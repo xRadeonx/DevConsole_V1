@@ -1,0 +1,2898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevStudio V2 — Orquestador & Log Matrix (30+ Consolas)</title>
+  <style>
+    :root {
+      --bg-base: #090d16;
+      --bg-surface: #0f172a;
+      --bg-surface-elevated: #1e293b;
+      --bg-glass: rgba(15, 23, 42, 0.88);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: #38bdf8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.22);
+      --emerald: #10b981;
+      --emerald-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --rose: #f43f5e;
+      --rose-bg: rgba(244, 63, 94, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* =========================================================================
+       HEADER SUPERIOR TIPO STUDIO
+       ========================================================================= */
+    .studio-header {
+      height: 52px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 50;
+      gap: 12px;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .project-name {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Cluster de Infraestructura en Header */
+    .infra-health-cluster {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    .infra-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .infra-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .infra-pill .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+    .infra-pill.amber .pulse-dot {
+      background: #f59e0b;
+      box-shadow: 0 0 6px #f59e0b;
+    }
+
+    /* Tabs de Navegación */
+    .studio-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .studio-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .studio-tab-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
+    .studio-tab-btn.active {
+      background: #0284c7;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+
+    /* Header Acciones & Métricas */
+    .header-metrics {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .metric-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .metric-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .metric-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .metric-dot.green { background: #34d399; box-shadow: 0 0 8px #34d399; }
+    .metric-dot.amber { background: #fbbf24; }
+    .metric-dot.red { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
+
+    .btn-cmd-palette {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-cmd-palette:hover { border-color: var(--accent); color: #fff; }
+    .kbd-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--accent);
+    }
+
+    /* =========================================================================
+       CUERPO PRINCIPAL
+       ========================================================================= */
+    .studio-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+    .view-container {
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .view-container.active { display: flex; }
+
+    /* =========================================================================
+       VISTA 1: ORQUESTADOR & DOMINIOS
+       ========================================================================= */
+    .orchestrator-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 14px 18px;
+      gap: 12px;
+    }
+    .orch-action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      flex-wrap: wrap;
+    }
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 9px;
+      width: 260px;
+      gap: 6px;
+    }
+    .search-input-wrap:focus-within {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .search-input-wrap input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      outline: none;
+      font-size: 11.5px;
+      width: 100%;
+    }
+    .filter-tags-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .filter-tag {
+      padding: 3px 9px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-tag:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+    .filter-tag.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Switch de Densidad de Filas */
+    .density-toggle-group {
+      display: flex;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .density-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .density-btn.active {
+      background: #0284c7;
+      color: #fff;
+    }
+
+    /* Botones Genéricos de Acción */
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-action:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+    .btn-action.primary { background: #0284c7; border-color: #0284c7; color: #fff; }
+    .btn-action.primary:hover { background: #0369a1; }
+    .btn-action.danger { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.3); color: #fb7185; }
+    .btn-action.danger:hover { background: #f43f5e; color: #fff; }
+
+    /* Dominios Funcionales (Slices) */
+    .domain-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .domain-header {
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .domain-header:hover { background: rgba(255, 255, 255, 0.04); }
+    .domain-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .domain-chevron {
+      color: var(--text-dim);
+      font-size: 11px;
+      transition: transform 0.2s;
+    }
+    .domain-chevron.collapsed { transform: rotate(-90deg); }
+    .domain-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .domain-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .domain-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* Tablas de Microservicios */
+    .orch-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+    .orch-table th {
+      text-align: left;
+      padding: 7px 12px;
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .orch-table th.sort-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    .orch-table th.sort-header:hover { color: var(--accent); }
+    .orch-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      vertical-align: middle;
+    }
+    .orch-table tr:hover td { background: rgba(255, 255, 255, 0.025); }
+
+    /* Modo Compacto */
+    .orch-table.compact th { padding: 4px 10px; font-size: 9px; }
+    .orch-table.compact td { padding: 4px 10px; font-size: 11px; }
+    .orch-table.compact .port-tag { padding: 1px 4px; font-size: 10px; }
+    .orch-table.compact .tech-pill { font-size: 8.5px; padding: 0 4px; }
+    .orch-table.compact .btn-inspect { padding: 2px 6px; font-size: 10px; }
+
+    .svc-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .tech-pill {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .tech-pill.django { background: rgba(68, 183, 139, 0.15); color: #44b78b; border: 1px solid rgba(68, 183, 139, 0.3); }
+    .tech-pill.react { background: rgba(97, 218, 251, 0.15); color: #61dafb; border: 1px solid rgba(97, 218, 251, 0.3); }
+
+    .port-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .port-tag:hover { background: rgba(56, 189, 248, 0.2); }
+
+    .git-branch-interactive {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .git-branch-interactive:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .daemon-badges {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .d-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-dim);
+    }
+    .d-badge.on {
+      background: var(--emerald-bg);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .switch-toggle {
+      width: 32px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .switch-toggle.on { background: #10b981; }
+    .switch-thumb {
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s;
+    }
+    .switch-toggle.on .switch-thumb { transform: translateX(14px); }
+
+    .btn-inspect {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.08);
+      color: #7dd3fc;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-inspect:hover { background: #0284c7; color: #fff; }
+
+    /* =========================================================================
+       DRAWER DE INSPECCIÓN EN VIVO (SLIDE-OVER PANEL)
+       ========================================================================= */
+    .inspect-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 520px;
+      background: #090e17;
+      border-left: 1px solid var(--border-focus);
+      box-shadow: -10px 0 35px rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .inspect-drawer.open { transform: translateX(0); }
+    .drawer-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .drawer-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .drawer-tab-btn {
+      flex: 1;
+      padding: 9px 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .drawer-tab-btn:hover { color: #fff; }
+    .drawer-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .drawer-terminal {
+      flex: 1;
+      background: #020409;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #e2e8f0;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    .drawer-footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Pestaña Diagnóstico y Red */
+    .diag-stat-card {
+      background: #020409;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .diag-stat-label { font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.3px; }
+    .diag-stat-val { font-size: 13.5px; font-weight: 700; color: #38bdf8; font-family: var(--font-mono); }
+    .diag-section {
+      background: #020409;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .diag-section-title { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .dep-pill {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .dep-pill.upstream { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #7dd3fc; }
+    .dep-pill.downstream { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+
+    /* =========================================================================
+       VISTA 2: LOG STUDIO & CONSOLAS (100% ANCHO DE PANTALLA)
+       ========================================================================= */
+    .studio-log-layout {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #020409;
+    }
+
+    /* Ribbon Toolbar Superior */
+    .log-stage-toolbar {
+      height: 44px;
+      background: #090d16;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .log-toolbar-left, .log-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-channel-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.1);
+      color: #7dd3fc;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-channel-picker:hover { background: #0284c7; color: #fff; }
+
+    .channel-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .c-chip {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .c-chip:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .c-chip.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+
+    .log-filter-chips {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .lf-chip {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .lf-chip:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+    .lf-chip.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+    .lf-chip.rose.active { background: #f43f5e; border-color: #fb7185; color: #fff; }
+
+    /* Barra de Búsqueda y Filtro de Palabras Clave en Logs */
+    .log-search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 7px;
+    }
+    .log-search-wrap input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 11px;
+      outline: none;
+      width: 130px;
+    }
+    .log-search-wrap:focus-within { border-color: var(--accent); }
+    mark.log-hl {
+      background: #f59e0b;
+      color: #000;
+      padding: 0 2px;
+      border-radius: 2px;
+      font-weight: 800;
+    }
+
+    /* Pausa de Stream */
+    .stream-pause-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 5px;
+      transition: all 0.15s;
+    }
+    .stream-pause-btn.paused {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: #f59e0b;
+      color: #fbbf24;
+      animation: pulse-border 1.5s infinite;
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .pause-badge {
+      background: #f59e0b;
+      color: #000;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 10px;
+    }
+
+    /* Escenario Principal */
+    .log-main-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Mosaico Adaptativo */
+    .mosaic-wall-grid {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .mosaic-wall-grid.cols-1 { grid-template-columns: 1fr; }
+    .mosaic-wall-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .mosaic-wall-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .mosaic-wall-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Celda de Consola */
+    .console-cell {
+      background: #020409;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      height: 290px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      transition: border-color 0.15s;
+    }
+    .console-cell:hover { border-color: rgba(56, 189, 248, 0.35); }
+    .console-cell.is-maximized {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 50 !important;
+    }
+
+    .cell-header {
+      height: 28px;
+      background: #0b1120;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .cell-title-area {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+    }
+    .cell-name {
+      font-weight: 700;
+      font-size: 11.5px;
+      color: #fff;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+    .cell-tools {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .cell-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .cell-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+    .cell-body {
+      flex: 1;
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.45;
+      color: #94a3b8;
+      overflow-y: auto;
+      background: #020409;
+    }
+    .cell-body.font-small { font-size: 9.5px; line-height: 1.35; }
+    .cell-body.font-large { font-size: 12px; line-height: 1.55; }
+
+    /* Barra PTY Shell interactiva al pie de cada celda */
+    .cell-pty-bar {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid #1e293b;
+      background: #060b13;
+      padding: 2px 6px;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .cell-pty-prompt {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #38bdf8;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+    .cell-pty-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+    }
+    .cell-pty-send {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .cell-pty-send:hover { background: #0284c7; color: #fff; }
+
+    /* Entradas de Log */
+    .log-entry {
+      word-break: break-all;
+      white-space: pre-wrap;
+      margin-bottom: 2px;
+    }
+    .log-entry.is-err {
+      color: #fb7185;
+      background: rgba(244, 63, 94, 0.08);
+      padding: 1px 4px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .log-entry.is-err:hover {
+      background: rgba(244, 63, 94, 0.2);
+      text-decoration: underline;
+    }
+    .log-entry.is-http { color: #38bdf8; }
+    .line-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 0 4px;
+      border-radius: 2px;
+      margin-right: 4px;
+    }
+    .tag-django { background: rgba(68, 183, 139, 0.2); color: #34d399; }
+    .tag-react { background: rgba(97, 218, 251, 0.2); color: #38bdf8; }
+    .tag-celery { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .tag-rabbit { background: rgba(244, 63, 94, 0.2); color: #f43f5e; }
+
+    /* Modo 2: Feed Multiplexado */
+    .multiplexed-stage {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      background: #020409;
+      overflow: hidden;
+    }
+    .multiplexed-stage.active { display: flex; }
+    .multiplexed-header {
+      padding: 6px 12px;
+      background: #090d16;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .multiplexed-body {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* Drawer Flotante de Canales (Ctrl+B) */
+    .log-channels-drawer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 320px;
+      background: #090e17;
+      border-right: 1px solid var(--border-focus);
+      box-shadow: 10px 0 35px rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .log-channels-drawer.open { transform: translateX(0); }
+    .lcd-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .lcd-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .lcd-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lcd-item:hover { background: rgba(255, 255, 255, 0.04); }
+    .lcd-item.active { background: rgba(56, 189, 248, 0.12); border-left: 2px solid var(--accent); }
+
+    /* =========================================================================
+       MODALES Y OVERLAYS
+       ========================================================================= */
+    /* Modal Paleta de Comandos (Ctrl+K) */
+    .modal-overlay-cmd {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 12vh;
+      z-index: 250;
+    }
+    .cmd-palette-box {
+      width: 580px;
+      background: #090d16;
+      border: 1px solid var(--border-focus);
+      border-radius: 10px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .cmd-input-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .cmd-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+    }
+    .cmd-results-list {
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 6px;
+    }
+    .cmd-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .cmd-item:hover, .cmd-item.selected {
+      background: #0284c7;
+      color: #fff;
+    }
+
+    /* Modal Atajos de Teclado [?] */
+    .shortcuts-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .shortcuts-card {
+      width: 500px;
+      background: #090e17;
+      border: 1px solid var(--border-focus);
+      border-radius: 10px;
+      padding: 18px 22px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    /* Modal Stacktrace Inspector */
+    .stacktrace-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 320;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .stacktrace-card {
+      background: #090d16;
+      border: 1px solid var(--rose);
+      box-shadow: 0 0 35px rgba(244, 63, 94, 0.25);
+      border-radius: 10px;
+      width: 820px;
+      max-width: 95vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .stacktrace-body {
+      padding: 14px 18px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.55;
+      color: #e2e8f0;
+      background: #020409;
+    }
+
+    /* Dock Flotante de Acciones Masivas */
+    .floating-bulk-dock {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      border: 1px solid var(--border-focus);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(56, 189, 248, 0.25);
+      border-radius: 30px;
+      padding: 8px 18px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 150;
+      font-size: 12px;
+    }
+    .bulk-badge {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    /* Modal Git Branch Picker */
+    .branch-picker-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 220;
+    }
+    .branch-picker-card {
+      width: 380px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Toast */
+    .toast-msg {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #fff;
+      z-index: 400;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================================
+       HEADER SUPERIOR TIPO STUDIO
+       ========================================================================= -->
+  <header class="studio-header">
+    <div class="header-brand">
+      <span class="logo-badge">DEV STUDIO V2</span>
+      <span class="project-name">SISPER Core Engine</span>
+
+      <!-- Cluster de Salud de Infraestructura -->
+      <div class="infra-health-cluster">
+        <div class="infra-pill" onclick="showInfraDetails('db')" title="PostgreSQL Principal: 172.30.23.71:5432 (Solo Lectura)">
+          <span class="pulse-dot"></span>
+          <span>DB 172.30.23.71 (0.8ms)</span>
+        </div>
+        <div class="infra-pill" onclick="showInfraDetails('rabbit')" title="RabbitMQ AMQP Broker: 172.23.22.xx:5672">
+          <span class="pulse-dot"></span>
+          <span>AMQP :5672</span>
+        </div>
+        <div class="infra-pill" onclick="showInfraDetails('redis')" title="Redis Cache & Celery Backend :6379">
+          <span class="pulse-dot"></span>
+          <span>Redis :6379</span>
+        </div>
+        <div class="infra-pill" onclick="showInfraDetails('api')" title="DevConsole Daemon en localhost:8000">
+          <span class="pulse-dot"></span>
+          <span>DevConsole :8000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegación Central Tipo Tabs Studio -->
+    <nav class="studio-tabs">
+      <button class="studio-tab-btn active" id="tabBtnOrch" onclick="switchStudioTab('orch')">
+        <span>🧭</span>
+        <span>Orquestador & Dominios (27)</span>
+      </button>
+      <button class="studio-tab-btn" id="tabBtnLogs" onclick="switchStudioTab('logs')">
+        <span>⚡</span>
+        <span>Log Studio & Consolas Matrix</span>
+      </button>
+    </nav>
+
+    <!-- Cluster de Estado Global y Paleta de Comandos -->
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="header-metrics">
+        <div class="metric-item" onclick="setFilterQuick('online')">
+          <span class="metric-dot green"></span>
+          <span>Online: <strong id="kpiOnlineCount">21</strong> / 27</span>
+        </div>
+        <div class="metric-item" onclick="setFilterQuick('sync')">
+          <span class="metric-dot amber"></span>
+          <span>Desactualizados: <strong>3</strong></span>
+        </div>
+        <div class="metric-item" onclick="setFilterQuick('error')">
+          <span class="metric-dot red"></span>
+          <span>Alertas: <strong>1</strong></span>
+        </div>
+      </div>
+
+      <button class="btn-action" style="padding:4px 8px; font-size:11px;" onclick="openShortcutsModal()" title="Ver atajos de teclado (?)">
+        <span>⌨️ Atajos</span>
+        <span class="kbd-tag">?</span>
+      </button>
+
+      <button class="btn-cmd-palette" onclick="openCmdPalette()" title="Abrir paleta de comandos (Ctrl+K)">
+        <span>🔍</span>
+        <span>Acciones</span>
+        <span class="kbd-tag">Ctrl+K</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       BODY PRINCIPAL
+       ========================================================================= -->
+  <div class="studio-body">
+
+    <!-- =======================================================================
+         VISTA 1: ORQUESTADOR & DOMINIOS FUNCIONALES (27 MICROSERVICIOS)
+         ======================================================================= -->
+    <div class="view-container active" id="view-orch">
+      <div class="orchestrator-layout">
+
+        <!-- Barra de Filtros, Búsqueda y Densidad -->
+        <div class="orch-action-bar">
+          <div class="search-input-wrap">
+            <span>🔍</span>
+            <input type="text" id="orchSearchInput" placeholder="Buscar servicio, puerto o rama (Presiona /)..." oninput="filterOrchestratorTable(this.value)">
+          </div>
+
+          <div class="filter-tags-row">
+            <button class="filter-tag active" id="ftag-all" onclick="setFilterTag('all')">Todos (27)</button>
+            <button class="filter-tag" id="ftag-online" onclick="setFilterTag('online')">🟢 Solo Activos (21)</button>
+            <button class="filter-tag" id="ftag-sync" onclick="setFilterTag('sync')">⚠️ Desactualizados (3)</button>
+            <button class="filter-tag" id="ftag-error" onclick="setFilterTag('error')">⚠ Con Alerta (1)</button>
+          </div>
+
+          <!-- Selector de Densidad de Filas -->
+          <div class="density-toggle-group">
+            <button class="density-btn active" id="btnDenseNormal" onclick="setOrchDensity('normal')" title="Espaciado estándar">Normal</button>
+            <button class="density-btn" id="btnDenseCompact" onclick="setOrchDensity('compact')" title="Filas ultra compactas para 30+ en 1 pantalla">Ultra-Compacta</button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn-action primary" onclick="showToast('🚀 Lanzando distribución de ventanas en Tilix...')">
+              🖥️ Lanzar en Tilix ▾
+            </button>
+            <button class="btn-action" onclick="simulateGitCheckAll()">
+              🔄 Comprobar Git
+            </button>
+            <button class="btn-action danger" onclick="stopAllServices()">
+              ⏹ Detener Todo
+            </button>
+          </div>
+        </div>
+
+        <!-- DOMINIO 1: CONTRATOS & ADQUISICIONES -->
+        <div class="domain-section" id="dom-contratos">
+          <div class="domain-header" onclick="toggleDomain('contratos')">
+            <div class="domain-title-group">
+              <span class="domain-chevron" id="chev-contratos">▼</span>
+              <span class="domain-title">📑 Flujo Funcional: Contratos & Adquisiciones</span>
+              <span class="domain-badge">5 Microservicios + 2 Frontends</span>
+            </div>
+            <div class="domain-stats">
+              <span id="contratos-stats">Estado: <strong style="color:#34d399;">6 Online</strong> / 1 Offline</span>
+              <span>Rama Predominante: <code style="color:#7dd3fc;">feature/pna-v2</code></span>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px;" onclick="event.stopPropagation(); toggleSlicePower('contratos');">
+                ⚡ Alternar Slice
+              </button>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px; border-color:var(--accent); color:var(--accent);" onclick="event.stopPropagation(); monitorSliceInLogs('contratos');">
+                📺 Monitorear en Logs
+              </button>
+            </div>
+          </div>
+          <div id="contratos-body">
+            <table class="orch-table" id="table-contratos">
+              <thead>
+                <tr>
+                  <th style="width:28px;"><input type="checkbox" onchange="toggleSelectAllSlice('contratos', this.checked)"></th>
+                  <th class="sort-header" onclick="sortOrchestrator('name')">Servicio <span class="sort-indicator">↕</span></th>
+                  <th>Tecnología</th>
+                  <th class="sort-header" onclick="sortOrchestrator('port')">Puerto <span class="sort-indicator">↕</span></th>
+                  <th class="sort-header" onclick="sortOrchestrator('branch')">Rama Git <span class="sort-indicator">↕</span></th>
+                  <th>Procesos Auxiliares</th>
+                  <th class="sort-header" onclick="sortOrchestrator('online')">Estado <span class="sort-indicator">↕</span></th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-contratos"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DOMINIO 2: SOLICITUDES & IDENTIDAD -->
+        <div class="domain-section" id="dom-solicitudes">
+          <div class="domain-header" onclick="toggleDomain('solicitudes')">
+            <div class="domain-title-group">
+              <span class="domain-chevron" id="chev-solicitudes">▼</span>
+              <span class="domain-title">📝 Flujo Funcional: Solicitudes & Identidad</span>
+              <span class="domain-badge">5 Microservicios + 2 Frontends</span>
+            </div>
+            <div class="domain-stats">
+              <span id="solicitudes-stats">Estado: <strong style="color:#34d399;">5 Online</strong> / 2 Offline</span>
+              <span>Rama Predominante: <code style="color:#7dd3fc;">develop</code></span>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px;" onclick="event.stopPropagation(); toggleSlicePower('solicitudes');">
+                ⚡ Alternar Slice
+              </button>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px; border-color:var(--accent); color:var(--accent);" onclick="event.stopPropagation(); monitorSliceInLogs('solicitudes');">
+                📺 Monitorear en Logs
+              </button>
+            </div>
+          </div>
+          <div id="solicitudes-body">
+            <table class="orch-table" id="table-solicitudes">
+              <thead>
+                <tr>
+                  <th style="width:28px;"><input type="checkbox" onchange="toggleSelectAllSlice('solicitudes', this.checked)"></th>
+                  <th class="sort-header" onclick="sortOrchestrator('name')">Servicio <span class="sort-indicator">↕</span></th>
+                  <th>Tecnología</th>
+                  <th class="sort-header" onclick="sortOrchestrator('port')">Puerto <span class="sort-indicator">↕</span></th>
+                  <th class="sort-header" onclick="sortOrchestrator('branch')">Rama Git <span class="sort-indicator">↕</span></th>
+                  <th>Procesos Auxiliares</th>
+                  <th class="sort-header" onclick="sortOrchestrator('online')">Estado <span class="sort-indicator">↕</span></th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-solicitudes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DOMINIO 3: EVALUADOR PNA & REGLAS -->
+        <div class="domain-section" id="dom-evaluador">
+          <div class="domain-header" onclick="toggleDomain('evaluador')">
+            <div class="domain-title-group">
+              <span class="domain-chevron" id="chev-evaluador">▼</span>
+              <span class="domain-title">⚖️ Flujo Funcional: Evaluador PNA & Reglas de Negocio</span>
+              <span class="domain-badge">5 Microservicios + 2 Frontends</span>
+            </div>
+            <div class="domain-stats">
+              <span id="evaluador-stats">Estado: <strong style="color:#34d399;">6 Online</strong> / 1 Offline</span>
+              <span>Rama Predominante: <code style="color:#7dd3fc;">develop</code></span>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px;" onclick="event.stopPropagation(); toggleSlicePower('evaluador');">
+                ⚡ Alternar Slice
+              </button>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px; border-color:var(--accent); color:var(--accent);" onclick="event.stopPropagation(); monitorSliceInLogs('evaluador');">
+                📺 Monitorear en Logs
+              </button>
+            </div>
+          </div>
+          <div id="evaluador-body">
+            <table class="orch-table" id="table-evaluador">
+              <thead>
+                <tr>
+                  <th style="width:28px;"><input type="checkbox" onchange="toggleSelectAllSlice('evaluador', this.checked)"></th>
+                  <th class="sort-header" onclick="sortOrchestrator('name')">Servicio <span class="sort-indicator">↕</span></th>
+                  <th>Tecnología</th>
+                  <th class="sort-header" onclick="sortOrchestrator('port')">Puerto <span class="sort-indicator">↕</span></th>
+                  <th class="sort-header" onclick="sortOrchestrator('branch')">Rama Git <span class="sort-indicator">↕</span></th>
+                  <th>Procesos Auxiliares</th>
+                  <th class="sort-header" onclick="sortOrchestrator('online')">Estado <span class="sort-indicator">↕</span></th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-evaluador"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DOMINIO 4: REPORTERÍA, BI & INFRAESTRUCTURA -->
+        <div class="domain-section" id="dom-infra_reporteria">
+          <div class="domain-header" onclick="toggleDomain('infra_reporteria')">
+            <div class="domain-title-group">
+              <span class="domain-chevron" id="chev-infra_reporteria">▼</span>
+              <span class="domain-title">📊 Flujo Funcional: Reportería, BI & Automatización</span>
+              <span class="domain-badge">5 Microservicios + 1 Frontend</span>
+            </div>
+            <div class="domain-stats">
+              <span id="infra_reporteria-stats">Estado: <strong style="color:#34d399;">4 Online</strong> / 2 Offline</span>
+              <span>Rama Predominante: <code style="color:#7dd3fc;">develop</code></span>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px;" onclick="event.stopPropagation(); toggleSlicePower('infra_reporteria');">
+                ⚡ Alternar Slice
+              </button>
+              <button class="btn-action" style="padding:2px 7px; font-size:10.5px; border-color:var(--accent); color:var(--accent);" onclick="event.stopPropagation(); monitorSliceInLogs('infra_reporteria');">
+                📺 Monitorear en Logs
+              </button>
+            </div>
+          </div>
+          <div id="infra_reporteria-body">
+            <table class="orch-table" id="table-infra_reporteria">
+              <thead>
+                <tr>
+                  <th style="width:28px;"><input type="checkbox" onchange="toggleSelectAllSlice('infra_reporteria', this.checked)"></th>
+                  <th class="sort-header" onclick="sortOrchestrator('name')">Servicio <span class="sort-indicator">↕</span></th>
+                  <th>Tecnología</th>
+                  <th class="sort-header" onclick="sortOrchestrator('port')">Puerto <span class="sort-indicator">↕</span></th>
+                  <th class="sort-header" onclick="sortOrchestrator('branch')">Rama Git <span class="sort-indicator">↕</span></th>
+                  <th>Procesos Auxiliares</th>
+                  <th class="sort-header" onclick="sortOrchestrator('online')">Estado <span class="sort-indicator">↕</span></th>
+                  <th style="text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-infra_reporteria"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =====================================================================
+           DRAWER DE INSPECCIÓN EN VIVO (SLIDE-OVER CON 4 PESTAÑAS)
+           ===================================================================== -->
+      <aside class="inspect-drawer" id="inspectDrawer">
+        <div class="drawer-header">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">⚡</span>
+            <div>
+              <h3 style="font-size:13.5px; font-weight:800; color:#fff;" id="drwSvcName">ms_contratos</h3>
+              <span style="font-size:10.5px; color:var(--text-muted);" id="drwSvcSub">Django API · Puerto :8002 · PID 48190</span>
+            </div>
+          </div>
+          <button style="background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;" onclick="closeDrawer()">&times;</button>
+        </div>
+
+        <div class="drawer-tabs">
+          <button class="drawer-tab-btn active" id="drwTabLogs" onclick="switchDrawerTab('logs')">Streaming Logs</button>
+          <button class="drawer-tab-btn" id="drwTabEnv" onclick="switchDrawerTab('env')">Variables .env</button>
+          <button class="drawer-tab-btn" id="drwTabActions" onclick="switchDrawerTab('actions')">Comandos</button>
+          <button class="drawer-tab-btn" id="drwTabDiag" onclick="switchDrawerTab('diag')">📊 Métricas & Red</button>
+        </div>
+
+        <div class="drawer-body">
+          <!-- Vista 1: Logs en Vivo -->
+          <div id="drwLogsPane" style="display:flex; flex-direction:column; flex:1; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+              <span style="color:#34d399; display:flex; align-items:center; gap:6px;">
+                <span class="metric-dot green"></span>
+                <span>STREAM SSE/TMUX EN TIEMPO REAL</span>
+              </span>
+              <div style="display:flex; gap:5px;">
+                <button class="btn-action" style="padding:2px 7px; font-size:10px;" onclick="toggleDrawerFollow(this)">Seguir: ON</button>
+                <button class="btn-action" style="padding:2px 7px; font-size:10px;" onclick="clearDrawerTerminal()">Limpiar</button>
+              </div>
+            </div>
+            <div class="drawer-terminal" id="drwTerminal"></div>
+          </div>
+
+          <!-- Vista 2: Variables .env -->
+          <div id="drwEnvPane" style="display:none; flex-direction:column; flex:1; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11.5px; color:var(--text-dim);">Variables locales (.env editable en caliente):</span>
+              <button class="btn-action" style="padding:2px 7px; font-size:10px;" onclick="copyEnvExample()">Copiar .env.example</button>
+            </div>
+            <textarea id="drwEnvEditor" style="width:100%; height:260px; background:#020409; border:1px solid #1e293b; border-radius:6px; color:#38bdf8; font-family:var(--font-mono); font-size:11px; padding:10px; outline:none; resize:none;"></textarea>
+            <div style="display:flex; justify-content:flex-end;">
+              <button class="btn-action primary" onclick="saveDrawerEnv()">💾 Guardar y Recargar .env</button>
+            </div>
+          </div>
+
+          <!-- Vista 3: Acciones y Comandos -->
+          <div id="drwActionsPane" style="display:none; flex-direction:column; gap:8px;">
+            <button class="btn-action" style="justify-content:flex-start; padding:10px;" onclick="runQuickAction('migrate')">
+              <span>🗄️</span>
+              <div>
+                <strong style="color:#fff; display:block;">Ejecutar Migraciones Django</strong>
+                <small style="color:var(--text-dim);">python manage.py migrate --noinput</small>
+              </div>
+            </button>
+            <button class="btn-action" style="justify-content:flex-start; padding:10px;" onclick="runQuickAction('shell')">
+              <span>🐍</span>
+              <div>
+                <strong style="color:#fff; display:block;">Abrir Terminal Pipenv Interactiva</strong>
+                <small style="color:var(--text-dim);">pipenv shell en subterminal local</small>
+              </div>
+            </button>
+            <button class="btn-action" style="justify-content:flex-start; padding:10px;" onclick="runQuickAction('worker')">
+              <span>⚙️</span>
+              <div>
+                <strong style="color:#fff; display:block;">Reiniciar Celery Worker</strong>
+                <small style="color:var(--text-dim);">celery -A core worker -l info</small>
+              </div>
+            </button>
+            <button class="btn-action" style="justify-content:flex-start; padding:10px;" onclick="runQuickAction('test')">
+              <span>🧪</span>
+              <div>
+                <strong style="color:#fff; display:block;">Ejecutar Suite de Pruebas</strong>
+                <small style="color:var(--text-dim);">pytest --reuse-db -q</small>
+              </div>
+            </button>
+          </div>
+
+          <!-- Vista 4: Diagnóstico & Red (NUEVO) -->
+          <div id="drwDiagPane" style="display:none; flex-direction:column; gap:10px;">
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
+              <div class="diag-stat-card">
+                <span class="diag-stat-label">PID del Proceso</span>
+                <span class="diag-stat-val" id="diagPid">48190</span>
+              </div>
+              <div class="diag-stat-card">
+                <span class="diag-stat-label">Memoria RSS</span>
+                <span class="diag-stat-val" id="diagMem">142 MB</span>
+              </div>
+              <div class="diag-stat-card">
+                <span class="diag-stat-label">Uso de CPU</span>
+                <span class="diag-stat-val" id="diagCpu">1.8%</span>
+              </div>
+              <div class="diag-stat-card">
+                <span class="diag-stat-label">Uptime</span>
+                <span class="diag-stat-val">3h 42m</span>
+              </div>
+            </div>
+
+            <div class="diag-section">
+              <div class="diag-section-title">🌐 Conectividad HTTP & Swagger</div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight:700; color:#fff; font-size:11.5px;">Swagger UI / OpenAPI</div>
+                  <div style="font-size:10.5px; color:#38bdf8;" id="diagSwaggerUrl">http://localhost:8002/api/docs/</div>
+                </div>
+                <button class="btn-action" style="font-size:10px;" onclick="showToast('🌐 Abriendo Swagger OpenAPI...')">Abrir ↗</button>
+              </div>
+            </div>
+
+            <div class="diag-section">
+              <div class="diag-section-title">🐘 Base de Datos & RabbitMQ</div>
+              <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-dim);">Host DB:</span>
+                  <span style="font-family:var(--font-mono); color:#34d399;">172.30.23.71:5432 (PostgreSQL)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-dim);">Pool de Conexiones:</span>
+                  <span style="color:#fff;">3 activas / 15 pool (Ping: 0.8ms)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-dim);">RabbitMQ Broker:</span>
+                  <span style="font-family:var(--font-mono); color:#38bdf8;">172.23.22.xx:5672 (vhost: /sisper)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="diag-section">
+              <div class="diag-section-title">🔗 Mapa de Dependencias del Servicio</div>
+              <div style="font-size:10.5px; color:var(--text-dim); margin-bottom:2px;">Upstream (Depende de):</div>
+              <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px;">
+                <span class="dep-pill upstream">ms_autenticacion</span>
+                <span class="dep-pill upstream">PostgreSQL 172.30.23.71</span>
+                <span class="dep-pill upstream">RabbitMQ</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-dim); margin-bottom:2px;">Downstream (Consumido por):</div>
+              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                <span class="dep-pill downstream">mf_contratos</span>
+                <span class="dep-pill downstream">ms_solicitudes</span>
+                <span class="dep-pill downstream">ms_evaluador</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <div style="display:flex; gap:6px;">
+            <button class="btn-action primary" onclick="toggleDrawerServicePower()">🔄 Reiniciar Servicio</button>
+            <button class="btn-action" onclick="openDrawerServiceWeb()">🌐 Abrir Web</button>
+          </div>
+          <button class="btn-action" style="border-color:var(--accent); color:var(--accent);" onclick="jumpToLogStudioFromDrawer()">📺 Abrir en Log Studio</button>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- =======================================================================
+         VISTA 2: LOG STUDIO & CONSOLAS — PANTALLA COMPLETA (30+ CONSOLAS)
+         ======================================================================= -->
+    <div class="view-container" id="view-logs">
+      <div class="studio-log-layout">
+
+        <!-- Cinta Superior Unificada (Log Studio Ribbon) -->
+        <div class="log-stage-toolbar">
+          <div class="log-toolbar-left">
+            <!-- Selector Desplegable de Consolas -->
+            <button class="btn-channel-picker" onclick="toggleChannelsDrawer()" title="Abrir matriz flotante de selección (Ctrl+B)">
+              <span>◧ Matriz (<span id="monitoredCountHeader">8</span>/27) ▾</span>
+            </button>
+
+            <!-- Presets Rápidos de Escenarios -->
+            <div class="channel-chips-row">
+              <button class="c-chip active" id="cchip-contratos" onclick="selectScenarioPreset('contratos')">⚡ Contratos (7)</button>
+              <button class="c-chip" id="cchip-solicitudes" onclick="selectScenarioPreset('solicitudes')">⚡ Solicitudes (7)</button>
+              <button class="c-chip" id="cchip-evaluador" onclick="selectScenarioPreset('evaluador')">⚡ Evaluador (7)</button>
+              <button class="c-chip" id="cchip-backends" onclick="selectScenarioPreset('backends')">🐍 Backends (20)</button>
+              <button class="c-chip" id="cchip-frontends" onclick="selectScenarioPreset('frontends')">⚛️ Frontends (7)</button>
+              <button class="c-chip" id="cchip-all" onclick="selectScenarioPreset('all')">🌐 Todos (27)</button>
+              <button class="c-chip" id="cchip-error" onclick="selectScenarioPreset('error')" style="color:#fca5a5;">⚠ Alertas (1)</button>
+            </div>
+
+            <!-- Filtros de Nivel -->
+            <div class="log-filter-chips">
+              <button class="lf-chip active" id="lf-all" onclick="setLogStudioFilter('all')">Todos</button>
+              <button class="lf-chip rose" id="lf-error" onclick="setLogStudioFilter('error')">⚠ Errores</button>
+              <button class="lf-chip" id="lf-http" onclick="setLogStudioFilter('http')">HTTP</button>
+              <button class="lf-chip" id="lf-celery" onclick="setLogStudioFilter('celery')">Celery</button>
+            </div>
+          </div>
+
+          <div class="log-toolbar-right">
+            <!-- Buscador y Resaltador de Palabras Clave en Logs -->
+            <div class="log-search-wrap">
+              <span>🔍</span>
+              <input type="text" id="logKeywordInput" placeholder="Buscar en logs..." oninput="handleLogKeywordSearch(this.value)">
+              <span id="logMatchCounter" style="display:none; font-size:10px; color:#38bdf8; font-weight:700;">0</span>
+            </div>
+
+            <!-- Controlador Pausa / En Vivo -->
+            <button class="stream-pause-btn" id="btnPauseStream" onclick="toggleStreamPause()" title="Pausar o reanudar streaming en vivo (P)">
+              <span id="pauseStreamIcon">⏸</span>
+              <span id="pauseStreamText">Pausar</span>
+              <span id="pauseBufferBadge" class="pause-badge" style="display:none;">0</span>
+            </button>
+
+            <!-- Modo de Visualización -->
+            <div style="display:flex; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:2px;">
+              <button class="lf-chip active" id="btnModeMosaic" onclick="setStudioViewMode('mosaic')" title="Mosaico adaptativo de consolas">▦ Mosaico</button>
+              <button class="lf-chip" id="btnModeMultiplex" onclick="setStudioViewMode('multiplex')" title="Feed único consolidado de 27+ servicios">📜 Multiplexado (1 Feed)</button>
+            </div>
+
+            <!-- Selector de Columnas en Mosaico -->
+            <div id="colSelectorGroup" style="display:flex; align-items:center; gap:3px;">
+              <span style="font-size:10.5px; color:var(--text-dim);">Cols:</span>
+              <button class="lf-chip" onclick="setStudioGridCols(1)">1</button>
+              <button class="lf-chip active" id="colBtn2" onclick="setStudioGridCols(2)">2</button>
+              <button class="lf-chip" id="colBtn3" onclick="setStudioGridCols(3)">3</button>
+              <button class="lf-chip" id="colBtn4" onclick="setStudioGridCols(4)">4 (Wall)</button>
+            </div>
+
+            <!-- Densidad Tipográfica -->
+            <div style="display:flex; align-items:center; gap:2px;">
+              <button class="cell-btn" onclick="toggleFontSize('down')" title="Reducir fuente (alta densidad)">Aa-</button>
+              <button class="cell-btn" onclick="toggleFontSize('up')" title="Aumentar fuente">Aa+</button>
+            </div>
+
+            <!-- Botón Pantalla Completa Real -->
+            <button class="btn-action" style="padding:3px 8px; font-size:11px;" onclick="toggleStudioFullscreen()" title="Ocultar header superior para 100% de pantalla (F)">
+              <span id="fsIcon">⤢</span> Fullscreen
+            </button>
+          </div>
+        </div>
+
+        <!-- Escenario de Trabajo Principal -->
+        <div class="log-main-stage">
+          <!-- Modo 1: Mosaico Adaptativo de Consolas -->
+          <div class="mosaic-wall-grid cols-2" id="mosaicWallGrid">
+            <!-- Consolas inyectadas dinámicamente -->
+          </div>
+
+          <!-- Modo 2: Stream Multiplexado (Feed Unificado para 27+ Consolas) -->
+          <div class="multiplexed-stage" id="multiplexedStage">
+            <div class="multiplexed-header">
+              <span>Feed consolidado en vivo: 27 microservicios simultáneos en orden cronológico</span>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-action" style="padding:2px 7px; font-size:10px;" onclick="clearMultiplexStream()">Limpiar Feed</button>
+                <button class="btn-action" style="padding:2px 7px; font-size:10px;" onclick="copyStudioLogs()">Copiar Todo</button>
+              </div>
+            </div>
+            <div class="multiplexed-body" id="multiplexedBody"></div>
+          </div>
+
+          <!-- Drawer Flotante de Selección de Consolas (Ctrl+B) -->
+          <aside class="log-channels-drawer" id="logChannelsDrawer">
+            <div class="lcd-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:16px;">🖥️</span>
+                <div>
+                  <strong style="color:#fff; font-size:12.5px;">Matriz de 27 Consolas</strong>
+                  <div style="font-size:10px; color:var(--text-dim);">Activa o silencia consolas en pantalla</div>
+                </div>
+              </div>
+              <button style="background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;" onclick="toggleChannelsDrawer()">&times;</button>
+            </div>
+            <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; gap:6px;">
+              <button class="btn-action" style="flex:1; font-size:10.5px;" onclick="setAllChannelsActive(true)">Seleccionar Todas</button>
+              <button class="btn-action" style="flex:1; font-size:10.5px;" onclick="setAllChannelsActive(false)">Limpiar</button>
+            </div>
+            <div class="lcd-body" id="lcdServicesList">
+              <!-- Checkboxes de servicios inyectados dinámicamente -->
+            </div>
+          </aside>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =========================================================================
+       MODALES Y DOCKS AUXILIARES
+       ========================================================================= -->
+
+  <!-- Dock Flotante de Acciones Masivas -->
+  <div class="floating-bulk-dock" id="bulkDock">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span class="bulk-badge" id="bulkCountBadge">0</span>
+      <span style="font-weight:700; color:#fff;">servicios seleccionados</span>
+    </div>
+    <div style="height:18px; width:1px; background:rgba(255,255,255,0.15);"></div>
+    <div style="display:flex; gap:6px;">
+      <button class="btn-action primary" onclick="bulkSetPower(true)">▶ Encender Seleccionados</button>
+      <button class="btn-action" onclick="bulkSetPower(false)">⏹ Detener</button>
+      <button class="btn-action" onclick="showToast('⬇️ Ejecutando Git Pull en seleccionados...')">⬇️ Git Pull</button>
+      <button class="btn-action" style="border-color:var(--accent); color:var(--accent);" onclick="openBulkInLogStudio()">📺 Ver en Log Studio</button>
+      <button class="btn-action" style="opacity:0.7;" onclick="clearBulkSelection()">✕ Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal Paleta de Comandos (Ctrl+K) -->
+  <div class="modal-overlay-cmd" id="cmdModal" onclick="closeCmdPalette(event)">
+    <div class="cmd-palette-box">
+      <div class="cmd-input-row">
+        <span>🔍</span>
+        <input type="text" id="cmdInput" placeholder="Escribe un comando o busca un microservicio (ej: contratos, reiniciar, develop)..." oninput="filterCmdPalette(this.value)">
+        <span class="kbd-tag">ESC</span>
+      </div>
+      <div class="cmd-results-list" id="cmdResults">
+        <div class="cmd-item" onclick="executeCmd('launch_all')">
+          <span>🖥️ <strong>Lanzar Todo en Tilix</strong> (Mosaico de 3 pestañas)</span>
+          <span class="kbd-tag">Enter</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('slice_contratos')">
+          <span>⚡ <strong>Levantar Slice Contratos</strong> (5 backends + 2 frontends)</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('slice_evaluador')">
+          <span>⚖️ <strong>Levantar Slice Evaluador PNA</strong> (Motor de cálculo + Reglas)</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('switch_develop')">
+          <span>🟡 <strong>Alinear todo a DEVELOP</strong> (Git checkout develop masivo)</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('inspect_ms_contratos')">
+          <span>📑 <strong>Inspeccionar ms_contratos</strong> (Logs, .env y métricas)</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('switch_tab_logs')">
+          <span>📺 <strong>Ir a Log Studio</strong> (Monitoreo multiplexado en vivo)</span>
+        </div>
+        <div class="cmd-item" onclick="executeCmd('stop_all')">
+          <span>⏹ <strong>Detener todos los servicios</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Atajos de Teclado [?] -->
+  <div class="shortcuts-modal" id="shortcutsModal" onclick="closeShortcutsModal(event)">
+    <div class="shortcuts-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h4 style="color:#fff; font-size:14px;">⌨️ Atajos de Teclado — DevStudio</h4>
+        <button style="background:transparent; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;" onclick="document.getElementById('shortcutsModal').style.display='none'">&times;</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div class="sc-row"><span>Abrir Paleta de Comandos</span> <span class="kbd-tag">Ctrl + K</span></div>
+        <div class="sc-row"><span>Matriz de Selección de Consolas</span> <span class="kbd-tag">Ctrl + B</span></div>
+        <div class="sc-row"><span>Cambiar a Orquestador</span> <span class="kbd-tag">1</span></div>
+        <div class="sc-row"><span>Cambiar a Log Studio</span> <span class="kbd-tag">2</span></div>
+        <div class="sc-row"><span>Pausar / Reanudar Stream de Logs</span> <span class="kbd-tag">P / Espacio</span></div>
+        <div class="sc-row"><span>Enfocar Buscador Global</span> <span class="kbd-tag">/</span></div>
+        <div class="sc-row"><span>Modo Pantalla Completa Real</span> <span class="kbd-tag">F</span></div>
+        <div class="sc-row"><span>Cerrar Paneles o Modales</span> <span class="kbd-tag">Escape</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Stacktrace Inspector -->
+  <div class="stacktrace-modal" id="stacktraceModal" onclick="closeStacktraceModal(event)">
+    <div class="stacktrace-card">
+      <div style="padding:10px 16px; background:#1e1b2e; border-bottom:1px solid var(--rose); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">🚨</span>
+          <strong style="color:#fff; font-size:12.5px;" id="stTitle">Stacktrace Inspector — ms_notificaciones</strong>
+        </div>
+        <button style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;" onclick="document.getElementById('stacktraceModal').style.display='none'">&times;</button>
+      </div>
+      <div class="stacktrace-body" id="stCode">
+Traceback (most recent call last):
+  File "/sisper/services/notificaciones/consumer.py", line 148, in handle_event
+    channel.basic_publish(exchange='notif_ex', routing_key=rk, body=payload)
+  File "/root/.local/share/virtualenvs/sisper/lib/python3.10/site-packages/pika/adapters/blocking_connection.py", line 2257, in basic_publish
+    self._flush_output(tornado_like_callback)
+ConnectionResetError: [Errno 104] Connection reset by peer: RabbitMQ broker heartbeat timed out (172.23.22.xx:5672)
+      </div>
+      <div style="padding:10px 16px; background:#090d16; border-top:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:11px; color:var(--text-dim);">Excepción capturada en worker thread · PID 48192</div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-action" onclick="copyStacktraceText()">📋 Copiar Stacktrace</button>
+          <button class="btn-action primary" onclick="explainStacktraceAI()">🤖 Diagnosticar Causa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Selector de Ramas Git -->
+  <div class="branch-picker-modal" id="branchModal" onclick="closeBranchModal(event)">
+    <div class="branch-picker-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="color:#fff; font-size:13px;" id="branchModalTitle">🔀 Cambiar Rama Git — ms_contratos</h4>
+        <button style="background:transparent; border:none; color:#fff; font-size:16px; cursor:pointer;" onclick="document.getElementById('branchModal').style.display='none'">&times;</button>
+      </div>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">Selecciona la rama a la que deseas cambiar localmente:</p>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="btn-action" style="justify-content:space-between;" onclick="applyBranchChange('develop')">
+          <span>🟡 develop</span>
+          <span style="font-size:10px; opacity:0.7;">clean</span>
+        </button>
+        <button class="btn-action" style="justify-content:space-between;" onclick="applyBranchChange('test')">
+          <span>🔵 test</span>
+          <span style="font-size:10px; opacity:0.7;">clean</span>
+        </button>
+        <button class="btn-action" style="justify-content:space-between; border-color:var(--accent); color:var(--accent);" onclick="applyBranchChange('feature/pna-v2')">
+          <span>✨ feature/pna-v2 (Actual)</span>
+          <span style="font-size:10px; color:#fca5a5;">⬇️ 2 commits</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifier -->
+  <div class="toast-msg" id="toastBox">
+    <span id="toastIcon">✨</span>
+    <span id="toastText">Mensaje</span>
+  </div>
+
+  <!-- =========================================================================
+       LÓGICA JAVASCRIPT & ESTADO REACTIVO
+       ========================================================================= -->
+  <script>
+    // ESTADO REACTIVO COMPLETO DE LOS 27 MICROSERVICIOS
+    const STORE = {
+      services: [
+        // Flujo Contratos (7)
+        { id: 'ms_contratos', name: 'ms_contratos', type: 'Django', port: 8002, branch: 'feature/pna-v2', online: true, behind: 2, dirty: true, slice: 'contratos', daemons: { api: true, worker: true, consumer: true }, hasError: false, pid: 48190, mem: '142 MB', cpu: '1.8%' },
+        { id: 'ms_notificaciones', name: 'ms_notificaciones', type: 'Django', port: 8005, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'contratos', daemons: { api: true, worker: false, consumer: true }, hasError: true, pid: 48192, mem: '98 MB', cpu: '0.4%' },
+        { id: 'mf_contratos', name: 'mf_contratos', type: 'React', port: 3002, branch: 'feature/pna-v2', online: true, behind: 1, dirty: false, slice: 'contratos', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48195, mem: '210 MB', cpu: '2.1%' },
+        { id: 'ms_evaluador', name: 'ms_evaluador', type: 'Django', port: 8006, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'contratos', daemons: { api: true, worker: true, consumer: true }, hasError: false, pid: 48198, mem: '125 MB', cpu: '0.9%' },
+        { id: 'ms_proveedores', name: 'ms_proveedores', type: 'Django', port: 8007, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'contratos', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48201, mem: '110 MB', cpu: '0.5%' },
+        { id: 'mf_proveedores', name: 'mf_proveedores', type: 'React', port: 3007, branch: 'develop', online: false, behind: 0, dirty: false, slice: 'contratos', daemons: { api: false, worker: false, consumer: false }, hasError: false, pid: 0, mem: '0 MB', cpu: '0.0%' },
+        { id: 'ms_firmas', name: 'ms_firmas', type: 'Django', port: 8008, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'contratos', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48205, mem: '88 MB', cpu: '0.3%' },
+
+        // Flujo Solicitudes & Identidad (7)
+        { id: 'ms_solicitudes', name: 'ms_solicitudes', type: 'Django', port: 8003, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: true, worker: false, consumer: true }, hasError: false, pid: 48210, mem: '135 MB', cpu: '1.2%' },
+        { id: 'ms_autenticacion', name: 'ms_autenticacion', type: 'Django', port: 8001, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48212, mem: '102 MB', cpu: '0.8%' },
+        { id: 'mf_solicitudes', name: 'mf_solicitudes', type: 'React', port: 3003, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48215, mem: '190 MB', cpu: '1.5%' },
+        { id: 'ms_perfiles', name: 'ms_perfiles', type: 'Django', port: 8004, branch: 'test', online: false, behind: 1, dirty: false, slice: 'solicitudes', daemons: { api: false, worker: false, consumer: false }, hasError: false, pid: 0, mem: '0 MB', cpu: '0.0%' },
+        { id: 'mf_login', name: 'mf_login', type: 'React', port: 3001, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48218, mem: '175 MB', cpu: '0.9%' },
+        { id: 'ms_usuarios', name: 'ms_usuarios', type: 'Django', port: 8009, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48220, mem: '95 MB', cpu: '0.4%' },
+        { id: 'ms_roles', name: 'ms_roles', type: 'Django', port: 8010, branch: 'develop', online: false, behind: 0, dirty: false, slice: 'solicitudes', daemons: { api: false, worker: false, consumer: false }, hasError: false, pid: 0, mem: '0 MB', cpu: '0.0%' },
+
+        // Flujo Evaluador PNA & Reglas (7)
+        { id: 'ms_motor_pna', name: 'ms_motor_pna', type: 'Django', port: 8011, branch: 'feature/pna-v2', online: true, behind: 3, dirty: true, slice: 'evaluador', daemons: { api: true, worker: true, consumer: true }, hasError: false, pid: 48225, mem: '160 MB', cpu: '2.4%' },
+        { id: 'ms_indicadores', name: 'ms_indicadores', type: 'Django', port: 8012, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: true, worker: true, consumer: false }, hasError: false, pid: 48228, mem: '115 MB', cpu: '0.7%' },
+        { id: 'ms_hallazgos', name: 'ms_hallazgos', type: 'Django', port: 8013, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: true, worker: false, consumer: true }, hasError: false, pid: 48230, mem: '105 MB', cpu: '0.6%' },
+        { id: 'mf_auditoria', name: 'mf_auditoria', type: 'React', port: 3004, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48232, mem: '185 MB', cpu: '1.1%' },
+        { id: 'ms_reglas_negocio', name: 'ms_reglas_negocio', type: 'Django', port: 8014, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48235, mem: '92 MB', cpu: '0.5%' },
+        { id: 'ms_cumplimiento', name: 'ms_cumplimiento', type: 'Django', port: 8015, branch: 'develop', online: false, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: false, worker: false, consumer: false }, hasError: false, pid: 0, mem: '0 MB', cpu: '0.0%' },
+        { id: 'mf_indicadores', name: 'mf_indicadores', type: 'React', port: 3005, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'evaluador', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48238, mem: '165 MB', cpu: '0.8%' },
+
+        // Flujo Reportería, BI & Infraestructura (6)
+        { id: 'ms_reporteria', name: 'ms_reporteria', type: 'Django', port: 8016, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: true, worker: true, consumer: false }, hasError: false, pid: 48240, mem: '140 MB', cpu: '1.3%' },
+        { id: 'ms_exportador_excel', name: 'ms_exportador_excel', type: 'Django', port: 8017, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: true, worker: true, consumer: true }, hasError: false, pid: 48242, mem: '130 MB', cpu: '0.8%' },
+        { id: 'ms_celery_scheduler', name: 'ms_celery_scheduler', type: 'Django', port: 8018, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: false, worker: true, consumer: true }, hasError: false, pid: 48245, mem: '85 MB', cpu: '0.4%' },
+        { id: 'mf_dashboard_bi', name: 'mf_dashboard_bi', type: 'React', port: 3006, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: true, worker: false, consumer: false }, hasError: false, pid: 48248, mem: '220 MB', cpu: '2.0%' },
+        { id: 'ms_auditoria_logs', name: 'ms_auditoria_logs', type: 'Django', port: 8019, branch: 'develop', online: false, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: false, worker: false, consumer: false }, hasError: false, pid: 0, mem: '0 MB', cpu: '0.0%' },
+        { id: 'ms_alertas_sistema', name: 'ms_alertas_sistema', type: 'Django', port: 8020, branch: 'develop', online: true, behind: 0, dirty: false, slice: 'infra_reporteria', daemons: { api: true, worker: false, consumer: true }, hasError: false, pid: 48252, mem: '90 MB', cpu: '0.5%' },
+      ],
+      selectedIds: new Set(),
+      activeFilterTag: 'all',
+      orchDensity: 'normal',
+      orchSortKey: 'name',
+      orchSortAsc: true,
+      activeDrawerService: 'ms_contratos',
+      activeDrawerTab: 'logs',
+      drawerFollow: true,
+      monitoredLogServices: new Set(['ms_contratos', 'ms_notificaciones', 'mf_contratos', 'ms_evaluador', 'ms_solicitudes', 'ms_autenticacion', 'ms_motor_pna', 'ms_reporteria']),
+      studioViewMode: 'mosaic',
+      studioCols: 2,
+      studioFontSize: 'normal',
+      studioFullscreen: false,
+      streamPaused: false,
+      pausedLogBuffer: [],
+      targetBranchService: null
+    };
+
+    // INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', () => {
+      renderOrchestratorTables();
+      updateHeaderKPIs();
+      startSimulatedStreaming();
+
+      // Atajos Globales
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.preventDefault();
+          openCmdPalette();
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+          e.preventDefault();
+          if (document.getElementById('view-logs').classList.contains('active')) {
+            toggleChannelsDrawer();
+          }
+        }
+        if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          e.preventDefault();
+          openShortcutsModal();
+        }
+        if (e.key === '1' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          e.preventDefault();
+          switchStudioTab('orch');
+        }
+        if (e.key === '2' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          e.preventDefault();
+          switchStudioTab('logs');
+        }
+        if ((e.key === 'p' || e.key === 'P' || e.code === 'Space') && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          if (document.getElementById('view-logs').classList.contains('active')) {
+            e.preventDefault();
+            toggleStreamPause();
+          }
+        }
+        if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          e.preventDefault();
+          const inp = document.getElementById('orchSearchInput');
+          if (inp) { inp.focus(); inp.select(); }
+        }
+        if ((e.key === 'f' || e.key === 'F') && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+          e.preventDefault();
+          toggleStudioFullscreen();
+        }
+        if (e.key === 'Escape') {
+          closeCmdPalette();
+          closeDrawer();
+          document.getElementById('logChannelsDrawer')?.classList.remove('open');
+          document.getElementById('branchModal').style.display = 'none';
+          document.getElementById('shortcutsModal').style.display = 'none';
+          document.getElementById('stacktraceModal').style.display = 'none';
+          if (STORE.studioFullscreen) toggleStudioFullscreen();
+        }
+      });
+    });
+
+    // =========================================================================
+    // RENDERIZADO DEL ORQUESTADOR Y SUS 4 DOMINIOS
+    // =========================================================================
+    function renderOrchestratorTables() {
+      const q = (document.getElementById('orchSearchInput')?.value || '').toLowerCase();
+      const slices = ['contratos', 'solicitudes', 'evaluador', 'infra_reporteria'];
+
+      slices.forEach(slice => {
+        const tbody = document.getElementById(`tbody-${slice}`);
+        const table = document.getElementById(`table-${slice}`);
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (table) {
+          table.className = `orch-table ${STORE.orchDensity === 'compact' ? 'compact' : ''}`;
+        }
+
+        let sliceServices = STORE.services.filter(s => {
+          if (s.slice !== slice) return false;
+          if (q && !s.name.toLowerCase().includes(q) && !String(s.port).includes(q) && !s.branch.toLowerCase().includes(q)) return false;
+          if (STORE.activeFilterTag === 'online' && !s.online) return false;
+          if (STORE.activeFilterTag === 'sync' && s.behind === 0 && !s.dirty) return false;
+          if (STORE.activeFilterTag === 'error' && !s.hasError) return false;
+          return true;
+        });
+
+        // Ordenamiento dinámico
+        sliceServices.sort((a, b) => {
+          let valA = a[STORE.orchSortKey];
+          let valB = b[STORE.orchSortKey];
+          if (typeof valA === 'string') valA = valA.toLowerCase();
+          if (typeof valB === 'string') valB = valB.toLowerCase();
+          if (valA < valB) return STORE.orchSortAsc ? -1 : 1;
+          if (valA > valB) return STORE.orchSortAsc ? 1 : -1;
+          return 0;
+        });
+
+        sliceServices.forEach(s => {
+          const tr = document.createElement('tr');
+          const isChecked = STORE.selectedIds.has(s.id);
+
+          tr.innerHTML = `
+            <td><input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleSelectService('${s.id}', this.checked)"></td>
+            <td>
+              <div class="svc-name-cell">
+                <span class="metric-dot ${s.online ? (s.hasError ? 'red' : 'green') : 'amber'}" style="width:6px; height:6px;"></span>
+                <span>${s.name}</span>
+                ${s.hasError ? `<span style="font-size:9.5px; background:rgba(244,63,94,0.15); color:#f43f5e; padding:1px 4px; border-radius:3px;">⚠ Error</span>` : ''}
+              </div>
+            </td>
+            <td><span class="tech-pill ${s.type === 'Django' ? 'django' : 'react'}">${s.type}</span></td>
+            <td><span class="port-tag" onclick="showToast('🌐 Abriendo http://localhost:${s.port}/...')">:${s.port}</span></td>
+            <td>
+              <div style="display:flex; align-items:center; gap:5px;">
+                <button class="git-branch-interactive" onclick="openBranchPicker('${s.name}', '${s.branch}')">
+                  <span>🔀</span>
+                  <span>${s.branch}</span>
+                </button>
+                ${s.behind > 0 ? `<span style="font-size:9.5px; background:rgba(239,68,68,0.2); color:#fca5a5; padding:1px 4px; border-radius:3px;">⬇️ ${s.behind}</span>` : ''}
+                ${s.dirty ? `<span style="font-size:9.5px; color:#fbbf24;">● sucio</span>` : ''}
+              </div>
+            </td>
+            <td>
+              <div class="daemon-badges">
+                <span class="d-badge ${s.daemons.api ? 'on' : ''}" title="HTTP API Server">API</span>
+                ${s.type === 'Django' ? `
+                  <span class="d-badge ${s.daemons.worker ? 'on' : ''}" title="Celery Worker">Worker</span>
+                  <span class="d-badge ${s.daemons.consumer ? 'on' : ''}" title="RabbitMQ Consumer">Consumer</span>
+                ` : `
+                  <span class="d-badge on" title="Webpack WDS">WDS</span>
+                `}
+              </div>
+            </td>
+            <td>
+              <div class="switch-toggle ${s.online ? 'on' : ''}" onclick="toggleServicePower('${s.id}')">
+                <div class="switch-thumb"></div>
+              </div>
+            </td>
+            <td style="text-align:right;">
+              <button class="btn-inspect" onclick="openDrawer('${s.id}')">
+                <span>⚡</span>
+                <span>Inspeccionar</span>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Actualizar estadísticas de slice
+        const totalSlice = STORE.services.filter(s => s.slice === slice);
+        const onlineSlice = totalSlice.filter(s => s.online).length;
+        const statsEl = document.getElementById(`${slice}-stats`);
+        if (statsEl) {
+          statsEl.innerHTML = `Estado: <strong style="color:#34d399;">${onlineSlice} Online</strong> / ${totalSlice.length - onlineSlice} Offline`;
+        }
+      });
+    }
+
+    // ORDENAMIENTO DE COLUMNAS
+    function sortOrchestrator(key) {
+      if (STORE.orchSortKey === key) {
+        STORE.orchSortAsc = !STORE.orchSortAsc;
+      } else {
+        STORE.orchSortKey = key;
+        STORE.orchSortAsc = true;
+      }
+      renderOrchestratorTables();
+      showToast(`Ordenando por ${key} (${STORE.orchSortAsc ? 'ascendente' : 'descendente'})`);
+    }
+
+    // CAMBIO DE DENSIDAD DE FILAS
+    function setOrchDensity(density) {
+      STORE.orchDensity = density;
+      document.getElementById('btnDenseNormal').classList.toggle('active', density === 'normal');
+      document.getElementById('btnDenseCompact').classList.toggle('active', density === 'compact');
+      renderOrchestratorTables();
+      showToast(density === 'compact' ? 'Modo Ultra-Compacto activado: las 27 filas caben en una sola pantalla' : 'Modo Cómodo activado');
+    }
+
+    // TOGGLE ON/OFF DE SERVICIO
+    function toggleServicePower(id) {
+      const svc = STORE.services.find(s => s.id === id);
+      if (!svc) return;
+      svc.online = !svc.online;
+      svc.daemons.api = svc.online;
+      renderOrchestratorTables();
+      updateHeaderKPIs();
+      showToast(svc.online ? `▶ ${svc.name} iniciado correctamente (: ${svc.port})` : `⏹ ${svc.name} detenido`);
+    }
+
+    function toggleSlicePower(slice) {
+      const sliceSvcs = STORE.services.filter(s => s.slice === slice);
+      const allOnline = sliceSvcs.every(s => s.online);
+      sliceSvcs.forEach(s => {
+        s.online = !allOnline;
+        s.daemons.api = s.online;
+      });
+      renderOrchestratorTables();
+      updateHeaderKPIs();
+      showToast(!allOnline ? `⚡ Todo el slice ${slice} iniciado (${sliceSvcs.length} servicios)` : `⏹ Slice ${slice} detenido`);
+    }
+
+    function monitorSliceInLogs(slice) {
+      const svcs = STORE.services.filter(s => s.slice === slice).map(s => s.id);
+      STORE.monitoredLogServices = new Set(svcs);
+      switchStudioTab('logs');
+      showToast(`📺 Monitoreando en Log Studio los ${svcs.length} servicios del flujo ${slice}`);
+    }
+
+    function stopAllServices() {
+      STORE.services.forEach(s => { s.online = false; s.daemons.api = false; });
+      renderOrchestratorTables();
+      updateHeaderKPIs();
+      showToast('⏹ Todos los 27 microservicios han sido detenidos.');
+    }
+
+    function simulateGitCheckAll() {
+      showToast('🔄 GitLab: Verificando cambios remotos en los 27 repositorios...');
+      setTimeout(() => {
+        showToast('✅ GitLab: Consulta finalizada. 3 repositorios con commits pendientes.');
+      }, 1100);
+    }
+
+    function setFilterTag(tag) {
+      STORE.activeFilterTag = tag;
+      document.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`ftag-${tag}`);
+      if (btn) btn.classList.add('active');
+      renderOrchestratorTables();
+    }
+
+    function setFilterQuick(tag) {
+      setFilterTag(tag);
+      showToast(`Filtrando: ${tag}`);
+    }
+
+    function filterOrchestratorTable(val) {
+      renderOrchestratorTables();
+    }
+
+    function toggleDomain(slice) {
+      const body = document.getElementById(`${slice}-body`);
+      const chev = document.getElementById(`chev-${slice}`);
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? 'block' : 'none';
+      chev.classList.toggle('collapsed', !isHidden);
+    }
+
+    // SELECCIÓN MÚLTIPLE & BULK DOCK
+    function toggleSelectService(id, checked) {
+      if (checked) STORE.selectedIds.add(id);
+      else STORE.selectedIds.delete(id);
+      updateBulkDock();
+    }
+
+    function toggleSelectAllSlice(slice, checked) {
+      STORE.services.filter(s => s.slice === slice).forEach(s => {
+        if (checked) STORE.selectedIds.add(s.id);
+        else STORE.selectedIds.delete(s.id);
+      });
+      renderOrchestratorTables();
+      updateBulkDock();
+    }
+
+    function updateBulkDock() {
+      const dock = document.getElementById('bulkDock');
+      const badge = document.getElementById('bulkCountBadge');
+      if (STORE.selectedIds.size > 0) {
+        dock.style.display = 'flex';
+        badge.innerText = STORE.selectedIds.size;
+      } else {
+        dock.style.display = 'none';
+      }
+    }
+
+    function clearBulkSelection() {
+      STORE.selectedIds.clear();
+      renderOrchestratorTables();
+      updateBulkDock();
+    }
+
+    function bulkSetPower(turnOn) {
+      STORE.selectedIds.forEach(id => {
+        const s = STORE.services.find(x => x.id === id);
+        if (s) { s.online = turnOn; s.daemons.api = turnOn; }
+      });
+      renderOrchestratorTables();
+      updateHeaderKPIs();
+      showToast(turnOn ? `▶ ${STORE.selectedIds.size} servicios iniciados` : `⏹ ${STORE.selectedIds.size} servicios detenidos`);
+      clearBulkSelection();
+    }
+
+    function openBulkInLogStudio() {
+      STORE.monitoredLogServices = new Set(STORE.selectedIds);
+      switchStudioTab('logs');
+      showToast(`📺 Monitoreando los ${STORE.selectedIds.size} servicios seleccionados en Log Studio`);
+      clearBulkSelection();
+    }
+
+    function updateHeaderKPIs() {
+      const online = STORE.services.filter(s => s.online).length;
+      document.getElementById('kpiOnlineCount').innerText = online;
+    }
+
+    // =========================================================================
+    // SLIDE-OVER DRAWER DE INSPECCIÓN EN VIVO (4 PESTAÑAS)
+    // =========================================================================
+    function openDrawer(serviceId) {
+      const s = STORE.services.find(x => x.id === serviceId) || STORE.services[0];
+      STORE.activeDrawerService = s.id;
+
+      document.getElementById('drwSvcName').innerText = s.name;
+      document.getElementById('drwSvcSub').innerText = `${s.type} · Puerto :${s.port} · Rama ${s.branch} · PID ${s.pid || 48190}`;
+      document.getElementById('inspectDrawer').classList.add('open');
+
+      // Variables .env
+      document.getElementById('drwEnvEditor').value = `DEBUG=True
+PORT=${s.port}
+SERVICE_NAME=${s.name}
+DB_HOST=172.30.23.71
+DB_PORT=5432
+RABBITMQ_HOST=localhost
+ALLOWED_HOSTS=*`;
+
+      // Métricas y Diagnóstico
+      document.getElementById('diagPid').innerText = s.pid || '48190';
+      document.getElementById('diagMem').innerText = s.mem || '120 MB';
+      document.getElementById('diagCpu').innerText = s.cpu || '1.0%';
+      document.getElementById('diagSwaggerUrl').innerText = `http://localhost:${s.port}/api/docs/`;
+
+      renderDrawerTerminalInitial(s);
+    }
+
+    function closeDrawer() {
+      document.getElementById('inspectDrawer').classList.remove('open');
+    }
+
+    function switchDrawerTab(tab) {
+      STORE.activeDrawerTab = tab;
+      document.querySelectorAll('.drawer-tab-btn').forEach(b => b.classList.remove('active'));
+      ['drwLogsPane', 'drwEnvPane', 'drwActionsPane', 'drwDiagPane'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+      });
+
+      if (tab === 'logs') {
+        document.getElementById('drwTabLogs').classList.add('active');
+        document.getElementById('drwLogsPane').style.display = 'flex';
+      } else if (tab === 'env') {
+        document.getElementById('drwTabEnv').classList.add('active');
+        document.getElementById('drwEnvPane').style.display = 'flex';
+      } else if (tab === 'actions') {
+        document.getElementById('drwTabActions').classList.add('active');
+        document.getElementById('drwActionsPane').style.display = 'flex';
+      } else {
+        document.getElementById('drwTabDiag').classList.add('active');
+        document.getElementById('drwDiagPane').style.display = 'flex';
+      }
+    }
+
+    function renderDrawerTerminalInitial(s) {
+      const term = document.getElementById('drwTerminal');
+      term.innerHTML = `
+        <div style="color:#94a3b8;">[03:00:01] Inbound connection to :${s.port} established.</div>
+        <div style="color:#94a3b8;">[03:00:02] Connected to Database 172.30.23.71 (read-only mode active).</div>
+        <div style="color:#34d399;">[03:00:03] Healthcheck probe: 200 OK.</div>
+        ${s.hasError ? `<div style="color:#fca5a5; background:rgba(239,68,68,0.15); padding:2px; cursor:pointer;" onclick="openStacktraceModal('${s.id}')">[03:00:05] ERROR ConnectionResetError: RabbitMQ broker heartbeat timed out (Clic para ver Traceback)</div>` : ''}
+      `;
+    }
+
+    function clearDrawerTerminal() {
+      document.getElementById('drwTerminal').innerHTML = '<div style="color:#64748b;">Buffer de terminal limpiado.</div>';
+    }
+
+    function toggleDrawerFollow(btn) {
+      STORE.drawerFollow = !STORE.drawerFollow;
+      btn.innerText = STORE.drawerFollow ? 'Seguir: ON' : 'Seguir: OFF';
+    }
+
+    function saveDrawerEnv() {
+      showToast(`💾 Variables .env de ${STORE.activeDrawerService} guardadas exitosamente.`);
+    }
+
+    function copyEnvExample() {
+      showToast('📋 Plantilla .env.example copiada al editor.');
+    }
+
+    function toggleDrawerServicePower() {
+      toggleServicePower(STORE.activeDrawerService);
+      showToast(`🔄 Servicio ${STORE.activeDrawerService} reiniciado.`);
+    }
+
+    function openDrawerServiceWeb() {
+      const s = STORE.services.find(x => x.id === STORE.activeDrawerService);
+      if (s) showToast(`🌐 Abriendo http://localhost:${s.port}/...`);
+    }
+
+    function jumpToLogStudioFromDrawer() {
+      const svc = STORE.services.find(x => x.id === STORE.activeDrawerService);
+      if (svc) {
+        STORE.monitoredLogServices.add(svc.id);
+        closeDrawer();
+        switchStudioTab('logs');
+        showToast(`📺 Consola de ${svc.name} enfocada en Log Studio`);
+      }
+    }
+
+    function runQuickAction(act) {
+      if (act === 'migrate') {
+        const term = document.getElementById('drwTerminal');
+        switchDrawerTab('logs');
+        term.innerHTML += `
+          <div style="color:#38bdf8;">>>> python manage.py migrate --noinput</div>
+          <div style="color:#94a3b8;">Operations to perform: Apply all migrations: auth, core, contracts</div>
+          <div style="color:#34d399;">Applying contracts.0042_add_pna_indexes... OK</div>
+        `;
+        showToast('✅ Migración ejecutada con éxito');
+      } else if (act === 'shell') {
+        showToast('🐍 Abriendo sesión Pipenv interactiva en Tilix...');
+      } else if (act === 'worker') {
+        showToast('⚙️ Celery worker reiniciado.');
+      } else if (act === 'test') {
+        showToast('🧪 Ejecutando suite de pruebas unitarias...');
+      }
+    }
+
+    // =========================================================================
+    // VISTA 2: LOG STUDIO & CONSOLAS A PANTALLA COMPLETA (30+ CONSOLAS)
+    // =========================================================================
+    function switchStudioTab(tab) {
+      document.querySelectorAll('.studio-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+
+      if (tab === 'orch') {
+        document.getElementById('tabBtnOrch').classList.add('active');
+        document.getElementById('view-orch').classList.add('active');
+      } else {
+        document.getElementById('tabBtnLogs').classList.add('active');
+        document.getElementById('view-logs').classList.add('active');
+        renderMosaicWall();
+        renderLcdServicesList();
+      }
+    }
+
+    function toggleChannelsDrawer() {
+      const drawer = document.getElementById('logChannelsDrawer');
+      drawer.classList.toggle('open');
+      renderLcdServicesList();
+    }
+
+    function selectScenarioPreset(preset) {
+      document.querySelectorAll('.c-chip').forEach(c => c.classList.remove('active'));
+      const activeChip = document.getElementById(`cchip-${preset}`);
+      if (activeChip) activeChip.classList.add('active');
+
+      if (preset === 'contratos') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.slice === 'contratos').map(s => s.id));
+        showToast('⚡ Mostrando 7 consolas del Flujo Contratos');
+      } else if (preset === 'solicitudes') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.slice === 'solicitudes').map(s => s.id));
+        showToast('⚡ Mostrando 7 consolas del Flujo Solicitudes');
+      } else if (preset === 'evaluador') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.slice === 'evaluador').map(s => s.id));
+        showToast('⚡ Mostrando 7 consolas del Flujo Evaluador PNA');
+      } else if (preset === 'backends') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.type === 'Django').map(s => s.id));
+        showToast(`🐍 Mostrando ${STORE.monitoredLogServices.size} consolas de Microservicios Backend`);
+      } else if (preset === 'frontends') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.type === 'React').map(s => s.id));
+        showToast(`⚛️ Mostrando ${STORE.monitoredLogServices.size} consolas de Frontends`);
+      } else if (preset === 'all') {
+        STORE.monitoredLogServices = new Set(STORE.services.map(s => s.id));
+        showToast('🌐 Mostrando las 27 consolas simultáneas');
+      } else if (preset === 'error') {
+        STORE.monitoredLogServices = new Set(STORE.services.filter(s => s.hasError).map(s => s.id));
+        showToast('⚠ Filtrando consolas con alertas activas');
+      }
+
+      renderMosaicWall();
+      renderLcdServicesList();
+    }
+
+    // RENDERIZADO DEL MOSAICO ADAPTATIVO
+    function renderMosaicWall() {
+      const grid = document.getElementById('mosaicWallGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const countHeader = document.getElementById('monitoredCountHeader');
+      if (countHeader) countHeader.innerText = STORE.monitoredLogServices.size;
+
+      if (STORE.monitoredLogServices.size === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align:center; padding:80px 20px; color:var(--text-dim);">
+            <div style="font-size:36px; margin-bottom:10px;">🖥️</div>
+            <h3 style="color:#fff; font-size:15px; margin-bottom:6px;">No hay consolas seleccionadas en el escenario</h3>
+            <p style="font-size:12px; margin-bottom:16px;">Abre la matriz de consolas para elegir cuáles de los 27+ servicios monitorear.</p>
+            <button class="btn-action primary" onclick="selectScenarioPreset('contratos')">Cargar Flujo Contratos</button>
+          </div>
+        `;
+        return;
+      }
+
+      STORE.monitoredLogServices.forEach(id => {
+        const s = STORE.services.find(x => x.id === id) || { id, name: id, port: 8000, type: 'Django', hasError: false };
+        const cell = document.createElement('div');
+        cell.className = `console-cell`;
+        cell.id = `cell-${s.id}`;
+
+        cell.innerHTML = `
+          <div class="cell-header">
+            <div class="cell-title-area">
+              <span class="metric-dot ${s.hasError ? 'red' : 'green'}"></span>
+              <span class="cell-name" title="${s.name}">${s.name}</span>
+              <span class="port-tag" style="padding:1px 4px; font-size:9.5px;">:${s.port}</span>
+              <span class="tech-pill ${s.type === 'Django' ? 'django' : 'react'}" style="font-size:8.5px; padding:0 3px;">${s.type}</span>
+            </div>
+            <div class="cell-tools">
+              <button class="cell-btn" onclick="clearCellTerminal('${s.id}')" title="Limpiar buffer">🧹</button>
+              <button class="cell-btn" onclick="toggleCellErrors('${s.id}')" title="Filtrar sólo errores">⚠️</button>
+              <button class="cell-btn" onclick="toggleMaximizeCell('${s.id}')" title="Maximizar / Restaurar">⤢</button>
+              <button class="cell-btn" onclick="closeConsoleCell('${s.id}')" title="Cerrar consola">✕</button>
+            </div>
+          </div>
+          <div class="cell-body ${STORE.studioFontSize === 'small' ? 'font-small' : (STORE.studioFontSize === 'large' ? 'font-large' : '')}" id="cell-body-${s.id}">
+            <div class="log-entry is-http"><span class="line-tag ${s.type === 'Django' ? 'tag-django' : 'tag-react'}">${s.type.toUpperCase()}</span> GET /api/v1/health/ 200 OK (16ms)</div>
+            ${s.hasError ? `<div class="log-entry is-err" onclick="openStacktraceModal('${s.id}')">[ERROR] ConnectionResetError: RabbitMQ broker socket timeout (Clic para ver Traceback)</div>` : ''}
+            <div class="log-entry">[03:05:00] Inbound telemetry stream active on worker thread.</div>
+          </div>
+          <!-- Barra PTY Shell interactiva -->
+          <div class="cell-pty-bar">
+            <span class="cell-pty-prompt">${s.name}:~$</span>
+            <input type="text" class="cell-pty-input" placeholder="help, ping, status, migrate..." onkeydown="handlePtyInput(event, '${s.id}', this)">
+            <button class="cell-pty-send" onclick="sendPtyCommand('${s.id}', this.previousElementSibling)">↵</button>
+          </div>
+        `;
+        grid.appendChild(cell);
+      });
+    }
+
+    // MANEJO DE COMANDOS PTY EN CADA CELDA
+    function handlePtyInput(e, svcId, inputEl) {
+      if (e.key === 'Enter') {
+        sendPtyCommand(svcId, inputEl);
+      }
+    }
+
+    function sendPtyCommand(svcId, inputEl) {
+      const cmd = (inputEl.value || '').trim();
+      if (!cmd) return;
+      inputEl.value = '';
+
+      const body = document.getElementById(`cell-body-${svcId}`);
+      if (!body) return;
+
+      body.innerHTML += `<div class="log-entry" style="color:#38bdf8;"><strong>${svcId}:~$</strong> ${cmd}</div>`;
+
+      if (cmd === 'help') {
+        body.innerHTML += `<div class="log-entry" style="color:#94a3b8;">Comandos disponibles: help, status, ping db, migrate, env, clear</div>`;
+      } else if (cmd === 'status') {
+        const s = STORE.services.find(x => x.id === svcId);
+        body.innerHTML += `<div class="log-entry" style="color:#34d399;">● ONLINE · PID: ${s?.pid || 48190} · Memoria: ${s?.mem || '120MB'} · Puerto: :${s?.port}</div>`;
+      } else if (cmd === 'ping db') {
+        body.innerHTML += `<div class="log-entry" style="color:#34d399;">[PING] Host 172.30.23.71:5432 responded in 0.8ms · Pool OK</div>`;
+      } else if (cmd === 'migrate') {
+        body.innerHTML += `<div class="log-entry" style="color:#94a3b8;">Operations to perform: Apply all migrations</div><div class="log-entry" style="color:#34d399;">Running migrations: No migrations to apply.</div>`;
+      } else if (cmd === 'clear') {
+        body.innerHTML = '';
+      } else if (cmd === 'env') {
+        body.innerHTML += `<div class="log-entry" style="color:#fbbf24;">DEBUG=True | DB_HOST=172.30.23.71 | PORT=8002</div>`;
+      } else {
+        body.innerHTML += `<div class="log-entry" style="color:#94a3b8;">Comando ejecutado con código de retorno 0 (OK).</div>`;
+      }
+
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function toggleMaximizeCell(id) {
+      const cell = document.getElementById(`cell-${id}`);
+      if (!cell) return;
+      const isMax = cell.classList.toggle('is-maximized');
+      showToast(isMax ? `⤢ ${id} expandido a pantalla completa` : `⤡ Restaurado al mosaico`);
+    }
+
+    function closeConsoleCell(id) {
+      STORE.monitoredLogServices.delete(id);
+      renderMosaicWall();
+      renderLcdServicesList();
+      showToast(`✕ Consola ${id} cerrada.`);
+    }
+
+    function clearCellTerminal(id) {
+      const body = document.getElementById(`cell-body-${id}`);
+      if (body) body.innerHTML = '<div style="color:#64748b;">Buffer limpiado.</div>';
+      showToast(`🧹 Buffer de ${id} limpiado.`);
+    }
+
+    function toggleCellErrors(id) {
+      const body = document.getElementById(`cell-body-${id}`);
+      if (!body) return;
+      Array.from(body.children).forEach(line => {
+        if (!line.classList.contains('is-err')) line.style.display = (line.style.display === 'none') ? 'block' : 'none';
+      });
+      showToast(`⚠️ Alternando filtro de errores en ${id}`);
+    }
+
+    // DRAWER LATERAL DE CANALES (Ctrl+B)
+    function renderLcdServicesList() {
+      const container = document.getElementById('lcdServicesList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      STORE.services.forEach(s => {
+        const isMonitored = STORE.monitoredLogServices.has(s.id);
+        const item = document.createElement('div');
+        item.className = `lcd-item ${isMonitored ? 'active' : ''}`;
+        item.onclick = () => toggleLcdServiceMonitor(s.id);
+
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" ${isMonitored ? 'checked' : ''} style="pointer-events:none;">
+            <span style="font-weight:700; color:#fff; font-size:11.5px;">${s.name}</span>
+            <span style="font-size:10px; color:var(--text-dim);">:${s.port}</span>
+          </div>
+          <div>
+            <span class="tech-pill ${s.type === 'Django' ? 'django' : 'react'}" style="font-size:8.5px;">${s.type}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function toggleLcdServiceMonitor(id) {
+      if (STORE.monitoredLogServices.has(id)) STORE.monitoredLogServices.delete(id);
+      else STORE.monitoredLogServices.add(id);
+      renderMosaicWall();
+      renderLcdServicesList();
+    }
+
+    function setAllChannelsActive(val) {
+      if (val) STORE.monitoredLogServices = new Set(STORE.services.map(s => s.id));
+      else STORE.monitoredLogServices.clear();
+      renderMosaicWall();
+      renderLcdServicesList();
+      showToast(val ? 'Las 27 consolas añadidas al mosaico' : 'Todas las consolas quitadas');
+    }
+
+    // MODOS DE VISUALIZACIÓN DEL STUDIO
+    function setStudioViewMode(mode) {
+      STORE.studioViewMode = mode;
+      document.getElementById('btnModeMosaic').classList.toggle('active', mode === 'mosaic');
+      document.getElementById('btnModeMultiplex').classList.toggle('active', mode === 'multiplex');
+
+      const mosaicGrid = document.getElementById('mosaicWallGrid');
+      const multiStage = document.getElementById('multiplexedStage');
+      const colGroup = document.getElementById('colSelectorGroup');
+
+      if (mode === 'mosaic') {
+        mosaicGrid.style.display = 'grid';
+        multiStage.classList.remove('active');
+        colGroup.style.display = 'flex';
+        renderMosaicWall();
+      } else {
+        mosaicGrid.style.display = 'none';
+        multiStage.classList.add('active');
+        colGroup.style.display = 'none';
+        feedMultiplexStream();
+      }
+      showToast(mode === 'mosaic' ? '▦ Modo Mosaico Adaptativo' : '📜 Modo Stream Multiplexado (1 Feed 27+)');
+    }
+
+    function setStudioGridCols(cols) {
+      STORE.studioCols = cols;
+      [1, 2, 3, 4].forEach(c => {
+        const btn = document.getElementById(`colBtn${c}`);
+        if (btn) btn.classList.toggle('active', c === cols);
+      });
+      const grid = document.getElementById('mosaicWallGrid');
+      grid.className = `mosaic-wall-grid cols-${cols}`;
+      showToast(`Mosaico cambiado a ${cols} columna(s)`);
+    }
+
+    function toggleFontSize(dir) {
+      if (dir === 'down') STORE.studioFontSize = 'small';
+      else STORE.studioFontSize = 'large';
+      document.querySelectorAll('.cell-body').forEach(b => {
+        b.className = `cell-body ${STORE.studioFontSize === 'small' ? 'font-small' : 'font-large'}`;
+      });
+      showToast(dir === 'down' ? 'Aa- Densidad Alta (Fuente 9.5px)' : 'Aa+ Densidad Cómoda (Fuente 12px)');
+    }
+
+    function toggleStudioFullscreen() {
+      STORE.studioFullscreen = !STORE.studioFullscreen;
+      const header = document.querySelector('.studio-header');
+      if (STORE.studioFullscreen) {
+        header.style.display = 'none';
+        document.getElementById('fsIcon').innerText = '⤡';
+        showToast('⤢ Modo 100% Pantalla Completa Activo (Presiona Esc o F para restaurar)');
+      } else {
+        header.style.display = 'flex';
+        document.getElementById('fsIcon').innerText = '⤢';
+        showToast('⤡ Header restaurado');
+      }
+    }
+
+    // PAUSA Y REANUDACIÓN DE STREAM
+    function toggleStreamPause() {
+      STORE.streamPaused = !STORE.streamPaused;
+      const btn = document.getElementById('btnPauseStream');
+      const icon = document.getElementById('pauseStreamIcon');
+      const text = document.getElementById('pauseStreamText');
+      const badge = document.getElementById('pauseBufferBadge');
+
+      if (STORE.streamPaused) {
+        btn.classList.add('paused');
+        icon.innerText = '▶';
+        text.innerText = 'Reanudar';
+        badge.style.display = 'inline-block';
+        badge.innerText = '0';
+        showToast('⏸ Streaming pausado en vivo. Los logs se acumulan en buffer.');
+      } else {
+        btn.classList.remove('paused');
+        icon.innerText = '⏸';
+        text.innerText = 'Pausar';
+        badge.style.display = 'none';
+        // Drenar buffer acumulado
+        drainPausedBuffer();
+        showToast('▶ Streaming reanudado. Buffer sincronizado.');
+      }
+    }
+
+    function drainPausedBuffer() {
+      STORE.pausedLogBuffer.forEach(ev => injectLogEventToDOM(ev));
+      STORE.pausedLogBuffer = [];
+      const badge = document.getElementById('pauseBufferBadge');
+      if (badge) badge.innerText = '0';
+    }
+
+    // BÚSQUEDA Y RESALTADO DE PALABRAS CLAVE EN LOGS
+    function handleLogKeywordSearch(q) {
+      const matchBadge = document.getElementById('logMatchCounter');
+      q = q.trim().toLowerCase();
+
+      if (!q) {
+        matchBadge.style.display = 'none';
+        // Quitar resaltados
+        document.querySelectorAll('mark.log-hl').forEach(m => {
+          m.outerHTML = m.innerText;
+        });
+        return;
+      }
+
+      let totalMatches = 0;
+      const cells = document.querySelectorAll('.cell-body, #multiplexedBody');
+      cells.forEach(container => {
+        Array.from(container.children).forEach(entry => {
+          const rawText = entry.textContent;
+          if (rawText.toLowerCase().includes(q)) {
+            totalMatches++;
+            entry.style.display = 'block';
+          }
+        });
+      });
+
+      matchBadge.style.display = 'inline-block';
+      matchBadge.innerText = `${totalMatches} matches`;
+    }
+
+    function clearMultiplexStream() {
+      document.getElementById('multiplexedBody').innerHTML = '<div style="color:#64748b;">Feed unificado limpiado.</div>';
+    }
+
+    function feedMultiplexStream() {
+      const body = document.getElementById('multiplexedBody');
+      if (!body || body.children.length > 5) return;
+      body.innerHTML = `
+        <div class="log-entry is-http"><span class="line-tag tag-django">ms_contratos</span> GET /api/v1/contratos/pna/ 200 OK (24ms)</div>
+        <div class="log-entry"><span class="line-tag tag-celery">ms_contratos</span> Task contratos.tasks.calcular_pna[uuid-91] SUCCESS</div>
+        <div class="log-entry is-err" onclick="openStacktraceModal('ms_notificaciones')"><span class="line-tag tag-rabbit">ms_notificaciones</span> ERROR RabbitMQ channel #3 closed by broker (Clic para inspeccionar)</div>
+        <div class="log-entry"><span class="line-tag tag-react">mf_contratos</span> [HMR] Hot module replacement signal accepted</div>
+        <div class="log-entry is-http"><span class="line-tag tag-django">ms_solicitudes</span> POST /api/v1/solicitudes/crear/ 201 CREATED (38ms)</div>
+        <div class="log-entry"><span class="line-tag tag-django">ms_autenticacion</span> JWT token issued for user ID #849</div>
+        <div class="log-entry"><span class="line-tag tag-django">ms_motor_pna</span> Engine execution matrix verified: 12 indicators active</div>
+      `;
+    }
+
+    function setLogStudioFilter(filter) {
+      document.querySelectorAll('.lf-chip').forEach(c => c.classList.remove('active'));
+      const activeBtn = document.getElementById(`lf-${filter}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const cells = document.querySelectorAll('.cell-body');
+      const multi = document.getElementById('multiplexedBody');
+      [...cells, multi].forEach(container => {
+        if (!container) return;
+        Array.from(container.children).forEach(line => {
+          if (filter === 'all') line.style.display = 'block';
+          else if (filter === 'error') line.style.display = line.classList.contains('is-err') ? 'block' : 'none';
+          else if (filter === 'http') line.style.display = line.classList.contains('is-http') ? 'block' : 'none';
+          else if (filter === 'celery') line.style.display = line.innerText.includes('CELERY') ? 'block' : 'none';
+        });
+      });
+      showToast(`Filtro global de logs aplicado: ${filter}`);
+    }
+
+    function copyStudioLogs() {
+      showToast('📋 Todos los logs visibles han sido copiados al portapapeles.');
+    }
+
+    // =========================================================================
+    // STREAMING SIMULADO EN VIVO
+    // =========================================================================
+    function startSimulatedStreaming() {
+      const EVENTS = [
+        { svc: 'ms_contratos', tag: 'tag-django', type: 'is-http', text: 'GET /api/v1/contratos/list/ 200 OK (22ms)' },
+        { svc: 'ms_contratos', tag: 'tag-celery', type: '', text: 'Task contratos.tasks.calcular_pna SUCCESS in 0.14s' },
+        { svc: 'ms_notificaciones', tag: 'tag-rabbit', type: 'is-err', text: 'ERROR ConnectionResetError: RabbitMQ heartbeat dropped' },
+        { svc: 'mf_contratos', tag: 'tag-react', type: '', text: '[webpack] Compiled successfully in 380ms' },
+        { svc: 'ms_solicitudes', tag: 'tag-django', type: 'is-http', text: 'POST /api/v1/solicitudes/validate/ 200 OK' },
+        { svc: 'ms_motor_pna', tag: 'tag-django', type: '', text: '[Engine] Calculated index for contract #8831 in 48ms' },
+        { svc: 'ms_reporteria', tag: 'tag-celery', type: '', text: 'Task reporteria.export_bi_summary FINISHED' },
+        { svc: 'ms_autenticacion', tag: 'tag-django', type: 'is-http', text: 'POST /api/v1/auth/verify/ 200 OK (12ms)' }
+      ];
+
+      setInterval(() => {
+        const time = new Date().toTimeString().split(' ')[0];
+        const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+        ev.time = time;
+
+        if (STORE.streamPaused) {
+          STORE.pausedLogBuffer.push(ev);
+          const badge = document.getElementById('pauseBufferBadge');
+          if (badge) badge.innerText = STORE.pausedLogBuffer.length;
+          return;
+        }
+
+        injectLogEventToDOM(ev);
+      }, 2400);
+    }
+
+    function injectLogEventToDOM(ev) {
+      // Inyectar en celda específica de mosaico
+      const cellBody = document.getElementById(`cell-body-${ev.svc}`);
+      if (cellBody) {
+        const errClick = ev.type === 'is-err' ? `onclick="openStacktraceModal('${ev.svc}')"` : '';
+        cellBody.innerHTML += `<div class="log-entry ${ev.type}" ${errClick}>[${ev.time}] ${ev.text}</div>`;
+        if (cellBody.children.length > 50) cellBody.removeChild(cellBody.children[0]);
+        cellBody.scrollTop = cellBody.scrollHeight;
+      }
+
+      // Inyectar en feed multiplexado si está activo
+      const multiBody = document.getElementById('multiplexedBody');
+      if (multiBody && STORE.studioViewMode === 'multiplex') {
+        const errClick = ev.type === 'is-err' ? `onclick="openStacktraceModal('${ev.svc}')"` : '';
+        multiBody.innerHTML += `<div class="log-entry ${ev.type}" ${errClick}>[${ev.time}] <span class="line-tag ${ev.tag}">${ev.svc}</span> ${ev.text}</div>`;
+        if (multiBody.children.length > 90) multiBody.removeChild(multiBody.children[0]);
+        multiBody.scrollTop = multiBody.scrollHeight;
+      }
+
+      // Drawer
+      const drwTerm = document.getElementById('drwTerminal');
+      if (document.getElementById('inspectDrawer').classList.contains('open') && STORE.drawerFollow) {
+        drwTerm.innerHTML += `<div style="color:#94a3b8;">[${ev.time}] ${ev.svc}: ${ev.text}</div>`;
+        drwTerm.scrollTop = drwTerm.scrollHeight;
+      }
+    }
+
+    // =========================================================================
+    // MODALES AUXILIARES
+    // =========================================================================
+    function openShortcutsModal() {
+      document.getElementById('shortcutsModal').style.display = 'flex';
+    }
+    function closeShortcutsModal(e) {
+      if (e.target.id === 'shortcutsModal') document.getElementById('shortcutsModal').style.display = 'none';
+    }
+
+    function openStacktraceModal(svcId) {
+      document.getElementById('stTitle').innerText = `🚨 Stacktrace Inspector — ${svcId}`;
+      document.getElementById('stacktraceModal').style.display = 'flex';
+    }
+    function closeStacktraceModal(e) {
+      if (e.target.id === 'stacktraceModal') document.getElementById('stacktraceModal').style.display = 'none';
+    }
+    function copyStacktraceText() {
+      showToast('📋 Stacktrace copiado al portapapeles.');
+    }
+    function explainStacktraceAI() {
+      showToast('🤖 Diagnóstico IA: Timeout causado por heartbeat perdido en broker RabbitMQ (172.23.22.xx). Revisa la red local.');
+    }
+
+    function showInfraDetails(type) {
+      if (type === 'db') showToast('🐘 PostgreSQL 172.30.23.71:5432 · Latencia: 0.8ms · Modo estricto SOLO LECTURA');
+      else if (type === 'rabbit') showToast('🐰 RabbitMQ 172.23.22.xx:5672 · 14 colas activas · 0 mensajes retenidos');
+      else if (type === 'redis') showToast('⚡ Redis 6379 · Celery result backend · 128 MB en uso');
+      else if (type === 'api') showToast('🛠️ DevConsole :8000 · Estado saludable');
+    }
+
+    // MODAL DE CAMBIO DE RAMA GIT
+    function openBranchPicker(name, curBranch) {
+      STORE.targetBranchService = name;
+      document.getElementById('branchModalTitle').innerText = `🔀 Cambiar Rama Git — ${name}`;
+      document.getElementById('branchModal').style.display = 'flex';
+    }
+    function closeBranchModal(e) {
+      if (e.target.id === 'branchModal') document.getElementById('branchModal').style.display = 'none';
+    }
+    function applyBranchChange(branch) {
+      const s = STORE.services.find(x => x.name === STORE.targetBranchService);
+      if (s) {
+        s.branch = branch;
+        s.behind = branch === 'feature/pna-v2' ? 2 : 0;
+        renderOrchestratorTables();
+        showToast(`🔀 ${s.name}: Cambiado a rama '${branch}' exitosamente`);
+      }
+      document.getElementById('branchModal').style.display = 'none';
+    }
+
+    // PALETA DE COMANDOS (CTRL+K)
+    function openCmdPalette() {
+      document.getElementById('cmdModal').style.display = 'flex';
+      const input = document.getElementById('cmdInput');
+      input.value = '';
+      input.focus();
+    }
+    function closeCmdPalette(e) {
+      if (!e || e.target.id === 'cmdModal') document.getElementById('cmdModal').style.display = 'none';
+    }
+    function filterCmdPalette(q) {
+      const list = document.getElementById('cmdResults');
+      Array.from(list.children).forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(q.toLowerCase()) ? 'flex' : 'none';
+      });
+    }
+    function executeCmd(cmd) {
+      closeCmdPalette();
+      if (cmd === 'launch_all') showToast('🖥️ Lanzando todos los 27 microservicios en Tilix...');
+      else if (cmd === 'slice_contratos') toggleSlicePower('contratos');
+      else if (cmd === 'slice_evaluador') toggleSlicePower('evaluador');
+      else if (cmd === 'switch_develop') {
+        STORE.services.forEach(s => s.branch = 'develop');
+        renderOrchestratorTables();
+        showToast('🟡 Todos los 27 servicios alineados a la rama DEVELOP');
+      } else if (cmd === 'inspect_ms_contratos') openDrawer('ms_contratos');
+      else if (cmd === 'switch_tab_logs') switchStudioTab('logs');
+      else if (cmd === 'stop_all') stopAllServices();
+    }
+
+    // TOAST NOTIFIER
+    function showToast(msg) {
+      const t = document.getElementById('toastBox');
+      document.getElementById('toastText').innerText = msg;
+      t.style.display = 'flex';
+      clearTimeout(window._tTimer);
+      window._tTimer = setTimeout(() => { t.style.display = 'none'; }, 2400);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{
+  "_comentario": [
+    "Plantilla de configuración de la instalación. Copiar a panel.json y ajustar.",
+    "panel.json NO se versiona: describe tu instalación concreta.",
+    "Las credenciales van en secrets.json, nunca aquí. Donde haga falta una,",
+    "usar el marcador __SECRET__ruta.en.secrets__ (ver secrets.example.json)."
+  ],
+  "project_name": "MiProyecto",
+  "registry": "registry.example.com:5000",
+  "local_subnet": "10.0.0",
+  "config_repo_dir": "config",
+  "onlyoffice_sync_service": "ms_ejemplo_contratos",
+  "ports": {
+    "ms_ejemplo_backend": 8000,
+    "mf_ejemplo_frontend": 3000
+  },
+  "infra_containers": {
+    "keydb": {
+      "container_name": "keydb",
+      "image": "registry.example.com:5000/keydb:6.3.4-alpine",
+      "label": "KeyDB (:6379)",
+      "port": 6379,
+      "run_cmd": [
+        "podman", "run", "-d",
+        "--name", "keydb",
+        "-p", "6379:6379",
+        "registry.example.com:5000/keydb:6.3.4-alpine"
+      ]
+    },
+    "onlyoffice-local": {
+      "container_name": "onlyoffice-local",
+      "image": "registry.example.com:5000/onlyoffice:9.2.1",
+      "label": "OnlyOffice (:8082)",
+      "port": 8082,
+      "run_cmd": [
+        "podman", "run", "-d",
+        "--name", "onlyoffice-local",
+        "-p", "8082:80",
+        "--add-host=host.containers.internal:host-gateway",
+        "-e", "JWT_ENABLED=true",
+        "-e", "JWT_SECRET=__SECRET__infra.onlyoffice_jwt_secret__",
+        "-e", "USE_UNAUTHORIZED_STORAGE=true",
+        "registry.example.com:5000/onlyoffice:9.2.1"
+      ]
+    }
+  },
+  "infra_targets": {
+    "_comentario": "Destinos de infraestructura por entorno, mostrados en la matriz de Infraestructura. Cada entorno es una lista de { id, name, type, target, localKey?, k8sPod?, testUrl?, note, cmd }. La matriz arma las columnas con los entornos que declares aquí.",
+    "local": [
+      {
+        "id": "postgres",
+        "name": "🐘 PostgreSQL Local",
+        "type": "Base de Datos Relacional",
+        "target": "127.0.0.1:5432",
+        "localKey": "postgres_local",
+        "testUrl": null,
+        "note": "Instancia PostgreSQL local (:5432)",
+        "cmd": "nc -zv 127.0.0.1 5432"
+      }
+    ],
+    "develop": [
+      {
+        "id": "postgres",
+        "name": "🐘 PostgreSQL Desarrollo",
+        "type": "Base de Datos Relacional",
+        "target": "db-dev.example.com:5432",
+        "localKey": null,
+        "testUrl": null,
+        "note": "Servidor de base de datos de desarrollo",
+        "cmd": "nc -zv db-dev.example.com 5432"
+      }
+    ]
+  },
+  "keycloak": {
+    "develop": {
+      "url": "https://keycloak-dev.example.com",
+      "realm": "MIREALM",
+      "client_id": "mi-backend",
+      "client_secret": "__SECRET__keycloak.develop.client_secret__",
+      "name": "DESARROLLO",
+      "color": "#f59e0b",
+      "ingress_ip": "10.0.0.10"
+    }
+  },
+  "databases": {
+    "develop": {
+      "host": "10.0.0.20",
+      "port": 5432,
+      "mi_db": "db_ejemplo",
+      "mi_user": "usuario_ejemplo",
+      "mi_pass": "__SECRET__databases.develop.mi_pass__"
+    }
+  },
+  "seasonal_themes": [
+    { "id": "none", "label": "Base", "description": "Diseño institucional estándar" },
+    { "id": "auto", "label": "Automático según calendario", "description": "Activa temas según la fecha" }
+  ]
+}

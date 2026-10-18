@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>SISPER DevConsole - Plataforma de Ingeniería y Operaciones</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/console-wall.css">
+  <!-- xterm (383 KB) se carga bajo demanda: el modo control está dormido y no
+       debe pesar en cada arranque de la aplicación. -->
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+
+  <!-- ====================================================================== -->
+  <!-- TOPBAR GLOBAL (fija arriba)                                             -->
+  <!-- ====================================================================== -->
+  <div class="topbar" id="topbar">
+    <!-- Izquierda: toggle sidebar + brand + ruta -->
+    <div class="topbar-left">
+      <button class="topbar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Mostrar / Ocultar menú lateral">☰</button>
+      <div class="topbar-brand">
+        <span class="topbar-brand-title">SISPER</span>
+        <span class="topbar-brand-sub">DevConsole</span>
+      </div>
+      <button class="badge-path badge-path-btn" id="baseDirPathBtn" onclick="openRootFolderModal()" title="Directorio raíz de proyectos. Haz clic para cambiar la carpeta raíz donde se buscan los proyectos.">
+        <span id="baseDirPathText">📁 Develop/</span>
+        <span style="font-size:10px; opacity:0.7;">⚙️</span>
+      </button>
+    </div>
+
+    <!-- Centro: KPI Ribbon -->
+    <div class="topbar-kpi-row" id="kpiRibbon">
+      <div class="kpi-item" id="kpiBackendStatus" onclick="filterKpi('backend')" title="Backend">
+        <span class="kpi-dot dot-online" id="kpiDotBackend"></span>
+        <span class="kpi-label">BE:</span>
+        <strong class="kpi-val" id="kpiValBackend">0/17</strong>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiFrontendStatus" onclick="filterKpi('frontend')" title="Frontend">
+        <span class="kpi-dot dot-online" id="kpiDotFrontend"></span>
+        <span class="kpi-label">FE:</span>
+        <strong class="kpi-val" id="kpiValFrontend">0/10</strong>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiGitBehindStatus" onclick="filterKpi('behind')" title="Servicios con commits por bajar desde el remoto (git behind)">
+        <span style="font-size:11px;">⬇️</span>
+        <strong class="kpi-val" id="kpiValBehind" style="color:var(--danger);">0</strong>
+        <span class="kpi-label">bajar</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiGitAheadStatus" onclick="filterKpi('ahead')" title="Servicios con commits locales sin subir al remoto (git ahead)">
+        <span style="font-size:11px;">⬆️</span>
+        <strong class="kpi-val" id="kpiValAhead" style="color:var(--accent);">0</strong>
+        <span class="kpi-label">subir</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiGitDirtyStatus" onclick="filterKpi('dirty')" title="Servicios con cambios sin commitear (git dirty)">
+        <span style="font-size:11px; color:var(--warn);">●</span>
+        <strong class="kpi-val" id="kpiValDirty" style="color:var(--warn);">0</strong>
+        <span class="kpi-label">sucios</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiK8sStatus" onclick="filterKpi('k8s')">
+        <svg width="13" height="13" viewBox="0 0 24 24" style="vertical-align:middle; flex-shrink:0;"><path fill="#326CE5" d="M11.666 0a1.44 1.44 0 0 0-.585.155L2.83 5.093a1.444 1.444 0 0 0-.722 1.25v9.88c0 .52.274.997.722 1.254l8.251 4.938c.45.268.995.27 1.442.007l8.368-4.945a1.447 1.447 0 0 0 .734-1.253V6.343a1.444 1.444 0 0 0-.722-1.25L12.923.155A1.44 1.44 0 0 0 12.339 0h-.673zm.332 2.146l7.472 4.417v8.868l-7.472 4.417-7.472-4.417V6.563l7.472-4.417zm.002 2.193a.987.987 0 0 0-.498.135l-2.015 1.164a.99.99 0 0 0-.363.363l-.707 1.226a.985.985 0 0 0-.131.498v2.328c0 .174.045.345.131.498l.707 1.225c.097.168.232.308.397.403l2.015 1.164a.988.988 0 0 0 .988 0l2.015-1.164a.991.991 0 0 0 .397-.403l.707-1.225a.987.987 0 0 0 .131-.498V9.731a.987.987 0 0 0-.131-.498l-.707-1.226a.99.99 0 0 0-.397-.363l-2.015-1.164a.986.986 0 0 0-.464-.135zm0 1.979l1.494.863.525.91-.525.909-1.494.863-1.494-.863-.525-.91.525-.909 1.494-.863z"/></svg>
+        <strong class="kpi-val" id="kpiValK8s" style="color:var(--accent); font-size:10.5px;">dev</strong>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item" id="kpiSyncTime" onclick="fetchStatus(true)" title="Clic para refrescar">
+        <strong class="kpi-val" id="kpiValTime" style="font-family:ui-monospace,monospace; font-size:10.5px; opacity:0.85;">--:--:--</strong>
+      </div>
+    </div>
+
+    <!-- Derecha: selector de entornos -->
+    <div class="topbar-right">
+      <!-- Las insignias se construyen desde los entornos configurados
+           (`env_summary.environments`).  Antes eran tres botones fijos, con sus
+           tres clases de color, así que otros nombres de entorno no aparecían. -->
+      <div class="env-switcher" id="globalEnvSwitcher"></div>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- SHELL PRINCIPAL: Sidebar + Contenido                                    -->
+  <!-- ====================================================================== -->
+  <div class="app-shell" id="appShell">
+
+    <!-- Sidebar izquierda -->
+    <aside class="sidebar" id="sidebarNav">
+      <nav class="sidebar-nav" style="padding-top:12px;">
+        <div class="sidebar-section-label">Monitoreo</div>
+        <button class="sidebar-nav-item active" data-tab="services" onclick="switchTab('services', this)" title="Microservicios & Git">
+          <span class="sidebar-nav-icon">📊</span>
+          <span class="sidebar-nav-label">Microservicios</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="consoles" onclick="switchTab('consoles', this)" title="Servicios y Consolas Integradas">
+          <span class="sidebar-nav-icon">🖥️</span>
+          <span class="sidebar-nav-label">Servicios y Consolas</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="workspace" onclick="switchTab('workspace', this)" title="Workspace & Git Sync">
+          <span class="sidebar-nav-icon"><span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" width="15" height="15" class="tech-icon-img" alt="Git" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#F05032" d="M23.546 10.93L13.067.452c-.604-.603-1.582-.603-2.188 0L8.708 2.627l2.76 2.76c.645-.215 1.379-.07 1.889.441.516.515.658 1.258.438 1.9l3.167 3.167c.642-.22 1.385-.077 1.9.438.78.78.78 2.05 0 2.831-.78.781-2.05.781-2.83 0-.57-.57-.704-1.393-.404-2.072l-2.952-2.953v6.793c.182.086.354.205.497.35.782.78.782 2.05 0 2.831-.782.78-2.05.78-2.831 0-.78-.78-.78-2.05 0-2.83.18-.18.39-.31.62-.39v-6.85a2.02 2.02 0 0 1-.62-.39c-.56-.56-.7-1.37-.41-2.04L6.96 5.86.454 12.37c-.605.605-.605 1.584 0 2.189l10.48 10.477c.604.604 1.582.604 2.186 0l10.426-10.43c.605-.603.605-1.582 0-2.186v.01z"/></svg></span></span></span>
+          <span class="sidebar-nav-label">Workspace</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="k8s" onclick="switchTab('k8s', this)" title="Kubernetes">
+          <span class="sidebar-nav-icon"><span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg" width="15" height="15" class="tech-icon-img" alt="Kubernetes" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#326CE5" d="M11.666 0a1.44 1.44 0 0 0-.585.155L2.83 5.093a1.444 1.444 0 0 0-.722 1.25v9.88c0 .52.274.997.722 1.254l8.251 4.938c.45.268.995.27 1.442.007l8.368-4.945a1.447 1.447 0 0 0 .734-1.253V6.343a1.444 1.444 0 0 0-.722-1.25L12.923.155A1.44 1.44 0 0 0 12.339 0h-.673zm.332 2.146l7.472 4.417v8.868l-7.472 4.417-7.472-4.417V6.563l7.472-4.417zm.002 2.193a.987.987 0 0 0-.498.135l-2.015 1.164a.99.99 0 0 0-.363.363l-.707 1.226a.985.985 0 0 0-.131.498v2.328c0 .174.045.345.131.498l.707 1.225c.097.168.232.308.397.403l2.015 1.164a.988.988 0 0 0 .988 0l2.015-1.164a.991.991 0 0 0 .397-.403l.707-1.225a.987.987 0 0 0 .131-.498V9.731a.987.987 0 0 0-.131-.498l-.707-1.226a.99.99 0 0 0-.397-.363l-2.015-1.164a.986.986 0 0 0-.464-.135zm0 1.979l1.494.863.525.91-.525.909-1.494.863-1.494-.863-.525-.91.525-.909 1.494-.863z"/></svg></span></span></span>
+          <span class="sidebar-nav-label">Kubernetes</span>
+        </button>
+        
+
+        <div class="sidebar-divider" style="margin:8px 12px;"></div>
+        <div class="sidebar-section-label">CI/CD &amp; Ops</div>
+<button class="sidebar-nav-item" data-tab="site" onclick="switchTab('site', this)" title="Configuración del sitio: tema estacional y manifiestos k8s por entorno">
+          <span class="sidebar-nav-icon">&#9881;&#65039;</span>
+          <span class="sidebar-nav-label">Sitio</span>
+        </button>
+        <button class="sidebar-nav-item" id="tabLinkDeployments" data-tab="deployments" onclick="switchTab('deployments', this)" title="Deployments CI/CD" style="display:none;">
+          <span class="sidebar-nav-icon"><span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/podman/podman-original.svg" width="15" height="15" class="tech-icon-img" alt="Podman" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#892CA0" d="M12.002 0c-4.66 0-8.528 2.87-10.378 7.02A12.023 12.023 0 0 0 0 12.002c0 1.77.387 3.45 1.08 4.962 1.848 4.028 5.703 6.91 10.323 7.034.2.005.398.005.599.002 4.62-.124 8.475-3.006 10.323-7.034.693-1.512 1.08-3.192 1.08-4.962a12.023 12.023 0 0 0-1.624-4.982C19.933 2.87 16.662 0 12.002 0zm-3.04 7.64c.82 0 1.485.665 1.485 1.485 0 .82-.665 1.485-1.485 1.485-.82 0-1.485-.665-1.485-1.485 0-.82.665-1.485 1.485-1.485zm6.08 0c.82 0 1.485.665 1.485 1.485 0 .82-.665 1.485-1.485 1.485-.82 0-1.485-.665-1.485-1.485 0-.82.665-1.485 1.485-1.485zm-3.04 4.88c2.46 0 4.56 1.42 5.56 3.48H6.48c1-2.06 3.1-3.48 5.56-3.48z"/></svg></span></span></span>
+          <span class="sidebar-nav-label">Deployments</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="infra" onclick="switchTab('infra', this)" title="Infraestructura">
+          <span class="sidebar-nav-icon"><span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="15" height="15" class="tech-icon-img" alt="Docker" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#2496ED" d="M13.983 11.078h2.119a.186.186 0 0 0 .186-.185V9.006a.186.186 0 0 0-.186-.186h-2.119a.185.185 0 0 0-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 0 0 .186-.186V3.574a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.888c0 .102.082.186.185.186m0 2.716h2.118a.187.187 0 0 0 .186-.186V6.29a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.887c0 .102.082.186.185.186m-2.93 0h2.12a.186.186 0 0 0 .184-.186V6.29a.185.185 0 0 0-.185-.185H8.1a.185.185 0 0 0-.185.185v1.887c0 .102.083.186.185.186m-2.964 0h2.119a.186.186 0 0 0 .185-.186V6.29a.185.185 0 0 0-.185-.185H5.136a.186.186 0 0 0-.186.185v1.887c0 .102.084.186.186.186m5.893 2.715h2.12a.186.186 0 0 0 .185-.185V9.006a.186.186 0 0 0-.185-.186h-2.12a.185.185 0 0 0-.184.185v1.888c0 .102.083.185.184.185m-2.93 0h2.12a.185.185 0 0 0 .184-.185V9.006a.185.185 0 0 0-.184-.186h-2.12a.185.185 0 0 0-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 0 0 .185-.185V9.006a.185.185 0 0 0-.185-.186h-2.12a.185.185 0 0 0-.185.185v1.888c0 .102.084.185.186.185m-2.928 0h2.119a.185.185 0 0 0 .185-.185V9.006a.185.185 0 0 0-.185-.186H2.208a.186.186 0 0 0-.186.185v1.888c0 .102.084.185.186.185m21.75 1.543c-.413-.263-1.63-.385-2.614-.144-.142-.71-.62-1.33-1.306-1.67-.184-.09-.378-.146-.576-.174l-.234-.033-.11.21c-.42.802-.455 1.776-.098 2.616-.275.143-.598.24-.967.283-.43.05-.88.026-1.328-.073l-.448-.098-.24.394c-.815 1.34-2.102 2.274-3.626 2.63-1.428.334-2.924.234-4.32-.29l-.265-.1-.21.2a10.82 10.82 0 0 1-5.182 2.697c-1.444.336-2.946.28-4.35-.164l-.452-.143-.09.464c.294 1.52 1.096 2.89 2.29 3.916 1.304 1.12 2.94 1.764 4.675 1.838 7.42.316 13.918-4.324 15.688-11.17l.08-.31-.303-.133z"/></svg></span></span></span>
+          <span class="sidebar-nav-label">Infraestructura</span>
+        </button>
+
+        <div class="sidebar-divider" style="margin:8px 12px;"></div>
+        <div class="sidebar-section-label">Análisis</div>
+        <button class="sidebar-nav-item" data-tab="map" onclick="switchTab('map', this)" title="Mapa Operativo">
+          <span class="sidebar-nav-icon">🗺️</span>
+          <span class="sidebar-nav-label">Mapa Operativo</span>
+        </button>
+        <button class="sidebar-nav-item" data-tab="activity" onclick="switchTab('activity', this)" title="Actividad en Vivo">
+          <span class="sidebar-nav-icon">⚡</span>
+          <span class="sidebar-nav-label">Actividad</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-btn" onclick="openSettingsModal()" title="Configuración de la aplicación: tema visual y preferencias">
+          <span style="font-size:14px;">🎨</span>
+          <span class="sidebar-nav-label">Configuración</span>
+        </div>
+        <div class="sidebar-footer-btn" onclick="openLayoutStudioModal()" title="Configuración y Lanzamiento de Sesiones Tilix">
+          <span style="font-size:14px;">⚙️</span>
+          <span class="sidebar-nav-label">Sesiones Tilix</span>
+        </div>
+        <div class="sidebar-footer-role" id="sidebarRolePill" onclick="openRoleModal()" title="Clic para cambiar de rol o autenticar como Administrador">
+          <span id="sidebarRoleIcon">👨‍💻</span>
+          <span id="sidebarRoleLabel" class="sidebar-nav-label">Desarrollador</span>
+          <span style="font-size:10px; opacity:0.6; margin-left:auto;" class="sidebar-nav-label">🔑</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Overlay para cerrar sidebar en pantallas pequeñas -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Contenido principal -->
+    <main class="main-content" id="mainContent">
+
+      <!-- ====================================================================== -->
+      <!-- TAB 1: MICROSERVICIOS Y GIT                                            -->
+      <!-- ====================================================================== -->
+      <div id="tab-services" class="tab-pane active">
+
+        <!-- Barra de Lanzamiento Tilix Global y Modular -->
+        <div class="btn-bar">
+          <div class="btn-bar-group">
+            <span class="btn-bar-label">Lanzar Tilix:</span>
+            <div class="toolbar-dropdown">
+              <button class="btn btn-hero" onclick="toggleToolbarDropdown(event, 'launchAllMenu')" title="Opciones para abrir todos los servicios">🖥️ Abrir Todo en Tilix ▾</button>
+              <div class="toolbar-dropdown-menu" id="launchAllMenu">
+                <div class="dropdown-header">Distribución en Ventana:</div>
+                <a href="javascript:void(0)" onclick="launchWithConflictCheck('tabs')">🚀 <strong>3 Pestañas</strong> <small style="color:var(--accent);">(Backends 1 y 2 + Frontends)</small></a>
+                <a href="javascript:void(0)" onclick="launchWithConflictCheck('all')">🖥️ <strong>1 Pestaña</strong> <small style="color:var(--text-muted);">(Mosaico completo)</small></a>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-header">Alinear Entorno antes de Abrir:</div>
+                <a href="javascript:void(0)" onclick="launchSingleEnvPrompt('develop')">🟡 Todo en DEVELOP</a>
+                <a href="javascript:void(0)" onclick="launchSingleEnvPrompt('test')">🔵 Todo en TEST</a>
+                <a href="javascript:void(0)" onclick="launchSingleEnvPrompt('main')">🟢 Todo en MAIN</a>
+              </div>
+            </div>
+            <div class="toolbar-btn-group">
+              <button class="btn btn-sm btn-outline" onclick="comprobarAntesDeLanzar()" title="Comprobar infraestructura, .env, entorno de pipenv y puertos antes de lanzar">🔍 Comprobar</button>
+              <button class="btn btn-sm btn-outline" onclick="openSecretsModal()" title="Credenciales que el panel necesita (BD, Keycloak, OnlyOffice). Se guardan en config/secrets.json con permisos 600.">🔐 Secretos</button>
+              <button class="btn btn-sm btn-outline" id="launchDestinoBtn" onclick="toggleLaunchDestino()" title="Destino de los lanzamientos: ventana de Tilix o sólo las consolas del dashboard">🖥️ Destino: Tilix</button>
+              <button class="btn btn-sm btn-hero" onclick="lanzarSoloDashboard()" title="Inicia las consolas seleccionadas (o todas si no hay ninguna marcada) sin abrir ventana de Tilix: se ven en este muro">▦ Iniciar en Dashboard</button>
+              <button class="btn btn-sm btn-outline" onclick="runAction('b1')" title="Lanzar 12 microservicios Bloque 1">📦 Back 1 (12)</button>
+              <button class="btn btn-sm btn-outline" onclick="runAction('b2')" title="Lanzar 5 microservicios Bloque 2">📦 Back 2 (5)</button>
+              <button class="btn btn-sm btn-outline" onclick="runAction('front')" title="Lanzar 10 microfrontends">🎨 Fronts (10)</button>
+            </div>
+          </div>
+          <div class="btn-bar-group" style="margin-left:auto;">
+            <div class="toolbar-dropdown">
+              <button class="btn btn-sm btn-outline" onclick="toggleToolbarDropdown(event, 'reloadMenu')" title="Recargar consolas o servicios activos">🔄 Recargar ▾</button>
+              <div class="toolbar-dropdown-menu right-aligned" id="reloadMenu">
+                <a href="javascript:void(0)" onclick="runAction('restart')">🔄 Recargar Todo</a>
+                <a href="javascript:void(0)" onclick="runAction('restart-backends')">📦 Recargar Solo Backends (17)</a>
+                <a href="javascript:void(0)" onclick="runAction('restart-frontends')">🎨 Recargar Solo Frontends (10)</a>
+              </div>
+            </div>
+            <div class="toolbar-dropdown">
+              <button class="btn btn-sm btn-danger" onclick="toggleToolbarDropdown(event, 'stopMenu')" title="Detener servicios o consolas">⏹️ Detener ▾</button>
+              <div class="toolbar-dropdown-menu right-aligned" id="stopMenu">
+                <a href="javascript:void(0)" onclick="runAction('stop')">⏹️ Detener Servidores (SIGINT/SIGTERM)</a>
+                <a href="javascript:void(0)" onclick="runAction('stop-close')" style="color:var(--danger);">❌ Cerrar Todo (Matar procesos y ventanas)</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <!-- Filtro y Lanzador de Flujos Funcionales (Slices) -->
+      <div class="filter-card">
+        <div class="filter-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar servicio por nombre o puerto (ej: contratos, 8006, 3000)..." oninput="renderAllServices()" style="min-width:280px; flex:1;">
+          <div class="filter-row" id="sliceChips" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span class="chip active" onclick="filterSlice('all', this)">Todos (27)</span>
+            <span class="chip" onclick="filterSlice('contratos', this)">Contratos (7)</span>
+            <span class="chip" onclick="filterSlice('solicitudes', this)">Solicitudes (7)</span>
+            <span class="chip" onclick="filterSlice('perfiles', this)">Perfiles de Riesgo (6)</span>
+            <span class="chip" onclick="filterSlice('promocion', this)">Promoción (7)</span>
+            <span class="chip" id="chipFilterBehind" onclick="toggleBehindFilter(this)" style="display:none; background:rgba(239,68,68,0.2); border:1px solid var(--danger); color:var(--danger); font-weight:800;" title="Filtrar solo microservicios que tienen commits pendientes en GitLab">⬇️ Desactualizados (0)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="view-toggle-group" id="viewToggleGroup">
+              <button class="view-toggle-btn active" id="btnViewGrid" onclick="setViewMode('grid')" title="Vista cuadrícula de tarjetas">⊞ Tarjetas</button>
+              <button class="view-toggle-btn" id="btnViewList" onclick="setViewMode('list')" title="Vista lista compacta de alta densidad">☰ Lista</button>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="fetchAllGit()" id="btnFetchAllGit" style="padding:5px 12px; display:inline-flex; align-items:center; gap:6px;" title="Consultar cambios remotos en GitLab para todos los microservicios sin alterar código local">
+              🔄 Comprobar GitLab
+            </button>
+          </div>
+        </div>
+        <div id="sliceActionRow" style="display:none; align-items:center; gap:10px; font-size:12px; color:var(--text-muted); padding-top:8px; border-top:1px solid var(--border-soft);">
+          <span id="sliceActionText" style="font-weight:600; color:var(--text);">Flujo seleccionado:</span>
+          <button class="btn btn-sm btn-hero" id="btnLaunchSlice" onclick="launchCurrentSlice()">🚀 Lanzar Este Flujo en Tilix</button>
+        </div>
+      </div>
+
+      <!-- Barra de Selección de Servicios para Lanzamiento Personalizado -->
+      <div id="selectionActionBar" class="selection-action-bar" style="display:none;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span style="font-weight:700; color:var(--accent); font-size:12.5px; display:flex; align-items:center; gap:6px;">
+            <span style="background:var(--accent-hover); color:var(--text); border-radius:10px; padding:1px 8px; font-size:11px;" id="selectedCountBadge">0</span>
+            <span>servicios seleccionados</span>
+          </span>
+          <button class="btn btn-xs btn-outline" onclick="selectAllServices(true)">Seleccionar Todos</button>
+          <button class="btn btn-xs btn-outline" onclick="selectAllServices(false)">Deseleccionar</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-sm btn-hero" onclick="launchSelectedServicesPrompt('develop')" style="background:linear-gradient(135deg, var(--accent-hover), var(--accent-hover)); font-weight:700;" title="Abrir solo los servicios seleccionados en 1 sola ventana Tilix">
+            🖥️ Abrir Seleccionados (<span id="btnSelectedCount">0</span>) en 1 Sola Ventana
+          </button>
+          <button class="btn btn-sm btn-dev" onclick="launchSelectedServicesPrompt('develop')" title="Lanzar seleccionados en DEVELOP">🟡 Develop</button>
+          <button class="btn btn-sm btn-test" onclick="launchSelectedServicesPrompt('test')" title="Lanzar seleccionados en TEST">🔵 Test</button>
+          <button class="btn btn-sm btn-main" onclick="launchSelectedServicesPrompt('main')" title="Lanzar seleccionados en MAIN">🟢 Main</button>
+          <button class="btn btn-sm btn-outline" style="border-color:rgba(255, 102, 0, 0.45); color:var(--warn);" onclick="launchSelectedAuxiliary('consumer')" title="Lanzar consolas de RabbitMQ Consumer para los servicios seleccionados">
+            <span class="tech-icon-wrapper" style="width:14px; height:14px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rabbitmq/rabbitmq-original.svg" width="14" height="14" class="tech-icon-img" alt="RabbitMQ" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:14px; height:14px;"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#FF6600" d="M10.36 0c-1.89 0-3.42 1.53-3.42 3.42v5.77A6.47 6.47 0 0 0 3.39 12a6.49 6.49 0 0 0-.25 1.78c0 3.58 2.91 6.49 6.49 6.49h7.73c3.58 0 6.49-2.91 6.49-6.49 0-3.32-2.5-6.07-5.74-6.44V3.42C18.11 1.53 16.58 0 14.69 0a3.39 3.39 0 0 0-2.16.78A3.39 3.39 0 0 0 10.36 0zm0 1.83c.88 0 1.59.71 1.59 1.59v6.86c-.52.23-1 .54-1.43.91V3.42c0-.88-.71-1.59-1.59-1.59s-1.59.71-1.59 1.59v8.6c-.44.82-.69 1.76-.69 2.76 0 2.57 2.09 4.66 4.66 4.66h6.06c2.57 0 4.66-2.09 4.66-4.66s-2.09-4.66-4.66-4.66h-.56V3.42c0-.88-.71-1.59-1.59-1.59s-1.59.71-1.59 1.59v4.29a3.3 3.3 0 0 0-1.84.42V3.42c0-.88.71-1.59 1.59-1.59zm6.73 9.47a1.07 1.07 0 1 1 0 2.14 1.07 1.07 0 0 1 0-2.14z"/></svg></span></span> Consumers
+          </button>
+          <button class="btn btn-sm btn-outline" style="border-color:rgba(148, 200, 61, 0.45); color:var(--success);" onclick="launchSelectedAuxiliary('worker')" title="Lanzar consolas de Celery Worker para los servicios seleccionados">
+            <span class="tech-icon-wrapper" style="width:14px; height:14px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/celery/celery-original.svg" width="14" height="14" class="tech-icon-img" alt="Celery" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:14px; height:14px;"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#94C83D" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.2 4.2c1.7 0 3.2.98 3.96 2.41.33.63.53 1.36.53 2.12 0 2.39-1.81 4.36-4.14 4.53l.85 3.55-1.58.38-1.07-4.46c-1.84-.35-3.23-1.97-3.23-3.91 0-2.2 1.78-3.99 3.97-3.99.24 0 .47.03.71.07z"/><circle cx="12.5" cy="10.8" r="1.5" fill="#37814A"/></svg></span></span> Workers
+          </button>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 1: MICROSERVICIOS BACKEND -->
+      <div class="section-title">
+        <span style="display:inline-flex; align-items:center; gap:8px;">
+          <span class="tech-badge-pill tech-pill-django">
+            <span class="tech-icon-wrapper" style="width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24" class="tech-icon-svg"><path fill="#44B78B" d="M11.146 0h3.333v16.893c-1.577.303-2.88.455-3.908.455-2.607 0-4.334-.849-5.183-2.546-.576-1.152-.864-2.713-.864-4.683 0-2.091.333-3.759 1-5.002.849-1.576 2.425-2.364 4.728-2.364.303 0 .606.015.894.045V0zm0 5.562c-.273-.03-.546-.045-.819-.045-1.303 0-2.228.455-2.773 1.364-.424.728-.637 1.804-.637 3.229 0 1.485.213 2.576.637 3.274.545.88 1.47 1.319 2.773 1.319.273 0 .546-.015.819-.045V5.562zM2.758 7.397H6.09v12.23H2.758V7.397zm-.212-4.183C2.546 2.122 2.925 1.7 3.683 1.7c.758 0 1.137.424 1.137 1.273 0 .849-.379 1.273-1.137 1.273-.758 0-1.137-.424-1.137-1.273zm18.307 4.183h3.334v12.23h-3.334V7.397zm-.212-4.183c0-1.092.379-1.516 1.137-1.516.758 0 1.137.424 1.137 1.273 0 .849-.379 1.273-1.137 1.273-.758 0-1.137-.424-1.137-1.273z"/></svg></span>
+            <span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="15" height="15" class="tech-icon-img" alt="Python" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#387eb8" d="M11.914 0C5.82 0 6.2 2.656 6.2 2.656l.006 2.753h5.814v.826H3.84S0 5.766 0 11.879c0 6.115 3.344 5.925 3.344 5.925h1.996v-2.81c0-3.22 2.74-3.22 2.74-3.22h5.753c2.617 0 2.516-2.48 2.516-2.48V3.41s.385-3.41-4.435-3.41zm-3.15 1.705a1.003 1.003 0 1 1 0 2.006 1.003 1.003 0 0 1 0-2.006z"/><path fill="#ffe873" d="M12.086 24c6.094 0 5.714-2.656 5.714-2.656l-.006-2.753H11.98v-.826h8.18s3.84.469 3.84-5.644c0-6.115-3.344-5.925-3.344-5.925h-1.996v2.81c0 3.22-2.74 3.22-2.74 3.22H10.2c-2.617 0-2.516 2.48-2.516 2.48v5.895s-.385 3.409 4.436 3.409zm3.15-1.705a1.003 1.003 0 1 1 0-2.006 1.003 1.003 0 0 1 0 2.006z"/></svg></span></span>
+            Django / Python
+          </span>
+          <span>Backend Microservices</span>
+        </span>
+        <span class="section-badge" id="badgeCountBackend">17 Servicios</span>
+      </div>
+      <div class="services-grid" id="backendGrid"></div>
+
+      <!-- SECCIÓN 2: MICROFRONTENDS -->
+      <div class="section-title">
+        <span style="display:inline-flex; align-items:center; gap:8px;">
+          <span class="tech-badge-pill tech-pill-react">
+            <span class="tech-icon-wrapper" style="width:16px; height:16px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="16" height="16" class="tech-icon-img" alt="React" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:16px; height:16px;"><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2" fill="#61DAFB"/><ellipse cx="12" cy="12" rx="10" ry="3.8" stroke="#61DAFB" stroke-width="1.3" fill="none" transform="rotate(0 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.8" stroke="#61DAFB" stroke-width="1.3" fill="none" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.8" stroke="#61DAFB" stroke-width="1.3" fill="none" transform="rotate(120 12 12)"/></svg></span></span>
+            <span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/webpack/webpack-original.svg" width="15" height="15" class="tech-icon-img" alt="Webpack" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><polygon points="12 1.5 21.5 7 21.5 17 12 22.5 2.5 17 2.5 7" fill="none" stroke="#1C78C0" stroke-width="1.4" stroke-linejoin="round"/><polygon points="12 1.5 21.5 7 12 12.5 2.5 7" fill="#8DD6F9" fill-opacity="0.35"/><polygon points="12 12.5 21.5 7 21.5 17 12 22.5" fill="#1C78C0" fill-opacity="0.5"/><polygon points="2.5 7 12 12.5 12 22.5 2.5 17" fill="#1C78C0" fill-opacity="0.75"/><polygon points="12 6.5 17 9.5 17 14.5 12 17.5 7 14.5 7 9.5" fill="#1C78C0" stroke="#8DD6F9" stroke-width="0.8" stroke-linejoin="round"/><polygon points="12 6.5 17 9.5 12 12 7 9.5" fill="#8DD6F9"/><polygon points="12 12 17 9.5 17 14.5 12 17.5" fill="#4695D6"/><polygon points="7 9.5 12 12 12 17.5 7 14.5" fill="#2B72B5"/></svg></span></span>
+            React / Webpack
+          </span>
+          <span>Frontend Microfrontends</span>
+        </span>
+        <span class="section-badge" id="badgeCountFrontend">10 Aplicaciones</span>
+      </div>
+      <div class="services-grid" id="frontendGrid"></div>
+
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB: SERVICIOS Y CONSOLAS (WORKSPACE OPERACIONAL · Phase 6S)           -->
+    <!-- UX canónica: Kubernetes -> Logs Pro (ConsoleViewport compartido).      -->
+    <!-- ====================================================================== -->
+    <div id="tab-consoles" class="tab-pane">
+      <!-- Encabezado compacto del workspace -->
+      <div class="console-workspace-header">
+        <div class="console-header-brand">
+          <div class="console-header-icon-box"><span>&gt;_</span></div>
+          <div class="console-header-text">
+            <h1 class="console-header-title">Servicios y consolas</h1>
+            <span id="consoleLiveIndicator" class="console-live-badge" title="Estado de la transmisión en vivo">
+              <span class="dot"></span> Conectando…
+            </span>
+            <p class="console-header-subtitle">Consolas integradas en vivo · modo lectura por defecto</p>
+          </div>
+        </div>
+        <div class="console-header-actions">
+          <span id="consoleSessionCount" class="badge-pill badge-clean">0 sesiones</span>
+          <button class="console-tool-btn" id="btnToggleSidebar" title="Mostrar / ocultar panel de servicios (Ctrl+B)">◧ Servicios</button>
+        </div>
+      </div>
+
+      <div class="console-workspace" id="consoleWorkspace">
+        <!-- Riel compacto cuando el panel de servicios está colapsado -->
+        <div class="console-sidebar-rail" id="consoleSidebarRail">
+          <button class="console-rail-btn" id="btnExpandSidebar" title="Mostrar panel de servicios (Ctrl+B)">◨</button>
+          <button class="console-rail-btn active" data-rail-filter="all" title="Todos los servicios">◉</button>
+          <button class="console-rail-btn" data-rail-filter="running" title="Solo servicios activos">▶</button>
+          <button class="console-rail-btn" data-rail-filter="error" title="Solo servicios con error">⚠</button>
+          <span class="console-rail-count" id="consoleRailCount">0 consolas</span>
+        </div>
+
+        <!-- Panel Izquierdo: Lista de Servicios (compacto, sin scroll horizontal) -->
+        <aside class="console-sidebar" id="consoleSidebar">
+          <div class="console-sidebar-header">
+            <div class="console-sidebar-title-row">
+              <span class="console-sidebar-title">
+                <span aria-hidden="true">🖥️</span>
+                <span>Servicios</span>
+                <span id="consoleSvcCount" class="console-svc-counter">0 / 0</span>
+              </span>
+              <button class="console-icon-btn" id="btnRefreshCatalog" title="Recargar catálogo de servicios">🔄</button>
+            </div>
+
+            <div class="console-search-box">
+              <input type="text" id="consoleSearchInput" class="console-search-input" placeholder="🔍 Buscar servicio o puerto...">
+            </div>
+
+            <!-- Filtros compactos por tipo y estado (sin desborde horizontal) -->
+            <div class="console-filter-row">
+              <label class="console-filter-field">
+                <span>Tipo</span>
+                <div class="console-select-wrap" id="consoleCategoryPills">
+                  <select id="consoleCategorySelect" class="console-select" title="Filtrar por tipo de servicio">
+                    <option value="all">Todos</option>
+                    <option value="backend">Backend</option>
+                    <option value="frontend">Frontend</option>
+                    <option value="worker">Workers</option>
+                    <option value="consumer">Consumers</option>
+                    <option value="beat">Beat</option>
+                    <option value="auxiliary">Auxiliares</option>
+                  </select>
+                </div>
+              </label>
+              <label class="console-filter-field">
+                <span>Estado</span>
+                <div class="console-select-wrap" id="consoleFilterPills">
+                  <select id="consoleFilterSelect" class="console-select" title="Filtrar por estado del servicio">
+                    <option value="all">Todos</option>
+                    <option value="running">Activos</option>
+                    <option value="starting">Iniciando</option>
+                    <option value="standby">Standby</option>
+                    <option value="stopped">Detenidos</option>
+                    <option value="error">Con error</option>
+                  </select>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="console-batch-bar">
+            <button class="console-tool-btn" id="btnPresetRunning" title="Monitorear todos los servicios activos">▶ Activos</button>
+            <button class="console-tool-btn" id="btnPresetAll" title="Monitorear todos los servicios">👁 Todos</button>
+            <button class="console-tool-btn" id="btnClearMonitors" title="Quitar todas las consolas">✕ Limpiar</button>
+          </div>
+
+          <div class="console-svc-list" id="consoleSvcList">
+            <!-- Rellenado dinámicamente vía renderConsoleSidebarServices() -->
+          </div>
+
+          <div class="console-sidebar-footer" id="consoleSidebarFooter">
+            <span id="consoleSummaryCounts">0 consolas abiertas</span>
+          </div>
+        </aside>
+
+        <!-- Área Derecha: Consolas Integradas (viewport fijo, scroll interno) -->
+        <section class="console-stage" id="consoleStage">
+          <!-- Barra del muro: equivalente 1:1 a la del laboratorio de terminales -->
+          <div class="console-stage-toolbar cw-toolbar" id="consoleWallToolbar">
+            <label class="cw-field">Columnas
+              <select id="consoleGridSelect" title="Columnas del muro (Auto ajusta al ancho para que las líneas no se partan)">
+                <option value="auto" selected>Auto</option>
+                <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                <option value="5">5</option><option value="6">6</option>
+                <option value="7">7</option><option value="8">8</option>
+              </select>
+            </label>
+            <label class="cw-field">Densidad
+              <select id="consoleDensitySelect" title="Densidad de las consolas">
+                <option value="comodo">Cómodo</option><option value="compacto" selected>Compacto</option><option value="denso">Denso</option>
+              </select>
+            </label>
+            <span class="cw-field">Letra</span>
+            <div class="cw-zoom">
+              <button type="button" class="cw-btn" data-action="wall-font-down" title="Reducir la letra de todas las consolas">A−</button>
+              <span class="cw-zv" id="consoleWallFont">11 px</span>
+              <button type="button" class="cw-btn" data-action="wall-font-up" title="Aumentar la letra de todas las consolas">A+</button>
+            </div>
+            <label class="cw-field">Orden
+              <select id="consoleSortSelect" title="Orden de las consolas">
+                <option value="manual">Manual</option><option value="name">Nombre A-Z</option>
+                <option value="nameDesc">Nombre Z-A</option><option value="port">Puerto</option><option value="type">Tipo</option>
+              </select>
+            </label>
+            <button class="cw-btn" id="btnWallFocus" title="Monitorear en grande las consolas marcadas (máx. 3)">◎ Enfoque</button>
+            <span class="cw-sep-v"></span>
+            <div class="cw-chips-global" id="consoleGlobalChips">
+              <button class="cw-chip" data-action="wall-filter" data-filter="ERROR">ERROR</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="WARN">WARN</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="INFO">INFO</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="GET">GET</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="POST">POST</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="PUT">PUT</button>
+              <button class="cw-chip" data-action="wall-filter" data-filter="DELETE">DELETE</button>
+              <button class="cw-chip on" data-action="wall-filter" data-filter="">Todo</button>
+            </div>
+            <span style="display:inline-flex; align-items:center; gap:6px;">
+              <input type="search" class="cw-input" id="consoleServiceSearch" placeholder="Buscar microservicio…" aria-label="Buscar microservicio por nombre o puerto">
+              <button class="cw-btn" id="consoleServiceClear" onclick="limpiarBusquedaConsolas()" title="Limpiar la búsqueda" aria-label="Limpiar la búsqueda" hidden>&#10005;</button>
+            </span>
+            <label class="cw-check" title="Mostrar solo líneas con error en todas las consolas">
+              <input type="checkbox" id="toggleWallErrors"> Solo errores
+            </label>
+            <label class="cw-check" title="Mostrar solo los servicios con consola viva; oculta los detenidos">
+              <input type="checkbox" id="toggleWallOnlyActive"> Solo activas
+            </label>
+            <label class="cw-field">Líneas
+              <select id="consoleTailSelect" title="Líneas visibles por consola">
+                <option value="50">50</option><option value="100">100</option>
+                <option value="200" selected>200</option><option value="500">500</option>
+              </select>
+            </label>
+            <label class="cw-check" title="Seguir el final: cuando llega salida nueva, la consola se desplaza sola. Si haces scroll dentro de una consola, esa consola se pausa y verás el aviso en su pie.">
+              <input type="checkbox" id="toggleGlobalFollow" checked> Seguir
+            </label>
+            <span class="cw-spacer"></span>
+            <button class="cw-btn" id="btnWallFit" title="Llevar todas las consolas al final y refrescar">↔ Ajustar</button>
+            <button class="cw-btn" id="btnWallPopout" title="Abrir el muro en otra ventana (segundo monitor)">⧉ Ventana</button>
+            <button class="cw-btn" id="btnWallPause" title="Pausar o reanudar la actualización del muro">Ⅱ Pausar</button>
+            <button class="cw-btn" id="btnWallReset" title="Volver a la vista inicial del muro">↺ Reiniciar vista</button>
+          </div>
+
+          <!-- Tira de Pestañas (Modo Pestañas) -->
+          <div class="console-tabs-strip" id="consoleTabsStrip" hidden></div>
+
+          <!-- Contenedor del Escenario (scroll interno del mosaico) -->
+          <div class="console-stage-view density-compacto" id="consoleStageView">
+            <!-- Vista Plana (Cuadrícula) -->
+            <div class="console-mosaic-grid grid-3" id="consoleMosaicGrid"></div>
+
+            <!-- Vista Agrupada (Por categorías operacionales) -->
+            <div class="console-grouped-view" id="consoleGroupedView" hidden></div>
+
+            <!-- Estado Vacío -->
+            <div class="console-empty-state" id="consoleEmptyState">
+              <span style="font-size:38px; margin-bottom:10px; opacity:0.6;">🖥️</span>
+              <h3 style="font-size:14px; font-weight:800; color:var(--text); margin:0 0 6px 0;">No hay consolas seleccionadas</h3>
+              <p style="font-size:11.5px; max-width:420px; margin:0 0 14px 0; line-height:1.5;">
+                Pulsa «Mostrar todas las consolas» para ver el muro completo con la salida en vivo.
+              </p>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-sm btn-primary" id="btnEmptyRunning">▶ Monitorear Activos</button>
+                <button class="btn btn-sm btn-outline" id="btnEmptyAll">👁 Monitorear Todos</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capa de enfoque: consola expandida a todo el stage (sustituye al modal flotante) -->
+          <div class="console-focus-layer" id="consoleFocusLayer" hidden></div>
+
+          <!-- Barra de Estado Inferior del Escenario -->
+          <footer class="console-stage-footer" id="consoleStageFooter">
+            <div class="console-footer-left">
+              <span id="consoleFooterDots" class="console-footer-dots">● 0 consolas abiertas</span>
+              <span id="consoleFooterMode" class="console-footer-note"></span>
+            </div>
+            <div class="console-footer-right">
+              <span id="consoleClock" class="console-footer-clock">🕒 --:--:--</span>
+            </div>
+          </footer>
+        </section>
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 2: WORKSPACE ENVIRONMENTS (GIT SYNC)                               -->
+    <!-- ====================================================================== -->
+    <div id="tab-workspace" class="tab-pane">
+      <div class="table-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 style="margin:0 0 4px 0; font-size:16px;">🌐 Matriz de Ramas y Sincronización Masiva</h3>
+            <span style="font-size:12px; color:var(--text-muted);">
+              Alinea de inmediato los 27 microservicios a la rama correspondiente. Los archivos con cambios sin guardar son protegidos automáticamente.
+            </span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-dev" onclick="switchAllEnv('develop')">🟡 Alinear Todo a DEVELOP</button>
+            <button class="btn btn-test" onclick="switchAllEnv('test')">🔵 Alinear Todo a TEST</button>
+            <button class="btn btn-main" onclick="switchAllEnv('main')">🟢 Alinear Todo a MAIN</button>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>Tipo</th>
+              <th>Rama Actual</th>
+              <th>Estado de Rama</th>
+              <th>Archivos Modificados</th>
+              <th>Acción Rápida</th>
+            </tr>
+          </thead>
+          <tbody id="workspaceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 4: KUBERNETES (CLUSTER & PODS)                                     -->
+    <!-- ====================================================================== -->
+    <!-- ====================================================================== -->
+    <!-- TAB: SITIO (configuración por entorno: tema estacional y manifiestos)  -->
+    <!-- ====================================================================== -->
+<div id="tab-site" class="tab-pane">
+      <div class="table-card" style="padding:18px 20px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+          <span style="font-size:22px;">&#9881;&#65039;</span>
+          <div style="flex:1; min-width:240px;">
+            <h3 class="modal-title" style="margin:0; font-size:16px;">Configuraci&oacute;n del Sitio</h3>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+              Ajustes del sitio por entorno. Cambia en vivo el tema del microfrontend de sesi&oacute;n (<code>MF_THEME</code>).
+            </div>
+          </div>
+          <span id="k8sThemeSummaryBadge" class="badge-pill" style="background:rgba(99,102,241,0.25); border:1px solid var(--accent); color:var(--text-secondary); font-weight:700; font-size:10.5px;">Consultando&hellip;</span>
+          <span class="badge-pill" style="background:rgba(56,189,248,0.18); border:1px solid var(--accent); color:var(--accent);">
+            Entorno: <b id="siteEnvBadge" style="margin-left:6px;">DEVELOP</b>
+          </span>
+        </div>
+
+        <!-- Paso 1: a qué entorno -->
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 0; border-top:1px solid var(--card-border);">
+          <span style="width:22px; height:22px; border-radius:50%; background:var(--accent); color:#04121f; font-weight:800; font-size:12px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">1</span>
+          <span style="font-size:12.5px; font-weight:700; color:var(--text); min-width:150px;">Entorno destino</span>
+          <select id="siteEnvSelect" class="search-input" style="padding:6px 10px; font-size:12px; min-width:180px;" onchange="onSiteEnvChange(this.value)"></select>
+          <span style="font-size:11.5px; color:var(--text-muted);">El tema se aplica a este entorno.</span>
+        </div>
+
+        <!-- Paso 2: estado actual -->
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 0; border-top:1px solid var(--card-border);">
+          <span style="width:22px; height:22px; border-radius:50%; background:var(--accent); color:#04121f; font-weight:800; font-size:12px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">2</span>
+          <span style="font-size:12.5px; font-weight:700; color:var(--text); min-width:150px;">Tema actual</span>
+          <span id="k8sThemeCurrentBadge" class="badge-pill" style="background:rgba(99,102,241,0.25); border:1px solid var(--accent); color:var(--text-secondary); font-weight:700; font-size:11px;">Consultando&hellip;</span>
+        </div>
+
+        <!-- Paso 3: elegir y aplicar -->
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 0; border-top:1px solid var(--card-border);">
+          <span style="width:22px; height:22px; border-radius:50%; background:var(--accent); color:#04121f; font-weight:800; font-size:12px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">3</span>
+          <span style="font-size:12.5px; font-weight:700; color:var(--text); min-width:150px;">Nuevo tema</span>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <select id="k8sThemeSelect" class="search-input" style="padding:6px 10px; font-size:12px; min-width:230px;" onchange="handleK8sThemeSelectChange(this.value)">
+              <option value="none">&#127963;&#65039; Base Institucional (none)</option>
+              <option value="auto">&#128197; Autom&aacute;tico seg&uacute;n Fecha (auto)</option>
+              <option value="fiestas-patrias">&#127464;&#127473; Fiestas Patrias (fiestas-patrias)</option>
+              <option value="halloween">&#127875; Halloween (halloween)</option>
+              <option value="navidad">&#127876; Navidad (navidad)</option>
+              <option value="__custom__">&#9999;&#65039; Otro tema personalizado...</option>
+            </select>
+            <input type="text" id="k8sThemeCustomInput" placeholder="Nombre tema (ej: a&ntilde;o-nuevo)" style="display:none; padding:6px 10px; font-size:12px; width:190px; background:var(--card-bg-solid); color:var(--text); border:1px solid var(--accent); border-radius:6px;">
+            <button class="btn btn-sm btn-hero" onclick="applyK8sTheme()">&#128640; Aplicar tema</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-k8s" class="tab-pane">
+      <div class="table-card">
+        
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0 0 4px 0; font-size:16px; display:inline-flex; align-items:center; gap:8px;">
+              <span class="tech-icon-wrapper" style="width:18px; height:18px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg" width="18" height="18" class="tech-icon-img" alt="Kubernetes" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:18px; height:18px;"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="#326CE5" d="M11.666 0a1.44 1.44 0 0 0-.585.155L2.83 5.093a1.444 1.444 0 0 0-.722 1.25v9.88c0 .52.274.997.722 1.254l8.251 4.938c.45.268.995.27 1.442.007l8.368-4.945a1.447 1.447 0 0 0 .734-1.253V6.343a1.444 1.444 0 0 0-.722-1.25L12.923.155A1.44 1.44 0 0 0 12.339 0h-.673zm.332 2.146l7.472 4.417v8.868l-7.472 4.417-7.472-4.417V6.563l7.472-4.417zm.002 2.193a.987.987 0 0 0-.498.135l-2.015 1.164a.99.99 0 0 0-.363.363l-.707 1.226a.985.985 0 0 0-.131.498v2.328c0 .174.045.345.131.498l.707 1.225c.097.168.232.308.397.403l2.015 1.164a.988.988 0 0 0 .988 0l2.015-1.164a.991.991 0 0 0 .397-.403l.707-1.225a.987.987 0 0 0 .131-.498V9.731a.987.987 0 0 0-.131-.498l-.707-1.226a.99.99 0 0 0-.397-.363l-2.015-1.164a.986.986 0 0 0-.464-.135zm0 1.979l1.494.863.525.91-.525.909-1.494.863-1.494-.863-.525-.91.525-.909 1.494-.863z"/></svg></span></span>
+              <span>Pods en Vivo del Cluster Kubernetes</span>
+            </h3>
+            <span style="font-size:12px; color:var(--text-muted);" id="k8sStatusSubtext">
+              Consultando estado en tiempo real...
+            </span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="k8sSearchInput" class="search-input" placeholder="🔍 Buscar pod, microservicio o IP..." style="width:250px; padding:6px 12px;" oninput="filterK8sPods()">
+              <button class="btn btn-sm btn-outline" style="padding:5px 8px;" onclick="clearK8sSearch()" title="Limpiar filtro de búsqueda">✕</button>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <label style="font-size:12px; color:var(--text-muted); font-weight:700;">Namespace:</label>
+              <select id="k8sNamespaceSelect" class="search-input" style="min-width:120px; padding:6px 10px;" onchange="fetchK8sStatus(); fetchCurrentK8sTheme();">
+                <option value="develop" selected>develop</option>
+                <option value="test">test</option>
+                <option value="prod">prod</option>
+              </select>
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted); cursor:pointer; user-select:none;">
+              <input type="checkbox" id="k8sAutoRefreshChk" onchange="toggleK8sAutoRefresh(this.checked)"> ⏱️ Auto-refrescar (4s)
+            </label>
+            <button class="btn btn-sm btn-outline" onclick="fetchK8sStatus()">🔄 Actualizar Pods</button>
+          </div>
+        </div>
+
+        <!-- Filtros Rápidos de Pods K8s -->
+        <div style="display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap;">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:700;">Filtrar estado:</span>
+          <button class="btn btn-sm btn-outline k8s-filter-btn active" id="k8sFilterBtn-all" onclick="setK8sStatusFilter('all')" style="padding:2px 8px; font-size:11px;">Todos (<span id="k8sCountAll">0</span>)</button>
+          <button class="btn btn-sm btn-outline k8s-filter-btn" id="k8sFilterBtn-Running" onclick="setK8sStatusFilter('Running')" style="padding:2px 8px; font-size:11px; color:var(--success); border-color:rgba(52,211,153,0.3);">🟢 Running (<span id="k8sCountRunning">0</span>)</button>
+          <button class="btn btn-sm btn-outline k8s-filter-btn" id="k8sFilterBtn-deploying" onclick="setK8sStatusFilter('deploying')" style="padding:2px 8px; font-size:11px; color:var(--accent); border-color:rgba(56,189,248,0.3);">🔄 Desplegando / Transición (<span id="k8sCountDeploying">0</span>)</button>
+          <button class="btn btn-sm btn-outline k8s-filter-btn" id="k8sFilterBtn-error" onclick="setK8sStatusFilter('error')" style="padding:2px 8px; font-size:11px; color:var(--danger); border-color:rgba(248,113,113,0.3);">🔴 Error / Crash (<span id="k8sCountError">0</span>)</button>
+          <button class="btn btn-sm btn-outline k8s-filter-btn" id="k8sFilterBtn-restarts" onclick="setK8sStatusFilter('restarts')" style="padding:2px 8px; font-size:11px; color:var(--warn); border-color:rgba(251,191,36,0.3);">⚠️ Con Reinicios (<span id="k8sCountRestarts">0</span>)</button>
+        </div>
+
+        <!-- Banner Activo de Despliegue en K8s -->
+        <div id="k8sDeployActiveBanner" style="display:none; justify-content:space-between; align-items:center; background:rgba(56,189,248,0.12); border:1px solid var(--accent); border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="k8sDeployBannerIcon" style="font-size:16px;">🔄</span>
+            <span id="k8sDeployBannerText" style="font-size:12px; font-weight:700; color:var(--accent);">Monitoreando despliegue...</span>
+          </div>
+          <button class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:11px;" onclick="clearTrackedDeployFilter()">✕ Ver todos los pods</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre del Pod</th>
+              <th>Estado</th>
+              <th>Ready</th>
+              <th>Reinicios</th>
+              <th>IP Pod</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="k8sTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 5: DEPLOYMENTS & VERSIONES (CI/CD)                                  -->
+    <!-- ====================================================================== -->
+    <div id="tab-deployments" class="tab-pane">
+      <div class="table-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 style="margin:0 0 4px 0; font-size:16px;">🚀 Matriz de Despliegues, Versiones & Construcción CI/CD</h3>
+            <span style="font-size:12px; color:var(--text-muted);">
+              Construye imágenes locales con Podman, súbelas al Registry institucional, actualiza manifiestos YAML y despliega a Kubernetes.
+            </span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label style="font-size:12px; color:var(--text-muted); font-weight:700;">Entorno K8s:</label>
+            <select id="deployEnvSelect" class="search-input" style="min-width:140px; padding:6px 10px;" onchange="fetchDeploymentVersions()">
+              <option value="develop" selected>DEVELOP (01_deploy_develop)</option>
+              <option value="test">TEST (02_deploy_test)</option>
+              <option value="main">MAIN / PROD (03_deploy_prod)</option>
+            </select>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" id="deploySearchInput" class="search-input" placeholder="🔍 Filtrar servicio..." style="width:160px; padding:6px 10px;" oninput="filterDeploymentTable()">
+              <button class="btn btn-sm btn-outline" style="padding:5px 8px;" onclick="clearDeployFilter()" title="Limpiar filtro de búsqueda">✕ Limpiar</button>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="fetchDeploymentVersions()">🔄 Refrescar</button>
+          </div>
+        </div>
+
+        <!-- Barra Git de Manifiestos K8s (backend/config) -->
+        <div style="background:rgba(30,41,59,0.5); padding:8px 14px; border-radius:10px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; border:1px solid var(--border-strong); flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; font-size:12px;">
+            <strong style="color:var(--text);">📦 Manifiestos Git (backend/config):</strong>
+            <span id="configGitBranchBadge" class="status-badge" style="background:var(--card-border); color:var(--accent); font-family:monospace;">main</span>
+            <span id="configGitStatusText" style="color:var(--text-muted); font-size:11px;">Consultando estado git...</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn btn-sm btn-outline" style="border-color:var(--accent); color:var(--accent);" onclick="configGitPull()" title="Git Pull origin main en backend/config">⬇️ Git Pull origin main</button>
+            <button class="btn btn-sm btn-outline" style="border-color:var(--success); color:var(--success);" onclick="openConfigGitPushModal()" title="Git Push origin main en backend/config">⬆️ Git Push origin main</button>
+            <button class="btn btn-sm btn-outline" onclick="openConfigGitStatusModal()" title="Ver detalle de cambios en backend/config">📄 Ver Cambios</button>
+          </div>
+        </div>
+
+        <!-- Barra de Acciones Masivas de Versión / Despliegue -->
+        <div style="background:rgba(15,23,42,0.85); padding:10px 14px; border-radius:10px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; border:1px solid var(--card-border); flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="selectAllDeploy" onchange="toggleSelectAllDeploy(this)"> <strong>Seleccionar Todos</strong>
+            </label>
+            <span id="deploySelectedCount" style="font-size:12px; color:var(--accent); font-weight:700;">(0 seleccionados)</span>
+
+            <!-- Selector Multi-Entorno de Destino -->
+            <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(30,41,59,0.8); padding:4px 10px; border-radius:8px; border:1px solid var(--border-strong);">
+              <span style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Destino(s):</span>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--accent); font-weight:700;">
+                <input type="checkbox" class="multi-env-chk" value="develop" checked onchange="updateMultiEnvLabel()"> DEV
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--warn); font-weight:700;">
+                <input type="checkbox" class="multi-env-chk" value="test" onchange="updateMultiEnvLabel()"> TEST
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--success); font-weight:700;">
+                <input type="checkbox" class="multi-env-chk" value="main" onchange="updateMultiEnvLabel()"> PROD
+              </label>
+              <button class="btn btn-sm btn-outline" style="padding:1px 6px; font-size:10px; margin-left:4px;" onclick="toggleAllMultiEnv()" title="Seleccionar o deseleccionar todos los entornos">Todos</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-sm btn-outline" id="btnManifestDir" onclick="openManifestDirModal()" title="Elegir la carpeta de manifiestos YAML de este entorno">⚙️ Carpeta YAML</button>
+            <button class="btn btn-sm" style="background:var(--accent-hover); color:var(--text);" onclick="openMassiveBuildModal()">🛠️ Construir Imágenes (Selección)</button>
+            <button class="btn btn-sm btn-primary" id="btnDeploySelected" onclick="deploySelectedManifests()" title="Desplegar en K8s los manifiestos de los servicios marcados">🚀 Desplegar seleccionados (0)</button>
+            <button class="btn btn-sm btn-outline" id="btnRolloutSelected" onclick="rolloutSelectedDeployments()" title="Rollout restart de los deployments marcados">🔄 Rollout seleccionados (0)</button>
+            <button class="btn btn-sm btn-outline" style="border-color:var(--danger); color:var(--danger);" onclick="rolloutAllDeployments()">⚠️ Rollout Todos en NS</button>
+          </div>
+        </div>
+
+        <table class="deployments-table">
+          <thead>
+            <tr>
+              <th class="col-chk"></th>
+              <th class="col-svc">Microservicio</th>
+              <th class="col-branch">Rama Git</th>
+              <th class="col-type">Tipo</th>
+              <th class="col-ver">Versión YAML Local</th>
+              <th class="col-k8sver">Versión en Clúster K8s</th>
+              <th class="col-status">Estado</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="deploymentsTableBody"></tbody>
+        </table>
+
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 6: INFRAESTRUCTURA & ENTORNO LOCAL (.env)                          -->
+    <!-- ====================================================================== -->
+    <div id="tab-infra" class="tab-pane">
+      <div class="control-grid">
+        <!-- Box 1: Modo de Entorno (.env) -->
+        <div class="panel-box" id="boxModoEntorno">
+          <div class="panel-box-header">
+            <span class="panel-box-title">MODO DE ENTORNO (.env)</span>
+            <span class="badge-pill" id="badge-env">CARGANDO...</span>
+          </div>
+          <p class="panel-desc" id="env-details">BD: — | Keycloak: —</p>
+          <div class="panel-actions" id="actionsModoEntorno">
+            <button class="btn-sm" onclick="runAction('env-local')">💻 Solo .env LOCAL</button>
+            <button class="btn-sm btn-outline" onclick="runAction('env-local-restart')">⚡ LOCAL y Refrescar</button>
+            <button class="btn-sm btn-intranet" onclick="runAction('env-intranet')">🌐 Solo .env INTRANET</button>
+            <button class="btn-sm btn-outline" onclick="runAction('env-intranet-restart')">⚡ INTRANET y Refrescar</button>
+          </div>
+        </div>
+
+        <!-- Box 2: Bitácora ms_sesion (RabbitMQ) -->
+        <div class="panel-box" id="boxBitacora">
+          <div class="panel-box-header">
+            <span class="panel-box-title" style="display:inline-flex; align-items:center; gap:6px;">
+              <span class="tech-icon-wrapper" style="width:16px; height:16px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rabbitmq/rabbitmq-original.svg" width="16" height="16" class="tech-icon-img" alt="RabbitMQ" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:16px; height:16px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#FF6600" d="M10.36 0c-1.89 0-3.42 1.53-3.42 3.42v5.77A6.47 6.47 0 0 0 3.39 12a6.49 6.49 0 0 0-.25 1.78c0 3.58 2.91 6.49 6.49 6.49h7.73c3.58 0 6.49-2.91 6.49-6.49 0-3.32-2.5-6.07-5.74-6.44V3.42C18.11 1.53 16.58 0 14.69 0a3.39 3.39 0 0 0-2.16.78A3.39 3.39 0 0 0 10.36 0zm0 1.83c.88 0 1.59.71 1.59 1.59v6.86c-.52.23-1 .54-1.43.91V3.42c0-.88-.71-1.59-1.59-1.59s-1.59.71-1.59 1.59v8.6c-.44.82-.69 1.76-.69 2.76 0 2.57 2.09 4.66 4.66 4.66h6.06c2.57 0 4.66-2.09 4.66-4.66s-2.09-4.66-4.66-4.66h-.56V3.42c0-.88-.71-1.59-1.59-1.59s-1.59.71-1.59 1.59v4.29a3.3 3.3 0 0 0-1.84.42V3.42c0-.88.71-1.59 1.59-1.59zm6.73 9.47a1.07 1.07 0 1 1 0 2.14 1.07 1.07 0 0 1 0-2.14z"/></svg></span></span>
+              <span>BITÁCORA MS_SESION (RabbitMQ)</span>
+            </span>
+            <span class="badge-pill" id="badge-bitacora">CARGANDO...</span>
+          </div>
+          <p class="panel-desc" id="bitacora-desc">Control de resiliencia y código git.</p>
+          <div class="panel-actions" id="actionsBitacora">
+            <button class="btn-sm btn-outline" onclick="runAction('bitacora-local')">🛡️ Activar Parche Local</button>
+            <button class="btn-sm btn-outline" onclick="runAction('bitacora-intranet')">🧹 Restaurar Original (Git Limpio)</button>
+          </div>
+        </div>
+
+        <!-- Box 3: Infraestructura Base -->
+        <div class="panel-box">
+          <div class="panel-box-header">
+            <span class="panel-box-title">INFRAESTRUCTURA BASE</span>
+            <span class="badge-pill badge-clean" style="display:inline-flex; align-items:center; gap:6px;">
+              <span class="tech-icon-wrapper" style="width:13px; height:13px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/podman/podman-original.svg" width="13" height="13" class="tech-icon-img" alt="Podman" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:13px; height:13px;"><svg width="13" height="13" viewBox="0 0 24 24"><path fill="#892CA0" d="M12.002 0c-4.66 0-8.528 2.87-10.378 7.02A12.023 12.023 0 0 0 0 12.002c0 1.77.387 3.45 1.08 4.962 1.848 4.028 5.703 6.91 10.323 7.034.2.005.398.005.599.002 4.62-.124 8.475-3.006 10.323-7.034.693-1.512 1.08-3.192 1.08-4.962a12.023 12.023 0 0 0-1.624-4.982C19.933 2.87 16.662 0 12.002 0zm-3.04 7.64c.82 0 1.485.665 1.485 1.485 0 .82-.665 1.485-1.485 1.485-.82 0-1.485-.665-1.485-1.485 0-.82.665-1.485 1.485-1.485zm6.08 0c.82 0 1.485.665 1.485 1.485 0 .82-.665 1.485-1.485 1.485-.82 0-1.485-.665-1.485-1.485 0-.82.665-1.485 1.485-1.485zm-3.04 4.88c2.46 0 4.56 1.42 5.56 3.48H6.48c1-2.06 3.1-3.48 5.56-3.48z"/></svg></span></span>
+              <span>PODMAN &amp;</span>
+              <span class="tech-icon-wrapper" style="width:13px; height:13px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="13" height="13" class="tech-icon-img" alt="Docker" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:13px; height:13px;"><svg width="13" height="13" viewBox="0 0 24 24"><path fill="#2496ED" d="M13.983 11.078h2.119a.186.186 0 0 0 .186-.185V9.006a.186.186 0 0 0-.186-.186h-2.119a.185.185 0 0 0-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 0 0 .186-.186V3.574a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.888c0 .102.082.186.185.186m0 2.716h2.118a.187.187 0 0 0 .186-.186V6.29a.186.186 0 0 0-.186-.185h-2.118a.185.185 0 0 0-.185.185v1.887c0 .102.082.186.185.186m-2.93 0h2.12a.186.186 0 0 0 .184-.186V6.29a.185.185 0 0 0-.185-.185H8.1a.185.185 0 0 0-.185.185v1.887c0 .102.083.186.185.186m-2.964 0h2.119a.186.186 0 0 0 .185-.186V6.29a.185.185 0 0 0-.185-.185H5.136a.186.186 0 0 0-.186.185v1.887c0 .102.084.186.186.186m5.893 2.715h2.12a.186.186 0 0 0 .185-.185V9.006a.186.186 0 0 0-.185-.186h-2.12a.185.185 0 0 0-.184.185v1.888c0 .102.083.185.184.185m-2.93 0h2.12a.185.185 0 0 0 .184-.185V9.006a.185.185 0 0 0-.184-.186h-2.12a.185.185 0 0 0-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 0 0 .185-.185V9.006a.185.185 0 0 0-.185-.186h-2.12a.185.185 0 0 0-.185.185v1.888c0 .102.084.185.186.185m-2.928 0h2.119a.185.185 0 0 0 .185-.185V9.006a.185.185 0 0 0-.185-.186H2.208a.186.186 0 0 0-.186.185v1.888c0 .102.084.185.186.185m21.75 1.543c-.413-.263-1.63-.385-2.614-.144-.142-.71-.62-1.33-1.306-1.67-.184-.09-.378-.146-.576-.174l-.234-.033-.11.21c-.42.802-.455 1.776-.098 2.616-.275.143-.598.24-.967.283-.43.05-.88.026-1.328-.073l-.448-.098-.24.394c-.815 1.34-2.102 2.274-3.626 2.63-1.428.334-2.924.234-4.32-.29l-.265-.1-.21.2a10.82 10.82 0 0 1-5.182 2.697c-1.444.336-2.946.28-4.35-.164l-.452-.143-.09.464c.294 1.52 1.096 2.89 2.29 3.916 1.304 1.12 2.94 1.764 4.675 1.838 7.42.316 13.918-4.324 15.688-11.17l.08-.31-.303-.133z"/></svg></span></span>
+              <span>DOCKER</span>
+            </span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:8px; font-size:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">
+                  <span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" width="15" height="15" class="tech-icon-img" alt="Redis/KeyDB" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#DC382D" d="M22.56 6.84a1.86 1.86 0 0 0-.9-.55L12.72 3.1a1.83 1.83 0 0 0-1.44 0L2.34 6.29a1.86 1.86 0 0 0-.9.55 1.76 1.76 0 0 0-.44 1.15v8.02a1.76 1.76 0 0 0 .44 1.15 1.86 1.86 0 0 0 .9.55l8.94 3.19a1.83 1.83 0 0 0 1.44 0l8.94-3.19a1.86 1.86 0 0 0 .9-.55 1.76 1.76 0 0 0 .44-1.15V7.99a1.76 1.76 0 0 0-.44-1.15zM12 4.67l7.55 2.69L17.7 8.04 12 6.01 6.3 8.04 4.45 7.36 12 4.67zm0 14.66l-7.55-2.69v-5.6l3.77 1.35a1.83 1.83 0 0 0 1.44 0L12 11.6l2.34.79a1.83 1.83 0 0 0 1.44 0l3.77-1.35v5.6L12 19.33z"/></svg></span></span>
+                  <span>KeyDB (:6379)</span>
+                </strong>
+                <div style="font-size:10px; color:var(--text-muted);" id="descKeydb">Podman: running</div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span id="badgeKeydb" class="status-badge offline">Apagado</span>
+                <div id="btnsKeydb" style="display:flex; gap:4px; align-items:center;">
+                  <button class="btn btn-sm btn-success" style="padding:3px 8px;" onclick="infraAction('keydb', 'start')">▶ Iniciar</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-soft); padding-top:8px;">
+              <div>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">
+                  <span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.simpleicons.org/onlyoffice/FF6F3D" width="15" height="15" class="tech-icon-img" alt="OnlyOffice" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#FF6F3D"/><rect x="5" y="5.5" width="14" height="2.5" rx="0.5" fill="var(--text)"/><rect x="5" y="10.5" width="14" height="2.5" rx="0.5" fill="var(--text)"/><rect x="5" y="15.5" width="9" height="2.5" rx="0.5" fill="var(--text)"/></svg></span></span>
+                  <span>OnlyOffice (:8082)</span>
+                </strong>
+                <div style="font-size:10px; color:var(--text-muted);" id="descOnlyoffice">Podman: running</div>
+                <div style="font-size:10px; margin-top:3px;" id="envOnlyofficeContracts">.env ms_contratos: comprobando...</div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span id="badgeOnlyoffice" class="status-badge offline">Apagado</span>
+                <div id="btnsOnlyoffice" style="display:flex; gap:4px; align-items:center;">
+                  <button class="btn btn-sm btn-success" style="padding:3px 8px;" onclick="infraAction('onlyoffice-local', 'start')">▶ Iniciar</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-soft); padding-top:8px;">
+              <div>
+                <strong style="display:inline-flex; align-items:center; gap:6px;">
+                  <span class="tech-icon-wrapper" style="width:15px; height:15px;"><img src="https://cdn.simpleicons.org/keycloak/4A90E2" width="15" height="15" class="tech-icon-img" alt="Keycloak" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline-flex';" /><span class="tech-fallback-svg" style="display:none; width:15px; height:15px;"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#008A87" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 3.6c2.08 0 3.93.81 5.31 2.13L12 11.04 6.69 5.73A7.16 7.16 0 0 1 12 3.6zm-7.2 4.71L10.08 13.6 4.77 18.91A7.16 7.16 0 0 1 4.8 8.31zm8.49 12.09c-2.08 0-3.93-.81-5.31-2.13L13.29 12.96l5.31 5.31c-1.38 1.32-3.23 2.13-6.6 2.13zm5.91-4.71L13.92 10.4l5.31-5.31c1.23 1.41 1.97 3.24 1.97 5.31s-.74 3.9-1.97 5.31z"/></svg></span></span>
+                  <span>Keycloak (:8080)</span>
+                </strong>
+                <div style="font-size:10px; color:var(--text-muted);" id="descKeycloak">Docker: running</div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <span id="badgeKeycloak" class="status-badge online">Docker</span>
+                <div id="btnsKeycloak" style="display:flex; gap:4px; align-items:center;">
+                  <button class="btn btn-sm btn-success" style="padding:3px 8px;" onclick="dockerKeycloak('start')">▶ Iniciar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Box 4: Servicios Institucionales y Verificador Multi-Entorno -->
+        <div class="panel-box" style="grid-column: 1 / -1;">
+          <div class="panel-box-header" style="flex-wrap:wrap; gap:12px;">
+            <div>
+              <span class="panel-box-title">🌐 SERVICIOS INSTITUCIONALES & CONECTIVIDAD MULTI-ENTORNO</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">
+                Matriz comparativa de infraestructura técnica: PostgreSQL, MongoDB, Keycloak, KeyDB, RabbitMQ, Alfresco, OnlyOffice y Firmador Digital.
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <div style="display:flex; gap:3px; background:var(--surface-elevated); padding:3px; border-radius:8px; border:1px solid var(--surface-elevated);">
+                <button class="btn btn-sm btn-outline active" id="infraTab_all" onclick="setInfraView('all')" style="font-size:11px; padding:3px 9px; background:#2563eb; color:var(--text);">📊 Matriz Comparativa</button>
+                <button class="btn btn-sm btn-outline" id="infraTab_local" onclick="setInfraView('local')" style="font-size:11px; padding:3px 9px;">💻 LOCAL</button>
+                <button class="btn btn-sm btn-outline" id="infraTab_develop" onclick="setInfraView('develop')" style="font-size:11px; padding:3px 9px;">🟡 DEVELOP</button>
+                <button class="btn btn-sm btn-outline" id="infraTab_test" onclick="setInfraView('test')" style="font-size:11px; padding:3px 9px;">🔵 TEST</button>
+                <button class="btn btn-sm btn-outline" id="infraTab_prod" onclick="setInfraView('prod')" style="font-size:11px; padding:3px 9px;">🟢 PROD</button>
+              </div>
+              <button class="btn btn-sm btn-outline" onclick="probeClientEndpoints(true)">⚡ Probar Conectividad Web</button>
+            </div>
+          </div>
+          
+          <div id="infraMatrixContainer" style="margin-top:14px; overflow-x:auto;">
+            <!-- Contenido dinámico generado por renderInfraMatrix() -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 7: MAPA OPERATIVO & CONEXIONES ACTIVAS                              -->
+    <!-- ====================================================================== -->
+    <div id="tab-map" class="tab-pane">
+      <!-- Barra Superior de Control y Filtros del Mapa -->
+      <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.3);">
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:24px;">🗺️</span>
+            <div>
+              <h2 style="margin:0; font-size:15px; font-weight:800; color:var(--text); letter-spacing:0.5px;">MAPA OPERATIVO & CONEXIONES ACTIVAS REALES</h2>
+              <span style="font-size:11px; color:var(--text-muted);">Monitoreo Táctico de Conexiones Keycloak SSO vinculadas a Reparticiones Navales</span>
+            </div>
+          </div>
+          <div style="height:26px; width:1px; background:var(--card-border); margin:0 4px;"></div>
+
+          <!-- Selector de Entorno Keycloak -->
+          <div style="display:flex; align-items:center; gap:6px; margin-left:4px;">
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">ENTORNO:</span>
+            <select id="mapEnvSelect" onchange="setOperationalMapEnv(this.value)" class="search-input" style="padding:5px 10px; font-size:11px; font-weight:700; background:var(--card-bg-solid); border-color:var(--border-strong); border-radius:8px;">
+              <!-- Se rellena desde los entornos configurados.  Sin direcciones
+                   internas: el host de cada base se muestra en #env-details y en
+                   la matriz de Infraestructura, ambos desde config/panel.json. -->
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <!-- Keycloak Connection Indicator -->
+          <span id="mapKcStatusBadge" style="background:color-mix(in srgb, var(--warn) 12%, transparent); color:var(--warn); border:1px solid color-mix(in srgb, var(--warn) 30%, transparent); padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">
+            🔑 Keycloak SSO
+          </span>
+          <!-- Botón de Actualizar -->
+          <button class="btn btn-sm btn-hero" onclick="fetchOperationalMapData(true)" style="padding:6px 12px; font-size:11px;">
+            <span id="mapRefreshSpinner">🔄</span> Actualizar
+          </button>
+          <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-muted); cursor:pointer;">
+            <input type="checkbox" id="mapAutoRefreshCheckbox" onchange="toggleMapAutoRefresh(this.checked)"> Auto (30s)
+          </label>
+        </div>
+      </div>
+
+      <!-- Resumen KPI Superior por Zonas Navales -->
+      <div id="mapKpiSummaryRow" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:18px;">
+        <!-- Se llena dinámicamente con renderMapKpis() -->
+      </div>
+
+      <!-- Sección Principal: Mapa SVG Interactivo a la Izquierda y Detalle Operativo a la Derecha -->
+      <div class="map-grid-layout">
+        <!-- Panel Izquierdo: Mapa SVG Táctico de Chile -->
+        <div class="map-tactical-panel">
+          <div class="map-tactical-header">
+            <span class="map-tactical-title">
+              <span>🛰️</span> TERRITORIO NACIONAL & JURISDICCIONES NAVALES
+            </span>
+            <span style="font-size:10px; color:var(--text-dim); font-family:monospace;" id="mapCoordinatesLabel">LAT: 17°S - 56°S</span>
+          </div>
+
+          <div class="map-svg-container" id="svgChileMapContainer">
+            <!-- SVG interactivo generado dinámicamente -->
+          </div>
+
+          <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:10px; color:var(--text-dim); border-top:1px solid var(--border-soft); padding-top:6px;">
+            <span>💡 Clic en cualquier Zona o Base Naval para filtrar</span>
+            <span id="mapLastUpdatedLabel" style="font-family:monospace;">Actualizado: --:--:--</span>
+          </div>
+        </div>
+
+        <!-- Panel Derecho: Detalle de Zona Seleccionada y Ranking de Reparticiones -->
+        <div class="zone-detail-panel" id="zoneDetailPanel">
+          <div style="display:flex; justify-content:center; align-items:center; height:300px; color:var(--text-muted); font-size:13px;">
+            <span>Cargando datos operativos de zonas navales...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- TAB 8: ACTIVIDAD EN VIVO (AUDITORÍA & TRAZABILIDAD)                    -->
+    <!-- ====================================================================== -->
+    <div id="tab-activity" class="tab-pane">
+      <!-- Barra Superior de Control y Filtros de Actividad -->
+      <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.3);">
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:24px;">⚡</span>
+            <div>
+              <h2 style="margin:0; font-size:15px; font-weight:800; color:var(--text); letter-spacing:0.5px;">AUDITORÍA DE ACTIVIDAD EN VIVO & TRAZABILIDAD</h2>
+              <span style="font-size:11px; color:var(--text-muted);">Monitoreo en tiempo real de transacciones, mutaciones y acciones de usuarios vía ms_sisper_bitacora</span>
+            </div>
+          </div>
+          <div style="height:26px; width:1px; background:var(--card-border); margin:0 4px;"></div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Entorno:</span>
+            <div style="display:inline-flex; border:1px solid var(--card-border); border-radius:8px; overflow:hidden; background:rgba(0,0,0,0.3);">
+              <button class="env-toggle-btn active" id="btnActEnvDev" onclick="switchActivityEnv('develop')" style="padding:4px 10px; font-size:11px; font-weight:700; border:none; background:var(--warn); color:#000; cursor:pointer;">🟡 DEVELOP</button>
+              <button class="env-toggle-btn" id="btnActEnvTest" onclick="switchActivityEnv('test')" style="padding:4px 10px; font-size:11px; font-weight:700; border:none; background:transparent; color:var(--text-muted); cursor:pointer;">🔵 TEST</button>
+              <button class="env-toggle-btn" id="btnActEnvMain" onclick="switchActivityEnv('main')" style="padding:4px 10px; font-size:11px; font-weight:700; border:none; background:transparent; color:var(--text-muted); cursor:pointer;">🟢 MAIN</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px; background:rgba(15,23,42,0.6); padding:4px 10px; border-radius:8px; border:1px solid var(--card-border);">
+            <label style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;">
+              <input type="checkbox" id="activityAutoRefreshToggle" onchange="toggleActivityAutoRefresh()" checked style="accent-color:var(--success); cursor:pointer;">
+              <span id="activityLiveIndicator" class="dot" style="background:var(--success); box-shadow:0 0 8px var(--success);"></span>
+              <span>En Vivo (Auto 10s)</span>
+            </label>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-muted);">
+            <span>Filas:</span>
+            <select id="activityLimitSelect" onchange="fetchLiveActivity(true)" style="background:var(--card-bg-solid); color:var(--text); border:1px solid var(--card-border); border-radius:6px; padding:3px 6px; font-size:11px;">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="fetchLiveActivity(true)" style="display:flex; align-items:center; gap:5px; font-size:11px; padding:5px 10px;">
+            <span id="activitySpinner" style="display:none; animation:spin 1s linear infinite;">🔄</span>
+            <span>Actualizar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Fila de Tarjetas KPI -->
+      <div id="activityKpiRow" style="display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap;">
+        <!-- Injected via renderLiveActivityKpis() -->
+      </div>
+
+      <!-- Filtros y Búsqueda -->
+      <div class="filter-card" style="margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="flex:1 1 280px; min-width:240px;">
+            <input type="text" id="activitySearchInput" class="search-input" placeholder="🔍 Filtrar por persona, RUN, endpoint o contenido..." oninput="filterActivityClientSide()" onkeydown="if(event.key==='Enter') fetchLiveActivity(true)">
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Módulo:</span>
+            <div id="activityModuleChips" style="display:flex; gap:4px; flex-wrap:wrap;">
+              <span class="chip active" onclick="filterActivityModule('all', this)">Todos</span>
+              <span class="chip" onclick="filterActivityModule('CONTRATOS', this)">Contratos</span>
+              <span class="chip" onclick="filterActivityModule('SESIÓN', this)">Sesión</span>
+              <span class="chip" onclick="filterActivityModule('IDENTIFICACIÓN', this)">Identificación</span>
+              <span class="chip" onclick="filterActivityModule('USUARIOS', this)">Adm. Usuarios</span>
+              <span class="chip" onclick="filterActivityModule('SOLICITUDES', this)">Solicitudes</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Método:</span>
+            <div id="activityMethodChips" style="display:flex; gap:4px; flex-wrap:wrap;">
+              <span class="chip active" onclick="filterActivityMethod('all', this)">Todos</span>
+              <span class="chip" onclick="filterActivityMethod('POST', this)">POST</span>
+              <span class="chip" onclick="filterActivityMethod('PUT', this)">PUT</span>
+              <span class="chip" onclick="filterActivityMethod('DELETE', this)">DELETE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cockpit & Radar de Seguimiento en Vivo de Persona -->
+      <div id="activityConnectedUserBanner" style="display:none; flex-direction:column; gap:14px; background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid var(--success); border-radius:14px; padding:18px 20px; margin-bottom:18px; box-shadow:0 8px 30px rgba(0,0,0,0.4), 0 0 25px rgba(16,185,129,0.15); transition:all 0.3s;">
+        <!-- Fila Superior: Perfil + Estado SSO + Acciones -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <div id="connectedUserAvatar" style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,var(--success),var(--success)); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:var(--text); box-shadow:0 0 15px rgba(16,185,129,0.4); flex-shrink:0;">
+              👤
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span id="connectedUserOnlineBadge" style="font-size:10.5px; font-weight:800; color:var(--success); background:rgba(16,185,129,0.2); padding:3px 8px; border-radius:6px; letter-spacing:0.5px; border:1px solid rgba(16,185,129,0.4); display:inline-flex; align-items:center; gap:5px;">
+                  <span class="dot" style="background:var(--success); box-shadow:0 0 8px var(--success);"></span>
+                  <span>🟢 EN LÍNEA (SSO Activo)</span>
+                </span>
+                <span id="connectedUserName" style="font-size:16px; font-weight:800; color:var(--text);">-</span>
+                <span id="connectedUserAdminBadge" style="display:none; background:rgba(245,158,11,0.22); color:var(--warn); border:1px solid var(--warn); padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; letter-spacing:0.5px;">👑 ADMIN</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <span>RUN: <strong id="connectedUserRun" style="color:var(--accent); font-family:monospace;">-</strong></span>
+                <span id="connectedUserRepWrap">Repartición: <strong id="connectedUserRep" style="color:var(--text);">-</strong></span>
+                <span>IP: <strong id="connectedUserIp" style="color:var(--text-secondary); font-family:monospace;">-</strong></span>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-sm" id="btnLiveScreenMirror" onclick="openScreenMirrorModal()" style="background:linear-gradient(135deg, #9333ea, #c026d3); color:var(--text); border:1px solid var(--intranet); padding:6px 14px; font-size:11px; font-weight:800; border-radius:6px; box-shadow:0 0 14px rgba(192,38,211,0.35); display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+              <span>🎥</span> Espejo Visual (Opción 3)
+            </button>
+            <button class="btn btn-sm btn-hero" onclick="fetchLiveActivity(true)" style="padding:6px 12px; font-size:11px; gap:5px;">
+              <span>🔄</span> Comprobar Ahora
+            </button>
+            <button class="btn btn-sm btn-outline" onclick="disconnectUserLiveTracking()" style="padding:6px 12px; font-size:11px; border-color:var(--danger); color:var(--danger);">
+              ✕ Desconectar
+            </button>
+          </div>
+        </div>
+
+        <!-- Alerta de Desconexión (se muestra solo si Keycloak reporta offline) -->
+        <div id="connectedUserOfflineAlert" style="display:none; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:10px 14px; font-size:11.5px; color:var(--danger); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">⚠️</span>
+            <span><strong>Usuario Desconectado:</strong> Esta persona cerró su sesión o expiró su token en Keycloak SSO. No se generarán nuevos movimientos hasta que vuelva a ingresar al sistema.</span>
+          </div>
+          <span id="connectedUserOfflineTime" style="font-size:10.5px; color:var(--text-muted); white-space:nowrap;">Comprobado: -</span>
+        </div>
+
+        <!-- Telemetría en Vivo del Frontend (Opción 1: Pantalla, Pestaña, Interacción viva) -->
+        <div id="connectedUserFrontendTelemetry" style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:12px 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:11px; font-weight:800; color:var(--accent); letter-spacing:0.5px; display:inline-flex; align-items:center; gap:6px;">
+              <span class="dot" style="background:var(--accent); box-shadow:0 0 8px var(--accent);"></span>
+              ACTIVIDAD EN EL SITIO EN TIEMPO REAL (TELEMETRÍA FRONTEND - OPCIÓN 1)
+            </span>
+            <span id="connectedUserTeleActiveBadge" style="font-size:10px; font-weight:700; color:var(--success); background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">
+              🟢 Telemetría Conectada
+            </span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; font-size:11.5px;">
+            <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border:1px solid var(--border-soft);">
+              <div style="color:var(--text-muted); font-size:10px; font-weight:700;">📍 PANTALLA ACTUAL</div>
+              <div id="telemetryRouteName" style="color:var(--text); font-weight:800; font-size:12px; margin-top:2px;">Inicio / Resumen</div>
+              <div id="telemetryRouteHash" style="color:var(--text-dim); font-size:10px; font-family:monospace; margin-top:1px;">#/</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border:1px solid var(--border-soft);">
+              <div style="color:var(--text-muted); font-size:10px; font-weight:700;">👁️ ESTADO DE PESTAÑA</div>
+              <div id="telemetryTabVisibility" style="color:var(--success); font-weight:800; font-size:12px; margin-top:2px;">🟢 Primer plano (Activa)</div>
+              <div style="color:var(--text-dim); font-size:10px; margin-top:1px;">Foco del navegador</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border:1px solid var(--border-soft);">
+              <div style="color:var(--text-muted); font-size:10px; font-weight:700;">⚡ ACCIÓN EN EL SITIO</div>
+              <div id="telemetryInteractionState" style="color:var(--warn); font-weight:800; font-size:12px; margin-top:2px;">👀 Navegando / Leyendo</div>
+              <div id="telemetryFieldTarget" style="color:var(--text-muted); font-size:10px; margin-top:1px;">Sin campos activos</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.25); padding:8px 10px; border-radius:6px; border:1px solid var(--border-soft);">
+              <div style="color:var(--text-muted); font-size:10px; font-weight:700;">⏱️ TIEMPO EN ESTA VISTA</div>
+              <div id="telemetryTimeOnView" style="color:var(--accent); font-weight:800; font-size:12px; margin-top:2px;">0 seg</div>
+              <div id="telemetryResolution" style="color:var(--text-dim); font-size:10px; margin-top:1px;">Res: 1920x1080</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Radar de Polling y Mini-KPIs del Usuario -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; padding-top:10px; border-top:1px solid var(--border-soft);">
+          <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 12px; border:1px solid var(--border-soft);">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">ACCIONES REGISTRADAS</div>
+            <div id="connectedUserCount" style="font-size:18px; font-weight:800; color:var(--accent); margin-top:2px;">0</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 12px; border:1px solid var(--border-soft);">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">ÚLTIMO MOVIMIENTO</div>
+            <div id="connectedUserLastAction" style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">-</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 12px; border:1px solid var(--border-soft);">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">ESTADO SESIÓN SSO</div>
+            <div id="connectedUserSessionStatusText" style="font-size:13px; font-weight:700; color:var(--success); margin-top:4px;">Activa</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:8px 12px; border:1px solid var(--border-soft); display:flex; flex-direction:column; justify-content:center;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-size:10px; color:var(--text-muted); font-weight:700;">RADAR EN VIVO</span>
+              <span id="connectedUserRadarDot" class="dot" style="background:var(--success); box-shadow:0 0 8px var(--success);"></span>
+            </div>
+            <div id="connectedUserCountdown" style="font-size:11.5px; font-weight:700; color:var(--accent); margin-top:3px;">
+              Refresco en 4s...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta Principal de Actividad -->
+      <div class="table-card" style="padding:0; overflow:hidden;">
+        <!-- Cabecera con Selector de Modo de Vista -->
+        <div style="padding:14px 18px; border-bottom:1px solid var(--card-border); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.4); flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="display:inline-flex; border:1px solid var(--card-border); border-radius:8px; overflow:hidden; background:rgba(0,0,0,0.3);">
+              <button class="env-toggle-btn active" id="btnActViewUsers" onclick="switchActivityViewMode('users')" style="padding:5px 12px; font-size:11px; font-weight:700; border:none; background:var(--accent); color:var(--card-bg-solid); cursor:pointer;">
+                👥 Agrupado por Personas
+              </button>
+              <button class="env-toggle-btn" id="btnActViewGlobal" onclick="switchActivityViewMode('global')" style="padding:5px 12px; font-size:11px; font-weight:700; border:none; background:transparent; color:var(--text-muted); cursor:pointer;">
+                📜 Feed Global de Transacciones
+              </button>
+            </div>
+            <span id="activityCountBadge" class="badge-pill badge-clean" style="font-size:11px;">0 registros</span>
+          </div>
+
+          <!-- Selector de Estilo Timeline vs Tabla en modo Seguimiento -->
+          <div id="trackingFormatSwitch" style="display:none; align-items:center; gap:6px;">
+            <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Formato:</span>
+            <div style="display:inline-flex; border:1px solid var(--card-border); border-radius:6px; overflow:hidden;">
+              <button id="btnFormatTimeline" class="env-toggle-btn active" onclick="switchTrackingFormat('timeline')" style="padding:3px 8px; font-size:10.5px; border:none; background:var(--accent-hover); color:var(--text); cursor:pointer;">Timeline</button>
+              <button id="btnFormatTable" class="env-toggle-btn" onclick="switchTrackingFormat('table')" style="padding:3px 8px; font-size:10.5px; border:none; background:transparent; color:var(--text-muted); cursor:pointer;">Tabla</button>
+            </div>
+          </div>
+
+          <span id="activityLastUpdated" style="font-size:11px; color:var(--text-muted);">Actualizado: -</span>
+        </div>
+
+        <!-- Vista 1: Grid de Personas Agrupadas -->
+        <div id="activityUsersView" style="padding:18px;">
+          <div id="activityUsersGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px;">
+            <!-- Renderizado dinámico vía renderActivityUsersCards() -->
+          </div>
+        </div>
+
+        <!-- Vista 2A: Timeline Táctico de Persona Conectada -->
+        <div id="activityTrackingTimelineView" style="display:none; padding:20px; max-height:700px; overflow-y:auto;">
+          <div id="trackingTimelineFlow" style="display:flex; flex-direction:column; gap:12px; position:relative; padding-left:20px; border-left:2px solid rgba(56,189,248,0.25); margin-left:10px;">
+            <!-- Inyectado vía renderTrackingTimeline() -->
+          </div>
+        </div>
+
+        <!-- Vista 2B: Tabla de Transacciones (Feed Global o formato tabular) -->
+        <div id="activityTimelineView" style="display:none; overflow-x:auto; max-height:650px;">
+          <table class="services-table" id="activityTable">
+            <thead>
+              <tr>
+                <th style="width:130px;">Fecha / Hora</th>
+                <th style="min-width:220px;">Persona / Ejecutor</th>
+                <th style="width:150px;">Módulo</th>
+                <th style="width:80px; text-align:center;">Método</th>
+                <th style="min-width:240px;">Endpoint Solicitado</th>
+                <th style="width:110px; text-align:center;">Estado HTTP</th>
+                <th style="width:110px;">IP Origen</th>
+                <th style="width:90px; text-align:center;">Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="activityTableBody">
+              <tr>
+                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">
+                  Cargando actividad en vivo...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </main>
+  </div><!-- Fin de .app-shell -->
+
+  <!-- ====================================================================== -->
+  <!-- MODALES DE LA APLICACIÓN                                               -->
+  <!-- ====================================================================== -->
+
+  <!-- Modal Layout Studio (Sesiones Tilix) -->
+  <div id="layoutStudioModal" class="modal-overlay" onclick="if(event.target===this) closeLayoutStudioModal()">
+    <div class="modal" style="max-width:960px; width:95%; max-height:85vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">⚙️</span>
+          <div>
+            <h3 class="modal-title" style="font-size:16px;">Layout Studio (Sesiones Tilix)</h3>
+            <span style="font-size:11px; color:var(--text-muted);">Normalización y lanzamiento de layouts ($BASE_DIR)</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-sm btn-hero" onclick="openImportModal()">📥 Importar JSON</button>
+          <button class="modal-close" onclick="closeLayoutStudioModal()">&times;</button>
+        </div>
+      </div>
+      <div style="overflow-y:auto; flex:1; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre de Sesión</th>
+              <th>Ruta Relativa</th>
+              <th>Paneles / Terminales</th>
+              <th>Lanzar con Rutas Normalizadas</th>
+            </tr>
+          </thead>
+          <tbody id="layoutsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" onclick="closeLayoutStudioModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Inspección de Imagen (Senior Labels & Metadata) -->
+  <div id="imageInspectModal" class="modal-overlay" onclick="if(event.target===this) closeImageInspectModal()">
+    <div class="modal" style="max-width:650px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">🏷️ Metadatos e Inspección de Imagen</h3>
+        <button class="modal-close" onclick="closeImageInspectModal()">&times;</button>
+      </div>
+      <div id="imageInspectContent" style="display:flex; flex-direction:column; gap:12px; font-size:12px;">
+        <!-- Llenado dinámicamente -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeImageInspectModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Git Auth (Pull / Push / Fetch con credenciales) -->
+  <div id="gitAuthModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="gitAuthTitle">Git Authentication</h3>
+        <button class="modal-close" onclick="closeGitAuthModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted);" id="gitAuthSubtitle">
+        Ingresa tus credenciales institucionales para GitLab.
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:4px;">Usuario:</label>
+          <input type="text" id="gitUsername" class="search-input" placeholder="tu_usuario" style="width:100%;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:4px;">Contraseña / Token:</label>
+          <input type="password" id="gitPassword" class="search-input" placeholder="••••••••" style="width:100%;">
+        </div>
+        <div id="gitPullStrategyRow" style="display:none;">
+          <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:4px;">Estrategia de Pull (si las ramas divergieron):</label>
+          <select id="gitPullStrategy" class="search-input" style="width:100%; font-size:12px;">
+            <option value="default" selected>Por defecto (git pull estándar sin banderas)</option>
+            <option value="no-ff">Fusionar forzado (--no-ff: crea merge commit)</option>
+            <option value="merge">Fusionar estándar (--no-rebase)</option>
+            <option value="rebase">Rebasar (--rebase: reordena commits locales arriba)</option>
+            <option value="ff-only">Solo avance rápido (--ff-only: falla si divergieron)</option>
+          </select>
+        </div>
+
+        <div id="gitPushInspectorRow" style="display:none; background:var(--card-bg-solid); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Inspección Pre-Push:</span>
+            <span id="gitPushBranchBadge" style="font-size:11px; font-family:ui-monospace, monospace; color:var(--accent); font-weight:700;">-</span>
+          </div>
+          <div id="gitPushCommitsStatus" style="font-size:11.5px; margin-bottom:6px;"></div>
+          <div id="gitPushCommitsList" style="max-height:110px; overflow-y:auto; background:var(--console-bg); border:1px solid var(--card-border); border-radius:6px; padding:6px 10px; font-family:ui-monospace, monospace; font-size:11px; color:var(--text-secondary); margin-bottom:6px; display:none;"></div>
+          <div id="gitPushDirtyWarning" style="font-size:11px; line-height:1.4;"></div>
+        </div>
+
+        <div id="gitPullInspectorRow" style="display:none; background:var(--card-bg-solid); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Inspección Pre-Pull:</span>
+            <span id="gitPullBranchBadge" style="font-size:11px; font-family:ui-monospace, monospace; color:var(--accent); font-weight:700;">-</span>
+          </div>
+          <div id="gitPullCommitsStatus" style="font-size:11.5px; margin-bottom:6px;"></div>
+          <div id="gitPullCommitsList" style="max-height:110px; overflow-y:auto; background:var(--console-bg); border:1px solid var(--card-border); border-radius:6px; padding:6px 10px; font-family:ui-monospace, monospace; font-size:11px; color:var(--text-secondary); margin-bottom:6px; display:none;"></div>
+          <div id="gitPullDirtyWarning" style="font-size:11px; line-height:1.4;"></div>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; color:var(--text-muted);">
+          <input type="checkbox" id="gitSaveCreds" checked> Recordar en almacén seguro local (.git-credentials)
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeGitAuthModal()">Cancelar</button>
+        <button class="btn" id="gitSubmitBtn" onclick="submitGitAuth()">Ejecutar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Selector de Ramas Git -->
+  <div id="branchModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="branchModalTitle">Cambiar Rama Git</h3>
+        <button class="modal-close" onclick="closeBranchModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted);">
+        Selecciona la rama a la que deseas cambiar este microservicio:
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <label style="font-size:12px; font-weight:700; color:var(--text);">Rama disponible:</label>
+        <select id="branchSelect" class="search-input" style="width:100%;"></select>
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; color:var(--text-muted);">
+          <input type="checkbox" id="branchAutoRestart" checked> Recargar consola en Tilix automáticamente si está activa
+        </label>
+      </div>
+      <div style="border-top:1px solid var(--card-border); margin-top:14px; padding-top:12px; display:flex; flex-direction:column; gap:10px;">
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--text);">Crear rama nueva</label>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input id="branchNuevaNombre" class="search-input" placeholder="feature/mi-rama" style="flex:1;"
+                   title="Se crea desde la rama seleccionada arriba (o desde la actual si no eliges)">
+            <button class="btn btn-sm" onclick="submitBranchCreate()" title="git checkout -b">➕ Crear</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--text);">Renombrar la rama seleccionada</label>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input id="branchRenombrar" class="search-input" placeholder="nuevo-nombre" style="flex:1;"
+                   title="git branch -m <seleccionada> <nuevo>">
+            <button class="btn btn-sm btn-outline" onclick="submitBranchRename()" title="git branch -m">✏️ Renombrar</button>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+            Renombrar es local: si la rama ya está publicada, en el remoto conserva el nombre anterior.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeBranchModal()">Cancelar</button>
+        <button class="btn" onclick="submitBranchSwitch()">Cambiar Rama</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación de Alinear Entorno antes de Lanzar Tilix -->
+  <div id="envLaunchModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="envLaunchModalTitle">Lanzador de Entorno Tilix</h3>
+        <button class="modal-close" onclick="closeEnvLaunchModal()">&times;</button>
+      </div>
+      <div id="envLaunchModalBody" style="font-size:13px; line-height:1.6; color:var(--text-secondary);"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeEnvLaunchModal()">Cancelar</button>
+        <button class="btn btn-outline" id="btnLaunchCurrentOnly" onclick="executeTilixOnly()">Abrir sin cambiar ramas</button>
+        <button class="btn btn-hero" id="btnAlignAndLaunch" onclick="executeAlignAndLaunch()">✅ Alinear y Abrir Tilix</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de Servicio -->
+  <div id="serviceModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="serviceModalTitle">Detalle de Microservicio</h3>
+        <button class="modal-close" onclick="closeServiceModal()">&times;</button>
+      </div>
+      <div id="serviceModalBody" style="font-size:12px; line-height:1.7;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeServiceModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editor de Configuración .env -->
+  <div id="envEditorModal" class="modal-overlay" onclick="if(event.target===this) closeEnvEditorModal()">
+    <div class="modal" style="max-width:850px; width:95%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden; background:var(--surface-base); border:1px solid var(--accent); box-shadow:0 0 35px rgba(56,189,248,0.25);">
+      <!-- Header -->
+      <div style="padding:14px 20px; background:linear-gradient(135deg, rgba(15,23,42,0.98), rgba(8,47,73,0.95)); border-bottom:1px solid rgba(56,189,248,0.3); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;">📝</span>
+          <div>
+            <h3 style="margin:0; font-size:15px; color:var(--text); display:flex; align-items:center; gap:8px;">
+              Configuración .env: <span id="envModalSvcName" style="color:var(--accent); font-family:monospace;">-</span>
+            </h3>
+            <div id="envModalPath" style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">-</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="badge-pill" style="background:rgba(52,211,153,0.15); border:1px solid var(--success); color:var(--success); font-size:10px; font-weight:700;">
+            🟢 Auto-Reload Activo
+          </span>
+          <button class="modal-close" onclick="closeEnvEditorModal()" style="font-size:22px; color:var(--text-muted);">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body / Editor Textarea -->
+      <div style="flex:1; position:relative; padding:16px; background:#030712; display:flex; flex-direction:column; min-height:360px;">
+        <div id="envModalLoading" style="position:absolute; inset:0; background:rgba(3,7,18,0.85); display:none; align-items:center; justify-content:center; gap:10px; z-index:10; color:var(--accent); font-size:13px; font-weight:600;">
+          <span>⏳ Cargando archivo .env...</span>
+        </div>
+        <textarea id="envModalTextarea" spellcheck="false" placeholder="VARIABLE=valor" style="flex:1; width:100%; min-height:360px; background:var(--console-bg); color:var(--text-secondary); font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:12.5px; line-height:1.6; padding:12px; border:1px solid var(--border-soft); border-radius:6px; resize:vertical; outline:none; box-sizing:border-box;"></textarea>
+      </div>
+
+      <!-- Footer / Actions -->
+      <div style="padding:12px 20px; background:rgba(15,23,42,0.95); border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); cursor:pointer; user-select:none;">
+          <input type="checkbox" id="envModalRestartChk" checked>
+          <span>🔄 Recargar servicio automáticamente al guardar</span>
+        </label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-sm btn-outline" onclick="reloadEnvEditorModal()" title="Descartar cambios no guardados y releer desde disco">
+            🔄 Recargar desde Disco
+          </button>
+          <button id="envModalSaveBtn" class="btn btn-sm btn-hero" onclick="saveEnvEditorModal()" style="background:var(--accent-hover); border-color:var(--accent); font-weight:700;">
+            💾 Guardar y Aplicar
+          </button>
+          <button class="btn btn-sm btn-outline" onclick="closeEnvEditorModal()">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Avanzado de Logs de K8s (Estilo Terminal Pro) -->
+  <div id="k8sLogsModal" class="modal-overlay">
+    <div class="modal" style="max-width:980px; width:95%; transition:all 0.2s ease;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 class="modal-title" id="k8sLogsTitle">Logs del Pod</h3>
+          <span id="k8sLogsNamespaceBadge" class="badge-path" style="background:var(--card-border);">ns: develop</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-sm btn-outline" style="padding:2px 8px; font-weight:700; font-size:11px;" onclick="changeLogsFontSize(1)" title="Aumentar fuente (Zoom +)">A+</button>
+          <button class="btn btn-sm btn-outline" style="padding:2px 8px; font-weight:700; font-size:11px;" onclick="changeLogsFontSize(-1)" title="Disminuir fuente (Zoom -)">A-</button>
+          <button class="btn btn-sm btn-outline" id="k8sLogsMaxBtn" style="padding:2px 8px; font-size:12px;" onclick="toggleMaximizeK8sLogs()" title="Maximizar / Restaurar">🗖</button>
+          <button class="modal-close" onclick="closeK8sLogsModal()">&times;</button>
+        </div>
+      </div>
+
+      <!-- Barra de Herramientas de Logs -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface-elevated); padding:8px 14px; border-radius:10px; border:1px solid var(--surface-elevated);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label style="font-size:11px; font-weight:700; color:var(--text-muted);">Contenedor:</label>
+          <select id="k8sLogsContainerSelect" class="search-input" style="min-width:140px; padding:4px 8px; font-size:11px;" onchange="refreshCurrentLogs()">
+            <option value="">(Predeterminado)</option>
+          </select>
+          <label style="font-size:11px; font-weight:700; color:var(--text-muted); margin-left:6px;">Líneas:</label>
+          <select id="k8sLogsTailSelect" class="search-input" style="width:80px; padding:4px 8px; font-size:11px;" onchange="refreshCurrentLogs()">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="text" id="k8sLogsFilterInput" class="search-input" placeholder="🔍 Buscar / resaltar..." style="width:170px; padding:4px 8px; font-size:11px;" oninput="applyLogFilter()">
+          <label style="display:flex; align-items:center; gap:5px; font-size:11px; cursor:pointer; color:var(--text-muted);">
+            <input type="checkbox" id="k8sLogsAutoRefresh" onchange="toggleAutoLogsRefresh(this)"> Auto (3s)
+          </label>
+          <button class="btn btn-sm btn-outline" onclick="refreshCurrentLogs()">🔄</button>
+          <button class="btn btn-sm btn-outline" onclick="copyLogContent()">📋 Copiar</button>
+        </div>
+      </div>
+
+      <!-- Atajos Rápidos de Filtro por Logger / HTTP Methods -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; background:rgba(0,0,0,0.35); padding:6px 12px; border-radius:8px; border:1px solid var(--surface-elevated);">
+        <span style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Filtros:</span>
+        <button class="btn btn-sm" style="background:#7f1d1d; color:var(--danger); font-size:10px; padding:1px 7px; border:1px solid #991b1b;" onclick="setLogFilter('error')">🔴 ERROR</button>
+        <button class="btn btn-sm" style="background:#78350f; color:var(--warn); font-size:10px; padding:1px 7px; border:1px solid #92400e;" onclick="setLogFilter('warn')">🟡 WARN</button>
+        <button class="btn btn-sm" style="background:#1e3a8a; color:#93c5fd; font-size:10px; padding:1px 7px; border:1px solid #1d4ed8;" onclick="setLogFilter('info')">🔵 INFO</button>
+        <button class="btn btn-sm" style="background:#064e3b; color:var(--success); font-size:10px; padding:1px 7px; border:1px solid #047857;" onclick="setLogFilter('POST')">🟢 POST</button>
+        <button class="btn btn-sm" style="background:#581c87; color:#d8b4fe; font-size:10px; padding:1px 7px; border:1px solid #7e22ce;" onclick="setLogFilter('GET')">🟣 GET</button>
+        <button class="btn btn-sm" style="background:#7c2d12; color:#fdba74; font-size:10px; padding:1px 7px; border:1px solid #c2410c;" onclick="setLogFilter('PUT')">🟠 PUT/PATCH</button>
+        <button class="btn btn-sm" style="background:#881337; color:var(--danger); font-size:10px; padding:1px 7px; border:1px solid #be123c;" onclick="setLogFilter('DELETE')">🔴 DELETE</button>
+        <button class="btn btn-sm btn-outline" style="font-size:10px; padding:1px 7px;" onclick="setLogFilter('')">⚪ Limpiar</button>
+      </div>
+
+      <!-- Ventana Terminal -->
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <span class="terminal-dot dot-red"></span>
+            <span class="terminal-dot dot-yellow"></span>
+            <span class="terminal-dot dot-green"></span>
+          </div>
+          <span style="font-family:ui-monospace, monospace; font-size:11px; color:var(--text-muted);" id="k8sLogsTerminalStatus">output stream</span>
+          <span style="font-size:11px; color:var(--text-dim);" id="k8sLogsLineCount">0 líneas</span>
+        </div>
+        <div class="terminal-body" id="k8sLogsBody">Cargando logs...</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="scrollLogsToBottom()">⬇️ Ir al final</button>
+        <button class="btn" onclick="closeK8sLogsModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cambiar Versión YAML -->
+  <div id="editYamlVersionModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="editYamlVersionTitle">Actualizar Versión en YAML</h3>
+        <button class="modal-close" onclick="closeEditYamlVersionModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted);" id="editYamlVersionSubtitle"></div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <label style="font-size:12px; font-weight:700; color:var(--text);">Nueva Versión (Tag):</label>
+        <input type="text" id="editYamlVersionInput" class="search-input" placeholder="ej: 1.0.59" style="width:100%;">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeEditYamlVersionModal()">Cancelar</button>
+        <button class="btn" onclick="submitEditYamlVersion()">💾 Guardar en YAML</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Construir Imagen Individual -->
+  <div id="singleBuildModal" class="modal-overlay">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="singleBuildTitle">🛠️ Construir Imagen: Microservicio</h3>
+        <button class="modal-close" onclick="closeSingleBuildModal()">&times;</button>
+      </div>
+      <div style="font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:14px;">
+        <div style="background:var(--surface-elevated); padding:10px 14px; border-radius:8px; border:1px solid var(--surface-elevated);">
+          <div style="color:var(--text-muted); font-size:11px;">IMAGEN DESTINO REGISTRY:</div>
+          <div id="singleBuildTargetImage" style="font-family:ui-monospace, monospace; font-weight:700; color:var(--accent); font-size:13px; margin-top:2px;">
+            registry.example.com:5000/...
+          </div>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:6px; display:block;">
+            🎯 Entorno Destino K8s (Despliegue & YAML):
+          </label>
+          <select id="singleBuildEnvSelect" class="search-input" style="width:100%; padding:8px 12px; background:var(--card-bg-solid); border:1px solid var(--accent); font-weight:700; color:var(--accent);" onchange="handleSingleBuildEnvChange(this.value)">
+            <option value="develop">🟡 DEVELOP (01_deploy_develop / ns: develop)</option>
+            <option value="test">🔵 TEST / QA (02_deploy_test / ns: test)</option>
+            <option value="main">🟢 MAIN / PRODUCCIÓN (03_deploy_prod / ns: prod)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:6px; display:block;">
+            🌿 Rama Git Origen para la Construcción:
+          </label>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="singleBuildBranchRadio" value="current" checked onchange="toggleSingleCustomBranch(false)">
+              <span id="singleBuildCurrentBranchLabel">Rama actual del repositorio</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="singleBuildBranchRadio" value="develop" onchange="toggleSingleCustomBranch(false)">
+              <span>develop (Ambiente Activo)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="singleBuildBranchRadio" value="test" onchange="toggleSingleCustomBranch(false)">
+              <span>test (QA)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="singleBuildBranchRadio" value="main" onchange="toggleSingleCustomBranch(false)">
+              <span>main (Producción)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="singleBuildBranchRadio" value="custom" onchange="toggleSingleCustomBranch(true)">
+              <span>Rama personalizada / feature</span>
+            </label>
+          </div>
+          <div id="singleCustomBranchContainer" style="display:none; margin-top:8px;">
+            <input type="text" id="singleCustomBranchInput" class="search-input" placeholder="Ej: feature/nueva-regla o hotfix/login" style="width:100%;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:6px; display:block;">
+            🏷️ Versión / Tag de la Imagen:
+          </label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="singleBuildVersionInput" class="search-input" style="flex:1; font-weight:700; font-family:ui-monospace, monospace;">
+            <button class="btn btn-sm btn-outline" type="button" onclick="bumpSingleBuildVersion('patch')">+0.0.1 (Patch)</button>
+            <button class="btn btn-sm btn-outline" type="button" onclick="bumpSingleBuildVersion('minor')">+0.1.0 (Minor)</button>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:6px; display:block;">
+            👤 Construida por (Etiqueta Institucional):
+          </label>
+          <input type="text" id="singleBuildAuthorInput" class="search-input" placeholder="Nombre / Usuario GitLab (ej: proteo)" style="width:100%;">
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">
+            Inyecta org.opencontainers.image.authors y ci.triggered_by según directriz institucional del Senior.
+          </div>
+        </div>
+
+        <div style="background:var(--surface-elevated); padding:12px 14px; border-radius:8px; border:1px solid var(--surface-elevated);">
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:8px; display:block;">
+            ⚙️ Etapas de Ejecución:
+          </label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="singleBuildOptBuild" checked disabled>
+              <strong>1. Construir imagen localmente</strong> (<code>podman build</code>)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; margin-left:20px; color:var(--accent);">
+              <input type="checkbox" id="singleBuildOptNoCache">
+              <strong>Compilación limpia sin caché</strong> (<code>--no-cache</code>)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="singleBuildOptPush" checked>
+              <strong>2. Subir imagen a Registry</strong> (<code>podman push gitlab...</code>)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="singleBuildOptYaml" checked>
+              <span id="singleBuildOptYamlLabel"><strong>3. Actualizar manifiesto YAML</strong> (<code>01_deploy_develop</code>)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="singleBuildOptDeploy">
+              <span id="singleBuildOptDeployLabel"><strong>4. Desplegar en Kubernetes</strong> (<code>kubectl apply</code> en namespace 'develop')</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="singleBuildOptRollout">
+              <span id="singleBuildOptRolloutLabel"><strong>5. Reiniciar pods en K8s</strong> (<code>kubectl rollout restart</code>)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeSingleBuildModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitSingleBuild()">🚀 Iniciar Construcción</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Construir Imágenes Masivo -->
+  <!-- Modal: carpeta de manifiestos YAML del entorno (tuerca de Deployments) -->
+  <div id="manifestDirModal" class="modal-overlay">
+    <div class="modal" style="max-width:1120px; width:96%; max-height:92vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="modal-title">&#128193; Carpeta de manifiestos YAML</h3>
+        <button class="modal-close" onclick="closeManifestDirModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        Entorno: <b id="manifestDirEnv" style="color:var(--accent);">DEVELOP</b>
+        &middot; de esta carpeta lee la matriz de Despliegues los YAML de cada servicio.
+      </div>
+<!-- Carpeta de manifiestos k8s del entorno -->
+        <div style="background:rgba(15,23,42,0.6); border:1px solid var(--card-border); border-radius:8px; padding:14px; margin-top:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:800; font-size:14px;">&#128193; Carpeta de manifiestos (YAML)</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                De aqu&iacute; lee la matriz de Despliegues los YAML de cada servicio de este entorno.
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <code id="siteK8sDir" style="font-size:11.5px; color:var(--accent);">&mdash;</code>
+              <button class="btn btn-sm btn-outline" onclick="siteExplorarActual()" title="Abrir el explorador en la carpeta vigente">&#128269; Explorar</button>
+              <button class="btn btn-sm btn-outline" onclick="siteBrowseTo('')" title="Ir a la ra&iacute;z del workspace">&#127968; Ra&iacute;z</button>
+              <button class="btn btn-sm btn-hero" id="siteK8sUseBtn" onclick="siteUseCurrentDir()" disabled>&#9989; Usar esta carpeta</button>
+            </div>
+          </div>
+          <div id="siteBrowsePanel" style="display:none; margin-top:12px;"></div>
+          <div id="siteInventory" style="margin-top:12px;"></div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Modal: comprobación previa al lanzamiento (sólo lectura) -->
+  <div id="preflightModal" class="modal-overlay">
+    <div class="modal" style="max-width:860px; width:95%; max-height:90vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="modal-title">&#128269; Comprobaci&oacute;n previa</h3>
+        <button class="modal-close" onclick="closePreflightModal()">&times;</button>
+      </div>
+      <div id="preflightBody" style="font-size:12.5px; line-height:1.6;"></div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+        <button class="btn btn-sm btn-outline" onclick="closePreflightModal()">Cancelar</button>
+        <button class="btn btn-sm btn-hero" id="preflightContinueBtn" onclick="preflightContinuar()">Lanzar igualmente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: diagnóstico de un servicio (sólo lectura) -->
+  <div id="diagnoseModal" class="modal-overlay">
+    <div class="modal" style="max-width:820px; width:95%; max-height:90vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="diagnoseTitle">&#129658; Diagn&oacute;stico</h3>
+        <button class="modal-close" onclick="closeDiagnoseModal()">&times;</button>
+      </div>
+      <div id="diagnoseBody" style="font-size:12.5px; line-height:1.6;"></div>
+    </div>
+  </div>
+
+  <!-- Editor de secretos: el panel dice QUÉ necesita y el usuario lo rellena -->
+  <div id="secretsModal" class="modal-overlay">
+    <div class="modal" style="max-width:760px; width:95%; max-height:90vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="modal-title">&#128272; Secretos del panel</h3>
+        <button class="modal-close" onclick="closeSecretsModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        Son las credenciales que esta instalación necesita para hablar con BD, Keycloak y OnlyOffice.
+        Se guardan en <code id="secretsPath">config/secrets.json</code> (permisos 600, fuera de git).
+        Los valores ya guardados <b>no</b> se muestran: deja el campo vacío para conservarlos.
+      </div>
+      <div id="secretsBody" style="display:flex; flex-direction:column; gap:8px; font-size:12px;"></div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" onclick="closeSecretsModal()">Cerrar</button>
+        <button class="btn" onclick="guardarSecretos()">&#128190; Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="massiveBuildModal" class="modal-overlay">
+    <div class="modal" style="max-width:1180px; width:96%; max-height:92vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="modal-title">🛠️ Construcción Masiva de Imágenes (CI/CD)</h3>
+        <button class="modal-close" onclick="closeMassiveBuildModal()">&times;</button>
+      </div>
+      <div style="font-size:13px; line-height:1.6; display:flex; flex-direction:column; gap:14px;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:12px;">Seleccionar Microservicios a Construir:</label>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-sm btn-outline" type="button" onclick="setMassivePresets('all')">Todos</button>
+              <button class="btn btn-sm btn-outline" type="button" onclick="setMassivePresets('backend')">Backend</button>
+              <button class="btn btn-sm btn-outline" type="button" onclick="setMassivePresets('frontend')">Frontend</button>
+              <button class="btn btn-sm btn-outline" type="button" onclick="setMassivePresets('none')">Limpiar</button>
+            </div>
+          </div>
+          <div id="massiveServicesContainer" style="max-height:180px; overflow-y:auto; background:var(--surface-elevated); border:1px solid var(--surface-elevated); border-radius:8px; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:6px;">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; margin-bottom:6px; display:block;">
+            🌿 Estrategia de Rama Git para la Construcción:
+          </label>
+          <select id="massiveBranchSelect" class="search-input" style="width:100%; padding:8px 12px;">
+            <option value="current" selected>Mantener rama actual de cada repositorio</option>
+            <option value="develop">Forzar rama 'develop' (si el repo está limpio)</option>
+            <option value="test">Forzar rama 'test' (si el repo está limpio)</option>
+            <option value="main">Forzar rama 'main' (si el repo está limpio)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-weight:700; font-size:12px; color:var(--text); margin-bottom:6px; display:block;">
+            👤 Construida por (Etiqueta Institucional):
+          </label>
+          <input type="text" id="massiveBuildAuthorInput" class="search-input" placeholder="Nombre / Usuario GitLab (ej: proteo)" style="width:100%;">
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px;">
+            Inyecta org.opencontainers.image.authors y ci.triggered_by según directriz institucional del Senior.
+          </div>
+        </div>
+
+        <div style="background:var(--surface-elevated); padding:12px 14px; border-radius:8px; border:1px solid var(--surface-elevated);">
+          <label style="font-weight:700; font-size:12px; margin-bottom:8px; display:block;">
+            ⚙️ Etapas de Ejecución Masiva:
+          </label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="massiveOptBuild" checked disabled>
+              <strong>1. Construir imágenes</strong> (<code>podman build</code> para cada microservicio)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; margin-left:20px; color:var(--accent);">
+              <input type="checkbox" id="massiveOptNoCache">
+              <strong>Compilación limpia sin caché</strong> (<code>--no-cache</code> para todos)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="massiveOptPush" checked>
+              <strong>2. Pushear al Registry</strong> (<code>podman push gitlab...</code>)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="massiveOptDeploy" onchange="toggleMassiveDeployEnvs(this.checked)">
+              <strong>3. Desplegar automáticamente a K8s</strong> tras compilar cada imagen
+            </label>
+            <div id="massiveDeployEnvsRow" style="display:none; margin-left:24px; background:var(--card-border); padding:8px 12px; border-radius:6px; border:1px solid var(--border-strong); gap:12px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:11px; color:var(--text-muted); font-weight:700;">Desplegar a:</span>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--accent); font-weight:600;">
+                <input type="checkbox" class="mass-env-chk" value="develop" checked> DEVELOP
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--warn); font-weight:600;">
+                <input type="checkbox" class="mass-env-chk" value="test"> TEST
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer; color:var(--success); font-weight:600;">
+                <input type="checkbox" class="mass-env-chk" value="main"> MAIN / PROD
+              </label>
+              <button type="button" class="btn btn-sm btn-outline" style="padding:1px 6px; font-size:10px; margin-left:6px;" onclick="toggleAllMassEnv()">Todos</button>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="massiveOptRollout">
+              <strong>4. Reiniciar deployments en K8s</strong> (<code>rollout restart</code>)
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeMassiveBuildModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitMassiveBuild()">🚀 Iniciar Construcción Masiva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Consola en Vivo de Build & Deploy -->
+  <div id="buildTerminalModal" class="modal-overlay">
+    <div class="modal" style="max-width:980px; width:95%;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 class="modal-title" id="buildTerminalTitle">⚙️ Consola de Construcción & Despliegue CI/CD</h3>
+          <span id="buildTerminalBadge" class="status-badge online"><span class="dot"></span> EN EJECUCIÓN</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:12px;" onclick="minimizeBuildTerminal()" title="Minimizar proceso">🗕</button>
+          <button class="modal-close" onclick="closeBuildTerminalModal()">&times;</button>
+        </div>
+      </div>
+
+      <!-- Barra de Selector de Tareas si hay múltiples en ejecución -->
+      <div id="buildModalTaskTabs" style="display:none; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:6px; border-bottom:1px solid var(--card-border);"></div>
+
+      <!-- Barra de Progreso -->
+      <div style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:4px;">
+          <span id="buildTerminalStepText">Iniciando proceso...</span>
+          <span id="buildTerminalPercent">0%</span>
+        </div>
+        <div style="width:100%; height:6px; background:var(--surface-elevated); border-radius:3px; overflow:hidden;">
+          <div id="buildTerminalProgressBar" style="width:0%; height:100%; background:var(--accent); transition:width 0.3s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Ventana Terminal -->
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <span class="terminal-dot dot-red"></span>
+            <span class="terminal-dot dot-yellow"></span>
+            <span class="terminal-dot dot-green"></span>
+          </div>
+          <span style="font-family:ui-monospace, monospace; font-size:11px; color:var(--text-muted);" id="buildTerminalStatusText">podman stream</span>
+          <span style="font-size:11px; color:var(--text-dim);" id="buildTerminalLinesCount">0 líneas</span>
+        </div>
+        <div class="terminal-body" id="buildTerminalBody" style="max-height:420px;">Cargando salida del proceso...</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="copyBuildLogs()">📋 Copiar Salida</button>
+        <button class="btn btn-outline" onclick="scrollBuildLogsToBottom()">⬇️ Ir al final</button>
+        <button class="btn btn-hero" onclick="minimizeBuildTerminal()">🗕 Minimizar Proceso</button>
+        <button class="btn btn-outline" onclick="closeBuildTerminalModal()">✕ Cerrar y Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Usuarios Conectados en Repartición -->
+  <div id="reparticionUsersModal" class="modal-overlay">
+    <div class="modal" style="max-width:880px; width:95%;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+            <span>👥 Personas Conectadas:</span>
+            <span id="repUsersModalSigla" style="color:var(--accent);">REP</span>
+          </h3>
+          <span id="repUsersModalZoneBadge" class="badge-pill" style="font-size:11px;">ZONA</span>
+          <span id="repUsersModalCountBadge" class="badge-pill badge-clean" style="color:var(--accent);">0 Personas</span>
+        </div>
+        <button class="modal-close" onclick="closeReparticionUsersModal()">&times;</button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div id="repUsersModalDesc" style="color:var(--text-secondary); font-size:13px; font-weight:600;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:11px; color:var(--text-muted);">
+          <span id="repUsersModalMeta">Jurisdicción: -</span>
+          <span id="repUsersModalEnv">Entorno: DEVELOP</span>
+        </div>
+      </div>
+
+      <div id="repUsersModalContent" style="max-height:420px; overflow-y:auto; border:1px solid var(--card-border); border-radius:8px; background:var(--console-bg);">
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between; margin-top:14px;">
+        <div>
+          <button class="btn btn-outline" onclick="copyReparticionUsersList()">📋 Copiar Lista de Usuarios</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-hero" onclick="closeReparticionUsersModal()">Entendido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de Transacción en Bitácora -->
+  <div id="transactionDetailModal" class="modal-overlay" onclick="if(event.target===this) closeTransactionDetailModal()">
+    <div class="modal" style="max-width:850px; width:95%;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
+            <span>🔍 Detalle de Transacción en Bitácora</span>
+          </h3>
+          <span id="modalTxStatusBadge" class="badge-pill">200 OK</span>
+          <span id="modalTxModuleBadge" class="badge-pill" style="background:var(--accent-hover); color:var(--text);">MÓDULO</span>
+        </div>
+        <button class="modal-close" onclick="closeTransactionDetailModal()">&times;</button>
+      </div>
+
+      <div style="margin-bottom:14px; background:rgba(15,23,42,0.8); border:1px solid var(--card-border); border-radius:10px; padding:12px 16px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; font-size:12px;">
+          <div>
+            <span style="color:var(--text-muted); font-size:10px; text-transform:uppercase; font-weight:700;">Persona Ejecutora</span>
+            <div id="modalTxUser" style="color:var(--text); font-weight:700; margin-top:2px;">-</div>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); font-size:10px; text-transform:uppercase; font-weight:700;">RUN / Identificador</span>
+            <div id="modalTxRun" style="font-family:ui-monospace, monospace; color:var(--accent); font-weight:700; margin-top:2px;">-</div>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); font-size:10px; text-transform:uppercase; font-weight:700;">Fecha y Hora Exacta</span>
+            <div id="modalTxDate" style="color:var(--text-secondary); margin-top:2px;">-</div>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); font-size:10px; text-transform:uppercase; font-weight:700;">Dirección IP</span>
+            <div id="modalTxIp" style="font-family:ui-monospace, monospace; color:var(--text-secondary); margin-top:2px;">-</div>
+          </div>
+        </div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-soft); font-size:12px;">
+          <span style="color:var(--text-muted); font-size:10px; text-transform:uppercase; font-weight:700;">Endpoint Completo:</span>
+          <div id="modalTxEndpoint" style="font-family:ui-monospace, monospace; color:var(--accent); word-break:break-all; margin-top:2px;">-</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12px; font-weight:700; color:var(--text);">📦 Carga Transaccional (Payload):</span>
+        <button class="btn btn-sm btn-outline" onclick="copyTransactionPayload()" style="font-size:11px; padding:3px 8px;">📋 Copiar JSON</button>
+      </div>
+      <div style="background:var(--console-bg); border:1px solid var(--card-border); border-radius:8px; padding:12px; max-height:360px; overflow-y:auto;">
+        <pre id="modalTxPayload" style="margin:0; font-family:ui-monospace, monospace; font-size:11.5px; color:var(--text-secondary); white-space:pre-wrap; word-break:break-all;"></pre>
+      </div>
+
+      <div class="modal-actions" style="margin-top:14px; justify-content:flex-end;">
+        <button class="btn btn-hero" onclick="closeTransactionDetailModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Espejo Visual en Vivo (Opción 3 - Co-browsing / Screen Mirror) -->
+  <div id="screenMirrorModal" class="modal-overlay" onclick="if(event.target===this) closeScreenMirrorModal()">
+    <div id="screenMirrorModalBox" class="modal" style="max-width:98vw; width:98vw; height:95vh; margin:2.5vh auto; display:flex; flex-direction:column; padding:0; overflow:hidden; background:var(--console-bg); border:1px solid var(--intranet); box-shadow:0 0 45px rgba(217,70,239,0.3); border-radius:12px; transition:all 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+      <!-- Header -->
+      <div style="padding:10px 20px; background:linear-gradient(135deg, rgba(24,10,38,0.98), rgba(15,23,42,0.98)); border-bottom:1px solid rgba(217,70,239,0.35); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; z-index:10;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <span style="font-size:18px;">🎥</span>
+          <div>
+            <div style="font-weight:800; font-size:15px; color:var(--text); display:flex; align-items:center; gap:8px;">
+              Espejo Visual en Vivo: <span id="mirrorUserName" style="color:var(--intranet);">-</span>
+              <span class="badge-pill" style="background:rgba(217,70,239,0.2); border:1px solid var(--intranet); color:#f0abfc; font-weight:800; font-size:10px; display:inline-flex; align-items:center; gap:4px; padding:2px 8px;">
+                <span class="dot" style="background:var(--intranet); box-shadow:0 0 8px var(--intranet);"></span>
+                CO-BROWSING ULTRA-LOW LATENCY
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <!-- Selector de Escala / Zoom -->
+          <div style="display:flex; align-items:center; gap:5px; background:var(--border-soft); padding:3px 8px; border-radius:6px; border:1px solid var(--border-strong);">
+            <span style="font-size:11px; color:var(--text-muted); font-weight:600;">🔍 Zoom:</span>
+            <select id="mirrorScaleSelect" onchange="changeMirrorScale(this.value)" style="background:var(--card-bg-solid); color:var(--text); border:1px solid rgba(217,70,239,0.4); border-radius:4px; font-size:11px; padding:2px 6px; cursor:pointer; outline:none;">
+              <option value="fit" selected>Ajustar a Pantalla (Auto-Fit)</option>
+              <option value="1.0">100% (Resolución Nativa 1:1)</option>
+              <option value="0.9">90%</option>
+              <option value="0.8">80%</option>
+              <option value="0.7">70%</option>
+              <option value="0.5">50%</option>
+            </select>
+            <span id="mirrorScaleInfo" style="font-size:10.5px; color:var(--accent); font-family:monospace; min-width:32px;">-</span>
+          </div>
+
+          <!-- Botón Pantalla Completa -->
+          <button id="btnToggleMirrorFullscreen" class="btn btn-sm" onclick="toggleMirrorFullscreen()" style="background:rgba(217,70,239,0.15); border:1px solid var(--intranet); color:#fdf4ff; font-size:11px; padding:4px 10px; font-weight:600;">
+            ⛶ Pantalla Completa
+          </button>
+          
+          <button class="btn btn-sm" onclick="forceMirrorRefresh()" style="background:var(--border-soft); border:1px solid rgba(255,255,255,0.2); color:var(--text); font-size:11px; padding:4px 10px;">
+            🔄 Forzar DOM
+          </button>
+          <button class="modal-close" onclick="closeScreenMirrorModal()" style="font-size:24px; line-height:1; color:var(--text-muted); background:none; border:none; cursor:pointer;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Barra de Metadatos del Espejo -->
+      <div style="padding:6px 20px; background:rgba(0,0,0,0.6); border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); flex-wrap:wrap; gap:8px; z-index:10;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <span>🖥️ Res. Nativa: <strong id="mirrorResolutionText" style="color:var(--text-secondary); font-family:monospace;">-</strong></span>
+          <span>📍 Puntero: <strong id="mirrorCursorCoords" style="color:var(--accent); font-family:monospace;">(0, 0)</strong></span>
+          <span>📜 Desplazamiento: <strong id="mirrorScrollCoords" style="color:var(--text-secondary); font-family:monospace;">(0, 0)</strong></span>
+          <span>⚡ Refresco: <strong id="mirrorFpsIndicator" style="color:var(--success); font-family:monospace;">~250ms</strong></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:10px; color:var(--success); background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">
+            🔒 Enmascaramiento Activo (Sin passwords ni campos sensibles)
+          </span>
+          <span id="mirrorTelemetryStatus" style="font-size:10.5px; color:var(--text-dim); font-family:monospace;">Sondeo: Activo</span>
+        </div>
+      </div>
+
+      <!-- Área de Visualización (Stage + Virtual Viewport Canvas Wrapper) -->
+      <div id="screenMirrorStage" style="flex:1; position:relative; overflow:auto; background:#04060b; background-image:radial-gradient(var(--border-soft) 1px, transparent 0); background-size:24px 24px; padding:16px; display:flex; justify-content:center; align-items:flex-start;">
+        
+        <!-- Canvas Wrapper con Resolución Nativa del Usuario Escalado con Transform -->
+        <div id="screenMirrorCanvasWrapper" style="position:relative; width:1920px; height:1080px; transform-origin: top center; background:var(--text); box-shadow:0 20px 60px rgba(0,0,0,0.85); border:1px solid var(--border-strong); border-radius:4px; overflow:hidden; flex-shrink:0;">
+          <!-- Es un espejo de sólo lectura: el contenido llega por srcdoc desde
+               el DOM de otra aplicación, así que es NO confiable.  No se le
+               concede allow-same-origin: esa combinación con allow-scripts
+               permitiría al contenido escapar de su sandbox y alcanzar el
+               origen del panel. -->
+          <iframe id="screenMirrorIframe" sandbox="allow-scripts" style="width:100%; height:100%; border:none; display:block; pointer-events:none;"></iframe>
+          <!-- Puntero Virtual del Operador -->
+          <div id="screenMirrorCursor" style="position:absolute; left:0; top:0; width:16px; height:16px; border-radius:50%; background:var(--danger); border:2px solid var(--text); box-shadow:0 0 12px var(--danger), 0 0 20px rgba(239,68,68,0.6); pointer-events:none; z-index:99999; transform:translate(-50%, -50%); transition:left 0.12s linear, top 0.12s linear; display:none;">
+            <div style="position:absolute; left:18px; top:-2px; background:rgba(15,23,42,0.92); color:var(--text); font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:4px; border:1px solid var(--danger); white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.5);">Puntero Operador</div>
+          </div>
+          <!-- Onda / Pulso de Click -->
+          <div id="screenMirrorClickPulse" style="position:absolute; width:44px; height:44px; border-radius:50%; border:3px solid var(--danger); pointer-events:none; z-index:99998; transform:translate(-50%, -50%) scale(0); opacity:0; transition:transform 0.35s ease-out, opacity 0.35s ease-out;"></div>
+        </div>
+
+        <!-- Spacer invisible para garantizar scrolling cuando el canvas esté escalado o 1:1 -->
+        <div id="screenMirrorCanvasSpacer" style="position:absolute; top:16px; left:16px; pointer-events:none; visibility:hidden;"></div>
+
+        <!-- Estado Vacío / Esperando -->
+        <div id="screenMirrorEmptyState" style="position:absolute; inset:0; background:var(--console-bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-muted); z-index:50;">
+          <div style="font-size:40px; animation:pulse 1.5s infinite;">📡</div>
+          <div style="font-weight:800; color:var(--text); font-size:15px;">Sincronizando canal de espejo visual con el navegador del operador...</div>
+          <div style="font-size:12px; max-width:500px; text-align:center; color:var(--text-dim); line-height:1.5;">
+            El frontend transmitirá el snapshot DOM sanitizado a resolución nativa y el stream de cursor de ultra baja latencia.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Selector de Rol & Autenticación PIN -->
+  <div id="roleModal" class="modal-overlay">
+    <div class="modal" style="max-width:500px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">👤 Perfil y Permisos de Usuario</h3>
+        <button class="modal-close" onclick="closeRoleModal()">&times;</button>
+      </div>
+      <div id="roleModalReason" style="display:none; font-size:12px; color:var(--warn); background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:8px 12px; border-radius:6px; margin-bottom:12px;"></div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+        Selecciona el rol con el que deseas operar la consola. Las acciones críticas de despliegue, construcción y cambios de entorno requieren autenticación de <strong>Administrador / DevOps</strong>.
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+        <!-- Card Rol Viewer -->
+        <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--card-border); border-radius:8px; cursor:pointer; background:rgba(15,23,42,0.6);" onclick="selectRoleRadio('viewer')">
+          <input type="radio" name="roleRadio" value="viewer" id="roleRadioViewer" style="margin-top:3px;">
+          <div>
+            <div style="font-weight:700; font-size:12px; color:var(--text-secondary);">👁️ Soporte / QA (Solo Lectura)</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.4;">Visualización en vivo de estado de servicios, pods y conectividad. Sin permisos de ejecución ni terminales.</div>
+          </div>
+        </label>
+
+        <!-- Card Rol Dev -->
+        <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--card-border); border-radius:8px; cursor:pointer; background:rgba(15,23,42,0.6);" onclick="selectRoleRadio('dev')">
+          <input type="radio" name="roleRadio" value="dev" id="roleRadioDev" checked style="margin-top:3px;">
+          <div>
+            <div style="font-weight:700; font-size:12px; color:var(--accent);">👨‍💻 Desarrollador (Estándar)</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.4;">Lanzar sesiones de Tilix, checkout de ramas, reinicio de servicios locales y lectura de Logs Pro en K8s.</div>
+          </div>
+        </label>
+
+        <!-- Card Rol Admin -->
+        <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--card-border); border-radius:8px; cursor:pointer; background:rgba(15,23,42,0.6);" onclick="selectRoleRadio('admin')">
+          <input type="radio" name="roleRadio" value="admin" id="roleRadioAdmin" style="margin-top:3px;">
+          <div>
+            <div style="font-weight:700; font-size:12px; color:var(--warn);">👑 Administrador / DevOps (Control Total)</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.4;">Construcción y push de imágenes, despliegues K8s (`apply`), rollouts globales, modo de entorno y Git push. Requiere PIN.</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Campo PIN (Solo si Admin) -->
+      <div id="rolePinContainer" style="display:none; background:var(--card-bg-solid); border:1px solid var(--border-strong); border-radius:8px; padding:12px; margin-bottom:16px;">
+        <label style="font-size:12px; font-weight:700; color:var(--text); display:block; margin-bottom:6px;">Ingresa el PIN de Administrador:</label>
+        <div style="display:flex; gap:8px;">
+          <input type="password" id="rolePinInput" class="search-input" placeholder="••••••••" style="font-size:14px; letter-spacing:2px; font-family:ui-monospace, monospace;" onkeydown="if(event.key==='Enter') submitRoleChange()">
+        </div>
+        <div id="rolePinError" style="color:var(--danger); font-size:11px; margin-top:6px; display:none;">⚠️ PIN incorrecto. Inténtalo de nuevo.</div>
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between;">
+        <div>
+          <button class="btn btn-outline" id="btnRoleLogoutAdmin" style="display:none; border-color:var(--danger); color:var(--danger);" onclick="logoutAdminRole()">Cerrar Sesión Admin</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeRoleModal()">Cancelar</button>
+          <button class="btn btn-hero" onclick="submitRoleChange()">Aplicar Perfil</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Selector de Directorio Raíz de Proyectos -->
+  <div id="rootFolderModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeRootFolderModal()">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">📁 Directorio Raíz de Proyectos</h3>
+        <button class="modal-close" onclick="closeRootFolderModal()">&times;</button>
+      </div>
+      
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">
+        Configura la carpeta base donde la consola escaneará automáticamente los microservicios (<code>backend/</code>) y microfrontends (<code>frontend/</code>).
+      </div>
+
+      <!-- Barra de Ruta y Navegación -->
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Ruta del Directorio en Disco:</label>
+        <div style="display:flex; gap:8px; align-items:stretch;">
+          <input type="text" id="inputRootFolder" class="input" style="flex:1; font-family:ui-monospace, monospace; font-size:12px; margin:0;" placeholder="/ruta/a/tu/Develop" onkeydown="if(event.key==='Enter') inspectRootFolder()">
+          <button type="button" class="btn btn-outline" onclick="navigateParentFolder()" title="Subir al directorio superior (..)" style="display:inline-flex; align-items:center; justify-content:center; padding:0 12px; font-size:14px; min-width:40px;">⬆️</button>
+          <button class="btn btn-outline" style="white-space:nowrap; padding:0 16px; font-size:12px; display:inline-flex; align-items:center; gap:5px;" onclick="inspectRootFolder()">🔍 Analizar</button>
+        </div>
+      </div>
+
+      <!-- Accesos Rápidos -->
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap; font-size:11px;">
+        <span style="color:var(--text-muted);">Sugerencias:</span>
+        <button class="btn btn-xs btn-outline" id="btnDefaultRoot" onclick="setAndInspectFolder(this.dataset.path)" style="font-size:10px; padding:2px 8px;">🏠 Develop Actual</button>
+        <button class="btn btn-xs btn-outline" onclick="setAndInspectFolder('~/Documentos')" style="font-size:10px; padding:2px 8px;">📁 ~/Documentos</button>
+      </div>
+
+      <!-- Panel de Diagnóstico y Preview en Vivo -->
+      <div id="rootFolderPreviewBox" style="background:#090d16; border:1px solid var(--card-border); border-radius:8px; padding:12px; margin-bottom:12px; min-height:80px;">
+        <div id="rootFolderPreviewLoading" style="display:none; text-align:center; padding:18px; color:var(--text-muted); font-size:12px;">
+          <span class="dot pulse"></span> Escaneando directorio...
+        </div>
+        <div id="rootFolderPreviewContent">
+          <!-- Renderizado dinámico -->
+        </div>
+      </div>
+
+      <!-- Subdirectorios en este nivel -->
+      <div id="rootFolderSubdirsWrapper" style="margin-bottom:16px;">
+        <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; display:flex; justify-content:space-between;">
+          <span>Subcarpetas detectadas (clic para navegar):</span>
+          <span id="rootFolderSubdirsCount" style="color:var(--text-dim);">0</span>
+        </div>
+        <div id="rootFolderSubdirsList" style="display:flex; gap:6px; flex-wrap:wrap; max-height:95px; overflow-y:auto; padding:6px; background:var(--console-bg); border-radius:6px; border:1px solid var(--card-border);">
+          <!-- Pills dinámicas de subcarpetas -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <div id="rootFolderStatusMsg" style="font-size:11.5px; color:var(--text-muted);"></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="closeRootFolderModal()">Cancelar</button>
+          <button class="btn btn-primary" id="btnApplyRootFolder" onclick="applyRootFolder()" disabled>💾 Aplicar y Escanear Proyectos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Conflicto de Microservicios Activos -->
+  <div id="conflictLaunchModal" class="modal-overlay">
+    <div class="modal" style="max-width:540px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--warn);">⚠️ Microservicios Ya en Ejecución</h3>
+        <button class="modal-close" onclick="closeConflictModal()">&times;</button>
+      </div>
+      <div id="conflictModalBody" style="font-size:13px; line-height:1.6; color:var(--text-secondary); margin:10px 0 14px 0;"></div>
+      <div class="modal-actions" style="flex-wrap:wrap; gap:8px;">
+        <button class="btn btn-outline" onclick="closeConflictModal()">Cancelar</button>
+        <button class="btn btn-outline" style="border-color:var(--danger); color:var(--danger);" onclick="confirmConflictForceLaunch()">⚠️ Abrir de Todas Formas (Forzar)</button>
+        <button class="btn btn-hero" id="btnStopAndLaunch" onclick="confirmStopAndLaunch()">🧹 Detener Todo y Abrir (Recomendado)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Git Manifiestos (backend/config) -->
+  <div id="configGitModal" class="modal-overlay">
+    <div class="modal" style="max-width:620px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="configGitModalTitle">📦 Git Manifiestos K8s (backend/config)</h3>
+        <button class="modal-close" onclick="closeConfigGitModal()">&times;</button>
+      </div>
+      <div id="configGitModalBody" style="font-size:12px; line-height:1.6; margin:10px 0;"></div>
+      <div id="configGitCommitRow" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+        <label style="font-size:12px; font-weight:700; color:var(--text);">Mensaje de commit:</label>
+        <input type="text" id="configGitCommitMsg" class="search-input" placeholder="ej: Actualización de versión YAML para despliegue" style="width:100%;">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeConfigGitModal()">Cerrar</button>
+        <button class="btn btn-hero" id="btnConfigGitSubmit" style="display:none;" onclick="submitConfigGitPush()">Confirmar y Hacer Push</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dock Multi-Tareas Flotante de Procesos de Build Minimizados -->
+  <div id="buildTasksDock" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1500; flex-direction:column-reverse; gap:10px; max-height:80vh; overflow-y:auto; pointer-events:none; width:380px;"></div>
+
+  <!-- Modal Importar Sesión Tilix -->
+  <div id="importLayoutModal" class="modal-overlay">
+    <div class="modal" style="max-width:580px; width:95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">📥 Importar Layout de Tilix (JSON)</h3>
+        <button class="modal-close" onclick="closeImportModal()">&times;</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted);">
+        Selecciona un archivo JSON exportado desde Tilix o tu sistema de archivos. Se guardará de forma portable en <code>config/sessions/</code>.
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Selector Visual de Archivo con Drag & Drop -->
+        <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;" onchange="onLayoutFileSelected(event)">
+        
+        <div id="importDropZone" 
+             onclick="document.getElementById('importFileInput').click()"
+             ondragover="handleDragOver(event)" 
+             ondragleave="handleDragLeave(event)" 
+             ondrop="handleDrop(event)"
+             style="border:2px dashed var(--border-strong); border-radius:10px; padding:18px 16px; text-align:center; cursor:pointer; background:var(--card-bg-solid); transition:all 0.2s ease;">
+          <div style="font-size:30px; margin-bottom:6px;" id="importDropIcon">📁</div>
+          <div style="font-weight:700; font-size:13px; color:var(--text);" id="importDropZoneText">
+            Haz clic aquí para seleccionar un archivo .json
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;" id="importDropZoneSubtext">
+            o arrastra y suelta el archivo aquí directamente
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label style="font-size:12px; font-weight:700; color:var(--text);">Nombre del archivo destino:</label>
+            <span id="importFileStatus" style="font-size:11px; color:var(--text-muted);">Auto-completado al elegir archivo</span>
+          </div>
+          <input type="text" id="importFileName" class="search-input" placeholder="ej: contratos_avanzado.json" style="width:100%;">
+        </div>
+
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label style="font-size:12px; font-weight:700; color:var(--text);">Contenido del Layout JSON:</label>
+            <span id="importJsonValidation" style="font-size:11px; font-weight:700; color:var(--text-muted);">Sin datos</span>
+          </div>
+          <textarea id="importFileContent" class="search-input" placeholder="El contenido se cargará automáticamente al elegir un archivo, o puedes pegarlo aquí directamente..." style="height:120px; font-family:ui-monospace, monospace; font-size:11px; width:100%;" oninput="validateImportJson()"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeImportModal()">Cancelar</button>
+        <button class="btn btn-hero" id="btnSubmitImport" onclick="submitImportLayout()">Guardar e Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Universal de Ejecución de Comandos y Diagnóstico de Errores -->
+  <div id="commandResultModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:780px; width:95%; max-height:85vh; display:flex; flex-direction:column; padding:0; overflow:hidden; background:var(--surface-base); border:1px solid var(--border-strong); box-shadow:0 12px 40px rgba(0,0,0,0.75);">
+      <div class="modal-header" style="padding:16px 20px; background:var(--card-bg-solid); border-bottom:1px solid var(--card-border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span id="cmdResultIcon" style="font-size:18px;">⚙️</span>
+          <div>
+            <h3 class="modal-title" id="cmdResultTitle" style="margin:0; font-size:15px; font-weight:800; color:var(--text);">Ejecución de Comando</h3>
+            <div id="cmdResultSubtitle" style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Operación en curso...</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeCommandModal()" style="font-size:20px; color:var(--text-muted); cursor:pointer; background:none; border:none;">&times;</button>
+      </div>
+
+      <div style="padding:16px 20px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+        <!-- Barra de estado y comando -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg-solid); padding:10px 14px; border-radius:8px; border:1px solid var(--card-border);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; text-transform:uppercase; font-weight:800; color:var(--text-muted);">Comando:</span>
+            <code id="cmdResultCommand" style="color:var(--accent); font-size:12px; font-family:ui-monospace, monospace; background:rgba(56,189,248,0.1); padding:2px 8px; border-radius:4px;">-</code>
+          </div>
+          <span id="cmdResultBadge" class="status-badge" style="font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; display:inline-flex; align-items:center; gap:6px;">
+            <span class="spinner" style="width:11px; height:11px; border-width:2px; display:inline-block;"></span> EN PROCESO
+          </span>
+        </div>
+
+        <!-- Consola de salida -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Salida del Sistema (stdout / stderr):</label>
+            <span id="cmdResultTimestamp" style="font-size:10.5px; color:var(--text-dim);">-</span>
+          </div>
+          <pre id="cmdResultOutput" class="cmd-console-box"></pre>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="padding:12px 20px; background:var(--card-bg-solid); border-top:1px solid var(--card-border); display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-outline" onclick="copyCommandOutput()" style="display:inline-flex; align-items:center; gap:6px;">📋 Copiar Salida</button>
+        <button class="btn btn-hero" id="btnCmdResultClose" onclick="closeCommandModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Terminal Integrada xterm.js (Phase 5B) -->
+  <div id="focusedTerminalModal" class="modal-overlay" style="display:none; z-index:10000;">
+    <div class="modal" style="max-width:1100px; width:95%; height:82vh; display:flex; flex-direction:column; padding:0; overflow:hidden; background:var(--surface-base); border:1px solid var(--border-strong); box-shadow:0 16px 48px rgba(0,0,0,0.85); border-radius:10px;">
+      <div class="modal-header" style="padding:12px 18px; background:var(--card-bg-solid); border-bottom:1px solid var(--card-border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:18px;">💻</span>
+          <div>
+            <h3 class="modal-title" id="focusedTerminalTitle" style="margin:0; font-size:15px; font-weight:800; color:var(--text);">Terminal Integrada</h3>
+            <div id="focusedTerminalSubtitle" style="font-size:11px; color:var(--text-muted); margin-top:2px;">Conectando a sesión tmux...</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="focusedTerminalBadge" class="status-badge" style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(56,189,248,0.15); color:var(--accent);">CONECTADO</span>
+          <button class="modal-close" onclick="closeFocusedTerminal()" style="font-size:22px; color:var(--text-muted); cursor:pointer; background:none; border:none; padding:0 6px;" title="Cerrar terminal (mantiene servicio vivo)">&times;</button>
+        </div>
+      </div>
+      <div id="focusedTerminalContainer" style="flex:1; width:100%; height:100%; background:var(--card-bg-solid); padding:10px; overflow:hidden; position:relative;"></div>
+      <div class="modal-actions" style="padding:8px 18px; background:var(--card-bg-solid); border-top:1px solid var(--card-border); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:var(--text-dim);">💡 PTY Host aislado vía node-pty + tmux attach | Atajos: Ctrl+C, Ctrl+D, Ctrl+Z funcionan nativamente</span>
+        <button class="btn btn-outline btn-sm" onclick="closeFocusedTerminal()">Cerrar Terminal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuración (tema y preferencias) -->
+  <div id="settingsModal" class="modal-overlay" style="z-index:1100;" onclick="if(event.target===this) closeSettingsModal()">
+    <div class="modal" style="max-width:780px; width:95%; max-height:86vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:22px;">🎨</span>
+          <div>
+            <h3 class="modal-title" style="font-size:16px;">Configuración</h3>
+            <span style="font-size:11px; color:var(--text-muted);">Apariencia y preferencias de la aplicación</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <div style="overflow-y:auto; flex:1; margin-top:14px;">
+        <div class="settings-section-title">Tema de la aplicación</div>
+        <p class="settings-hint">Se aplica a todas las vistas, paneles, consolas y modales. Queda guardado en este navegador.</p>
+        <div id="themePickerGrid" class="theme-grid"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeSettingsModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Notificación</div>
+
+  <!-- Widget Flotante Monitor de Despliegues / Rollout K8s -->
+  <div id="rolloutLiveTracker" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9999; background:rgba(15,23,42,0.96); border:1px solid var(--accent); border-radius:10px; padding:14px 18px; box-shadow:0 12px 36px rgba(0,0,0,0.6); min-width:340px; max-width:460px; backdrop-filter:blur(8px);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+      <span style="font-weight:700; font-size:12.5px; color:var(--accent); display:flex; align-items:center; gap:8px;">
+        <span class="spinner" id="rolloutTrackerSpinner" style="width:13px; height:13px; border-width:2px; display:inline-block;"></span>
+        <span>Monitor de Despliegue K8s</span>
+      </span>
+      <button onclick="closeRolloutTracker()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px;" title="Cerrar monitor">✕</button>
+    </div>
+    <div id="rolloutTrackerTarget" style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:4px; font-family:ui-monospace, monospace;"></div>
+    <div id="rolloutTrackerMsg" style="font-size:11px; color:var(--text-secondary); font-family:ui-monospace, monospace; line-height:1.4; word-break:break-word;">Iniciando seguimiento...</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+      <span id="rolloutTrackerTime" style="font-size:10px; color:var(--text-dim);">Consultando cada 2s</span>
+      <button id="rolloutTrackerViewBtn" class="btn btn-sm btn-outline" style="padding:2px 8px; font-size:10px;" onclick="goToK8sTab()">Ver en Pods K8s ➔</button>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- JAVASCRIPT DE LA APLICACIÓN                                            -->
+  <!-- ====================================================================== -->
+    <script src="/static/js/dashboard.js"></script>
+  <script>
+    /* Puentes al motor de temas (theme.js) con los nombres que usa la interfaz. */
+    function openSettingsModal() { window.SisperTheme && SisperTheme.openSettings(); }
+    function closeSettingsModal() { window.SisperTheme && SisperTheme.closeSettings(); }
+
+    /* Arranque dirigido: /?tab=consoles&wall=1 abre el muro a pantalla completa
+       (lo usa el botón «⧉ Ventana» del muro). */
+    (function () {
+      var q = new URLSearchParams(location.search);
+      if (q.get('wall') === '1') document.body.classList.add('wall-only');
+      var tab = q.get('tab');
+      if (!tab) return;
+      var intentos = 0;
+      var t = setInterval(function () {
+        if (typeof window.switchTab === 'function') {
+          try { window.switchTab(tab); } catch (e) { /* la app aún no está lista */ }
+          clearInterval(t);
+        }
+        if (++intentos > 60) clearInterval(t);
+      }, 250);
+    })();
+  </script>
+
+</body>
+</html>

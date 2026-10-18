@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevConsole — Laboratorio Visual de Terminales & Consolas</title>
+
+  <!-- xterm.js existente en static/ -->
+  <link rel="stylesheet" href="css/xterm.css">
+  <script src="js/xterm.js"></script>
+
+  <style>
+    :root {
+      --bg-lab: #080c14;
+      --bg-panel: #0d1322;
+      --bg-header: #111827;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --chrome-panel: #111827;
+      --chrome-toolbar: #0b1220;
+      --chrome-border: rgba(255,255,255,.09);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-lab);
+      color: #f1f5f9;
+      font-family: var(--font-sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* =========================================================================
+       BARRA SUPERIOR DEL LABORATORIO (TOP CONTROL BAR)
+       ========================================================================= */
+    .lab-topbar {
+      height: 50px;
+      background: #0b0f19;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+    .lab-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-lab {
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      color: #fff;
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .lab-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* Selectores en la barra superior */
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 2px 6px;
+      gap: 6px;
+    }
+    .ctrl-label {
+      font-size: 10.5px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .lab-select {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #38bdf8;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 3px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn-top {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: #f1f5f9;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-top:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-top.primary {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #fff;
+    }
+    .btn-top.primary:hover {
+      background: #0369a1;
+    }
+
+    /* =========================================================================
+       ESCENARIO PRINCIPAL (WORKSPACE DE TERMINALES)
+       ========================================================================= */
+    .lab-workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      background: #050811;
+      padding: 8px;
+    }
+
+    .terminal-stage {
+      flex: 1;
+      display: grid;
+      gap: 8px;
+      height: 100%;
+      width: 100%;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .terminal-stage.layout-mono {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+    }
+    .terminal-stage.layout-split-v {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+    }
+    .terminal-stage.layout-split-h {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    .terminal-stage.layout-quad {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+
+    /* =========================================================================
+       TARJETA DE TERMINAL (TERMINAL FRAME / CHROME)
+       ========================================================================= */
+    .term-window {
+      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .term-window:focus-within, .term-window.active-focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 30px rgba(0, 0, 0, 0.7);
+    }
+    .term-window.is-maximized {
+      position: absolute !important;
+      inset: 8px !important;
+      z-index: 100 !important;
+    }
+
+    /* Encabezado Superior de la Terminal */
+    .term-header {
+      height: 34px;
+      background: #161b22;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    /* Controles de Ventana / Traffic Lights */
+    .term-window-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot-traffic {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .dot-traffic.red { background: #ef4444; }
+    .dot-traffic.yellow { background: #f59e0b; }
+    .dot-traffic.green { background: #10b981; }
+
+    /* Pestañas de la Terminal (Dockview Style) */
+    .term-tabs-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+      max-width: 45%;
+    }
+    .term-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .term-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .term-tab.active {
+      background: #1e293b;
+      border-color: var(--accent);
+      color: #38bdf8;
+      font-weight: 700;
+    }
+    .term-tab .tab-close {
+      opacity: 0.6;
+      font-size: 12px;
+    }
+    .term-tab .tab-close:hover { opacity: 1; color: #ef4444; }
+
+    /* Metadata / Indicadores Técnicos */
+    .term-meta-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+    }
+    .meta-badge {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .meta-badge.branch { color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); }
+    .meta-badge.health { color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+
+    /* Herramientas de Cabecera */
+    .term-tools {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .tool-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s;
+    }
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .tool-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+    }
+
+    /* Barra de Búsqueda Flotante en Terminal */
+    .term-search-bar {
+      position: absolute;
+      top: 40px;
+      right: 14px;
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+      border-radius: 6px;
+      padding: 4px 8px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 40;
+    }
+    .term-search-bar.show { display: flex; }
+    .term-search-bar input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      outline: none;
+      width: 140px;
+    }
+
+    /* Área del Canvas xterm.js */
+    .term-canvas-wrapper {
+      flex: 1;
+      background: #090d16;
+      overflow: hidden;
+      position: relative;
+      padding: 6px;
+    }
+    .xterm-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Barra Inferior de Acciones Rápidas (Zero-Click Chips) */
+    .term-quick-bar {
+      height: 30px;
+      background: #0a0f1d;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .quick-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+    }
+    .q-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #7dd3fc;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .q-chip:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+
+    /* =========================================================================
+       MODAL DE COMPARATIVA Y ARQUITECTURA DE LIBRERÍAS
+       ========================================================================= */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      width: 820px;
+      max-width: 95vw;
+      max-height: 85vh;
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      background: #1e293b;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-body {
+      padding: 18px;
+      overflow-y: auto;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .comp-card {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .comp-card h4 {
+      color: #fff;
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .comp-pill {
+      font-size: 9.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .comp-pill.winner { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .comp-pill.info { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+
+    /* Toast */
+    .toast-box {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0f172a;
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 300;
+    }
+
+    /* Variantes aisladas de chrome. El renderer xterm y el transporte no cambian. */
+    body.chrome-minimal .lab-topbar { height:42px; background:#080c12; }
+    body.chrome-minimal .term-window { border-radius:3px; box-shadow:none; }
+    body.chrome-minimal .term-header { height:29px; background:#0b111b; }
+    body.chrome-minimal .term-quick-bar { height:24px; }
+    body.chrome-minimal .term-meta-badges { display:none; }
+    body.chrome-minimal .term-canvas-wrapper { padding:2px; }
+    body.chrome-glass .lab-topbar { background:rgba(14,22,37,.92); backdrop-filter:blur(14px); }
+    body.chrome-glass .term-window { background:rgba(13,20,34,.94); border-color:rgba(125,211,252,.18); box-shadow:0 12px 34px rgba(0,0,0,.32); }
+    body.chrome-glass .term-header { background:linear-gradient(105deg,rgba(30,41,59,.9),rgba(15,23,42,.92)); }
+    body.chrome-glass .term-canvas-wrapper { background:#0a1020; }
+    .term-state { display:inline-flex; align-items:center; gap:5px; color:#86efac; font:10px var(--font-mono); white-space:nowrap; }
+    .term-state i { width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px #22c55e; }
+    .term-subtitle { display:none; color:#64748b; font:10px var(--font-mono); }
+    body.chrome-minimal .term-subtitle { display:inline; }
+    body.chrome-minimal .term-window-controls { display:none; }
+    .secondary-tool { display:none !important; }
+    body.show-all-tools .secondary-tool { display:inline-flex !important; }
+    .term-footer-status { color:#64748b; font:10px var(--font-mono); }
+    @media (max-width: 1100px) {
+      .lab-title { display:none; }
+      .lab-topbar { overflow-x:auto; }
+      .term-meta-badges .meta-badge:nth-child(2) { display:none; }
+    }
+
+    /* Efecto Opcional CRT Scanlines (Cyberpunk) */
+    .scanlines-overlay {
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      opacity: 0.18;
+      display: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================================
+       BARRA SUPERIOR DE CONTROL DEL LABORATORIO
+       ========================================================================= -->
+  <header class="lab-topbar">
+    <div class="lab-brand">
+      <span class="badge-lab">LABORATORIO UI</span>
+      <span class="lab-title">Terminal & Console Studio V2</span>
+      <span style="font-size:11px; color:#64748b; margin-left:6px;">(Copia aislada de pruebas sin tocar producción)</span>
+    </div>
+
+    <div class="topbar-controls">
+      <!-- Selector de Tema Visual -->
+      <div class="ctrl-group">
+        <span class="ctrl-label">🎨 Tema:</span>
+        <select class="lab-select" id="themeSelector" onchange="changeActiveTheme(this.value)">
+          <option value="catppuccin">Catppuccin Mocha ⭐</option>
+          <option value="tokyonight">Tokyo Night</option>
+          <option value="dracula">Dracula Pro</option>
+          <option value="github">GitHub Dark Dimmed</option>
+          <option value="monokai">Monokai Pro</option>
+          <option value="cyberpunk">Cyberpunk Neon</option>
+        </select>
+      </div>
+
+      <!-- Selector de Layout / División de Pantalla -->
+      <div class="ctrl-group">
+        <span class="ctrl-label">▦ Layout:</span>
+        <select class="lab-select" id="layoutSelector" onchange="changeActiveLayout(this.value)">
+          <option value="split-v">Split Vertical (Dual 50/50)</option>
+          <option value="mono">Mono (Foco Total 100%)</option>
+          <option value="split-h">Split Horizontal (Arriba / Abajo)</option>
+          <option value="quad">Mosaico Quad (2x2 - 4 Consolas)</option>
+        </select>
+      </div>
+
+      <!-- Selector de Tamaño de Fuente -->
+      <div class="ctrl-group">
+        <span class="ctrl-label">Aa Fuente:</span>
+        <select class="lab-select" id="fontSizeSelector" onchange="changeFontSize(this.value)">
+          <option value="11">11px (Alta Densidad)</option>
+          <option value="12.5" selected>12.5px (Equilibrada)</option>
+          <option value="14">14px (Cómoda)</option>
+        </select>
+      </div>
+
+      <!-- Botón Comparativa de Librerías -->
+      <div class="ctrl-group" aria-label="Prototipos visuales">
+        <span class="ctrl-label">UI</span>
+        <select class="lab-select" id="chromeSelector" onchange="changeChrome(this.value)">
+          <option value="dock">Dockview · IDE</option>
+          <option value="minimal">Minimal · Logs</option>
+          <option value="glass">Glass · Operaciones</option>
+        </select>
+      </div>
+      <button class="btn-top" onclick="document.body.classList.toggle('show-all-tools'); showToast('Controles secundarios alternados')" title="Mostrar u ocultar controles secundarios">⋯ Herramientas</button>
+      <button class="btn-top primary" onclick="openCompModal()">
+        <span>ℹ️ Comparativa & Fusión</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       ESCENARIO PRINCIPAL CON INSTANCIAS DE XTERM.JS
+       ========================================================================= -->
+  <main class="lab-workspace">
+    <div class="scanlines-overlay" id="scanlinesEl"></div>
+
+    <div class="terminal-stage layout-split-v" id="termStage">
+
+      <!-- ===================================================================
+           VENTANA 1: MICROSERVICIO PRINCIPAL (ms_contratos)
+           =================================================================== -->
+      <div class="term-window" id="termWin-1">
+        <!-- Encabezado de Ventana (Estilo VS Code / Dockview) -->
+        <div class="term-header">
+          <div class="term-window-controls">
+            <span class="dot-traffic red" onclick="closeTermWindow(1)"></span>
+            <span class="dot-traffic yellow" onclick="minimizeTermWindow(1)"></span>
+            <span class="dot-traffic green" onclick="toggleMaximizeTerm(1)"></span>
+          </div>
+
+          <!-- Pestañas Acoplables -->
+          <div class="term-tabs-row">
+            <span class="term-state" title="PTY de demostración; no conectado a ningún proceso real"><i></i> DEMO</span>
+            <span class="term-subtitle">backend · DEVELOP</span>
+            <div class="term-tab active" id="tab-1" onclick="switchTermTab(1, 'ms_contratos')">
+              <span>🐍</span>
+              <span>ms_contratos (:8002)</span>
+              <span class="tab-close" onclick="event.stopPropagation(); closeTermTab(1)">×</span>
+            </div>
+            <div class="term-tab" id="tab-1b" onclick="switchTermTab(1, 'ms_evaluador')">
+              <span>⚖️</span>
+              <span>ms_evaluador</span>
+            </div>
+            <button class="tool-btn" onclick="addNewTab(1)" title="Nueva pestaña">+</button>
+          </div>
+
+          <!-- Badges de Estado & Métricas -->
+          <div class="term-meta-badges">
+            <span class="meta-badge branch">🌿 feature/pna-v2</span>
+            <span class="meta-badge health">● DB 172.30.23.71 (0.8ms)</span>
+            <span class="meta-badge">RAM: 142MB</span>
+          </div>
+
+          <!-- Micro-Herramientas -->
+          <div class="term-tools">
+            <button class="tool-btn" onclick="toggleTermSearch(1)" title="Buscar en buffer (Ctrl+F)">🔍</button>
+            <button class="tool-btn secondary-tool" onclick="toggleTermFilter(1)" title="Filtrar errores">⚠</button>
+            <button class="tool-btn secondary-tool" onclick="copyVisible(1)" title="Copiar salida de demostración">⧉</button>
+            <button class="tool-btn" id="btnPause-1" onclick="toggleTermPause(1)" title="Pausar / Reanudar Stream">⏸</button>
+            <button class="tool-btn" onclick="clearTerm(1)" title="Limpiar buffer">🧹</button>
+            <button class="tool-btn" onclick="toggleMaximizeTerm(1)" title="Maximizar a pantalla completa">⤢</button>
+          </div>
+        </div>
+
+        <!-- Barra de Búsqueda Flotante -->
+        <div class="term-search-bar" id="searchBar-1">
+          <span>🔍</span>
+          <input type="text" placeholder="Buscar texto en buffer..." oninput="handleSearchTerm(1, this.value)">
+          <button class="tool-btn" onclick="toggleTermSearch(1)">✕</button>
+        </div>
+
+        <!-- Contenedor del Canvas de xterm.js -->
+        <div class="term-canvas-wrapper" id="canvasWrapper-1">
+          <div class="xterm-container" id="xterm-1"></div>
+        </div>
+
+        <!-- Barra Inferior de Comandos Rápidos (Zero-Click CLI) -->
+        <div class="term-quick-bar">
+          <div class="quick-chips-row">
+            <span style="font-size:10px; color:#64748b;">CLI Rápido:</span>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'python manage.py check')">manage.py check</button>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'python manage.py showmigrations')">showmigrations</button>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'ping db')">ping 172.30.23.71</button>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'git status -s')">git status</button>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'curl :8002/api/v1/health/')">health check</button>
+            <button class="q-chip" onclick="injectQuickCmd(1, 'clear')">clear</button>
+          </div>
+          <span style="font-size:9.5px; color:#64748b; font-family:var(--font-mono);">PTY ACTIVO (Tipeo habilitado)</span>
+        </div>
+      </div>
+
+      <!-- ===================================================================
+           VENTANA 2: CELERY WORKER / TAREAS ASÍNCRONAS
+           =================================================================== -->
+      <div class="term-window" id="termWin-2">
+        <div class="term-header">
+          <div class="term-window-controls">
+            <span class="dot-traffic red" onclick="closeTermWindow(2)"></span>
+            <span class="dot-traffic yellow" onclick="minimizeTermWindow(2)"></span>
+            <span class="dot-traffic green" onclick="toggleMaximizeTerm(2)"></span>
+          </div>
+
+          <div class="term-tabs-row">
+            <span class="term-state" title="PTY de demostración; no conectado a ningún proceso real"><i></i> DEMO</span>
+            <span class="term-subtitle">worker · logs</span>
+            <div class="term-tab active" id="tab-2" onclick="switchTermTab(2, 'celery_worker')">
+              <span>⚙️</span>
+              <span>celery_worker (contratos)</span>
+              <span class="tab-close" onclick="event.stopPropagation(); closeTermTab(2)">×</span>
+            </div>
+            <div class="term-tab" id="tab-2b" onclick="switchTermTab(2, 'rabbitmq_consumer')">
+              <span>🐰</span>
+              <span>amqp_consumer</span>
+            </div>
+          </div>
+
+          <div class="term-meta-badges">
+            <span class="meta-badge health">● AMQP :5672</span>
+            <span class="meta-badge">Concurrencia: 4</span>
+            <span class="meta-badge">RAM: 98MB</span>
+          </div>
+
+          <div class="term-tools">
+            <button class="tool-btn" onclick="toggleTermSearch(2)" title="Buscar en buffer">🔍</button>
+            <button class="tool-btn secondary-tool" onclick="toggleTermFilter(2)" title="Filtrar errores">⚠</button>
+            <button class="tool-btn secondary-tool" onclick="copyVisible(2)" title="Copiar salida de demostración">⧉</button>
+            <button class="tool-btn" id="btnPause-2" onclick="toggleTermPause(2)" title="Pausar / Reanudar Stream">⏸</button>
+            <button class="tool-btn" onclick="clearTerm(2)" title="Limpiar buffer">🧹</button>
+            <button class="tool-btn" onclick="toggleMaximizeTerm(2)" title="Maximizar">⤢</button>
+          </div>
+        </div>
+
+        <div class="term-search-bar" id="searchBar-2">
+          <span>🔍</span>
+          <input type="text" placeholder="Buscar texto en buffer..." oninput="handleSearchTerm(2, this.value)">
+          <button class="tool-btn" onclick="toggleTermSearch(2)">✕</button>
+        </div>
+
+        <div class="term-canvas-wrapper" id="canvasWrapper-2">
+          <div class="xterm-container" id="xterm-2"></div>
+        </div>
+
+        <div class="term-quick-bar">
+          <div class="quick-chips-row">
+            <span style="font-size:10px; color:#64748b;">CLI Rápido:</span>
+            <button class="q-chip" onclick="injectQuickCmd(2, 'celery -A core inspect active')">inspect active</button>
+            <button class="q-chip" onclick="injectQuickCmd(2, 'celery -A core inspect stats')">inspect stats</button>
+            <button class="q-chip" onclick="injectQuickCmd(2, 'celery -A core purge -f')">purge queue</button>
+            <button class="q-chip" onclick="injectQuickCmd(2, 'clear')">clear</button>
+          </div>
+          <span style="font-size:9.5px; color:#64748b; font-family:var(--font-mono);">PTY ACTIVO</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       MODAL DE COMPARATIVA Y ARQUITECTURA DE LIBRERÍAS
+       ========================================================================= -->
+  <div class="modal-overlay" id="compModal" onclick="closeCompModal(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">🧪</span>
+          <strong style="color:#fff; font-size:14px;">Evaluación de Librerías & Estrategia de Fusión Visual</strong>
+        </div>
+        <button style="background:transparent; border:none; color:#fff; font-size:18px; cursor:pointer;" onclick="document.getElementById('compModal').style.display='none'">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Para elevar el aspecto de las terminales en <strong>DevConsole</strong> sin romper lo que ya funciona, hemos probado y clasificado las opciones de GitHub en sus dos roles técnicos complementarios:</p>
+
+        <div class="comp-grid">
+          <!-- Tarjeta 1: Motor de Terminal -->
+          <div class="comp-card">
+            <h4>
+              <span>⚡ Motor de Renderizado</span>
+              <span class="comp-pill winner">xterm.js (Ya integrado)</span>
+            </h4>
+            <p><strong>xterm.js</strong> ya está integrado localmente en el laboratorio y es la capa correcta de renderizado. Procesa secuencias ANSI, colores y teclado; los cambios aquí son solo de tema/opciones.</p>
+            <p style="margin-top:6px; color:#38bdf8;"><strong>Veredicto:</strong> No cambiar de motor; modernizar su paleta de colores (Catppuccin/Tokyo Night), fuente y chrome exterior.</p>
+          </div>
+
+          <!-- Tarjeta 2: Envoltorio y Layout -->
+          <div class="comp-card">
+            <h4>
+              <span>🪟 Gestor de Ventanas & Splits</span>
+              <span class="comp-pill winner">Fusión Estilo Dockview</span>
+            </h4>
+            <p><strong>Dockview</strong> aporta layouts acoplables y paneles tipo IDE. No se incluye en esta copia porque la página se sirve como HTML/JS sin bundle; debe evaluarse después de confirmar integración, licencia, tamaño y soporte del build actual.</p>
+            <p style="margin-top:6px; color:#34d399;"><strong>Prueba actual:</strong> se compara el chrome de ventanas y los layouts CSS; no pretende simular la integración real de Dockview.</p>
+          </div>
+
+          <!-- Tarjeta 3: Paleta de Comandos -->
+          <div class="comp-card">
+            <h4>
+              <span>🔍 Acciones Rápidas & Atajos</span>
+              <span class="comp-pill info">ninja-keys (Ctrl+K)</span>
+            </h4>
+            <p>Permite invocar cualquier comando o reiniciar un worker sin tocar el ratón mediante una paleta tipo Spotlight.</p>
+          </div>
+
+          <!-- Tarjeta 4: Iconografía y Controles -->
+          <div class="comp-card">
+            <h4>
+              <span>🎨 Iconografía y Controles</span>
+              <span class="comp-pill info">Lucide Icons</span>
+            </h4>
+            <p>Reemplaza emojis por vectores SVG nítidos de 16px para una apariencia 100% profesional de herramienta para desarrolladores.</p>
+          </div>
+        </div>
+
+        <div style="background:#090d16; border-left:3px solid #38bdf8; padding:10px 14px; border-radius:4px; margin-top:8px;">
+          <strong style="color:#fff;">💡 Conclusión de la Fusión Recomendada:</strong>
+          <br>
+          La mejor solución no es elegir una sola librería, sino una <strong>arquitectura en capas</strong>:
+          <strong>xterm.js</strong> como motor existente + CSS/temas para el chrome + addons oficiales de xterm para búsqueda/ajuste si se incorporan y se sirven localmente. Dockview sería una evaluación separada para layouts; no es una dependencia plug-and-play de esta página.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifier -->
+  <div class="toast-box" id="labToast">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">Mensaje</span>
+  </div>
+
+  <!-- =========================================================================
+       LÓGICA JAVASCRIPT: INSTANCIACIÓN DE XTERM.JS Y TEMAS DINÁMICOS
+       ========================================================================= -->
+  <script>
+    // PALETAS DE COLOR PROFESIONALES (THEMES)
+    const THEMES = {
+      catppuccin: {
+        name: 'Catppuccin Mocha',
+        background: '#1e1e2e',
+        foreground: '#cdd6f4',
+        cursor: '#f5e0dc',
+        selectionBackground: 'rgba(245, 224, 220, 0.25)',
+        black: '#45475a',
+        red: '#f38ba8',
+        green: '#a6e3a1',
+        yellow: '#f9e2af',
+        blue: '#89b4fa',
+        magenta: '#cba6f7',
+        cyan: '#89dceb',
+        white: '#bac2de',
+        brightBlack: '#585b70',
+        brightRed: '#f38ba8',
+        brightGreen: '#a6e3a1',
+        brightYellow: '#f9e2af',
+        brightBlue: '#89b4fa',
+        brightMagenta: '#cba6f7',
+        brightCyan: '#94e2d5',
+        brightWhite: '#a6adc8'
+      },
+      tokyonight: {
+        name: 'Tokyo Night',
+        background: '#1a1b26',
+        foreground: '#c0caf5',
+        cursor: '#c0caf5',
+        selectionBackground: 'rgba(122, 162, 247, 0.3)',
+        black: '#15161e',
+        red: '#f7768e',
+        green: '#9ece6a',
+        yellow: '#e0af68',
+        blue: '#7aa2f7',
+        magenta: '#bb9af7',
+        cyan: '#7dcfff',
+        white: '#a9b1d6',
+        brightBlack: '#414868',
+        brightRed: '#f7768e',
+        brightGreen: '#9ece6a',
+        brightYellow: '#e0af68',
+        brightBlue: '#7aa2f7',
+        brightMagenta: '#bb9af7',
+        brightCyan: '#7dcfff',
+        brightWhite: '#c0caf5'
+      },
+      dracula: {
+        name: 'Dracula Pro',
+        background: '#282a36',
+        foreground: '#f8f8f2',
+        cursor: '#f8f8f2',
+        selectionBackground: 'rgba(68, 71, 90, 0.5)',
+        black: '#21222c',
+        red: '#ff5555',
+        green: '#50fa7b',
+        yellow: '#f1fa8c',
+        blue: '#bd93f9',
+        magenta: '#ff79c6',
+        cyan: '#8be9fd',
+        white: '#f8f8f2',
+        brightBlack: '#6272a4',
+        brightRed: '#ff6e6e',
+        brightGreen: '#69ff94',
+        brightYellow: '#ffffa5',
+        brightBlue: '#d6acff',
+        brightMagenta: '#ff92df',
+        brightCyan: '#a4ffff',
+        brightWhite: '#ffffff'
+      },
+      github: {
+        name: 'GitHub Dark Dimmed',
+        background: '#22272e',
+        foreground: '#adbac7',
+        cursor: '#6cb6ff',
+        selectionBackground: 'rgba(49, 107, 187, 0.4)',
+        black: '#1c2128',
+        red: '#f47067',
+        green: '#57ab5a',
+        yellow: '#c69026',
+        blue: '#539bf5',
+        magenta: '#b083f0',
+        cyan: '#39c5cf',
+        white: '#909dab',
+        brightBlack: '#636e7b',
+        brightRed: '#ff938a',
+        brightGreen: '#6bc46d',
+        brightYellow: '#daaa3f',
+        brightBlue: '#6cb6ff',
+        brightMagenta: '#dcbdfb',
+        brightCyan: '#56d4dd',
+        brightWhite: '#cdd9e5'
+      },
+      monokai: {
+        name: 'Monokai Pro',
+        background: '#2d2a2e',
+        foreground: '#fcfcfa',
+        cursor: '#ffd866',
+        selectionBackground: 'rgba(255, 216, 102, 0.25)',
+        black: '#403e41',
+        red: '#ff6188',
+        green: '#a9dc76',
+        yellow: '#ffd866',
+        blue: '#fc9867',
+        magenta: '#ab9df2',
+        cyan: '#78dce8',
+        white: '#fcfcfa',
+        brightBlack: '#727072',
+        brightRed: '#ff6188',
+        brightGreen: '#a9dc76',
+        brightYellow: '#ffd866',
+        brightBlue: '#fc9867',
+        brightMagenta: '#ab9df2',
+        brightCyan: '#78dce8',
+        brightWhite: '#fcfcfa'
+      },
+      cyberpunk: {
+        name: 'Cyberpunk Neon',
+        background: '#05050e',
+        foreground: '#00ff9f',
+        cursor: '#ff0055',
+        selectionBackground: 'rgba(255, 0, 85, 0.3)',
+        black: '#120f26',
+        red: '#ff0055',
+        green: '#00ff9f',
+        yellow: '#ffe600',
+        blue: '#00b8ff',
+        magenta: '#ff00c8',
+        cyan: '#00ffff',
+        white: '#f1f1f1',
+        brightBlack: '#2d254e',
+        brightRed: '#ff3377',
+        brightGreen: '#33ffb3',
+        brightYellow: '#ffeb33',
+        brightBlue: '#33c6ff',
+        brightMagenta: '#ff33d3',
+        brightCyan: '#33ffff',
+        brightWhite: '#ffffff'
+      }
+    };
+
+    // ESTADO DEL LABORATORIO
+    const LAB_STATE = {
+      activeThemeKey: 'catppuccin',
+      fontSize: 12.5,
+      terminals: {},
+      isPaused: { 1: false, 2: false },
+      ptyBuffers: { 1: '', 2: '' },
+      streamTimers: [],
+      errorsOnly: { 1: false, 2: false }
+    };
+
+    // INICIALIZACIÓN AL CARGAR LA PÁGINA
+    document.addEventListener('DOMContentLoaded', () => {
+      changeChrome(document.getElementById('chromeSelector').value);
+      initTerminalInstance(1, 'ms_contratos');
+      initTerminalInstance(2, 'celery_worker');
+
+      startSimulatedStreaming();
+
+      // Atajo Ctrl+F para buscar
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          e.preventDefault();
+          toggleTermSearch(1);
+        }
+      });
+    });
+
+    // INICIALIZADOR DE INSTANCIA XTERM.JS
+    function initTerminalInstance(id, serviceName) {
+      const container = document.getElementById(`xterm-${id}`);
+      if (!container || typeof Terminal === 'undefined') return;
+
+      const theme = THEMES[LAB_STATE.activeThemeKey];
+
+      const term = new Terminal({
+        cursorBlink: true,
+        cursorStyle: 'bar',
+        fontFamily: "'JetBrains Mono', 'Fira Code', Cascadia Code, monospace",
+        fontSize: LAB_STATE.fontSize,
+        lineHeight: 1.4,
+        letterSpacing: 0,
+        theme: theme,
+        convertEol: true,
+        scrollback: 2000
+      });
+
+      term.open(container);
+      LAB_STATE.terminals[id] = term;
+
+      // Banner inicial de bienvenida en la terminal
+      writeWelcomeBanner(term, serviceName, id);
+
+      // Manejador de teclado interactivo (PTY Shell en memoria)
+      setupInteractiveKeyboard(term, id, serviceName);
+    }
+
+    // BANNER INICIAL CON SECUENCIAS ANSI DE COLOR
+    function writeWelcomeBanner(term, svc, id) {
+      term.writeln('\x1b[1;36m┌──────────────────────────────────────────────────────────────┐\x1b[0m');
+      term.writeln(`\x1b[1;36m│\x1b[0m \x1b[1;32m●\x1b[0m \x1b[1mSISPER DevConsole V2\x1b[0m — \x1b[33m${svc}\x1b[0m [PID 4819${id}]             \x1b[1;36m│\x1b[0m`);
+      term.writeln('\x1b[1;36m│\x1b[0m Entorno: \x1b[35mDEVELOP (172.23.22.x)\x1b[0m | DB: \x1b[32m172.30.23.71 (RO)\x1b[0m         \x1b[1;36m│\x1b[0m');
+      term.writeln('\x1b[1;36m│\x1b[0m Escribe \x1b[1;33mhelp\x1b[0m o pulsa los chips inferiores para ejecutar CLI.   \x1b[1;36m│\x1b[0m');
+      term.writeln('\x1b[1;36m└──────────────────────────────────────────────────────────────┘\x1b[0m');
+      term.write(`\r\n\x1b[1;32m${svc}@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+    }
+
+    // TECLADO INTERACTIVO BIDIRECCIONAL (PTY EMULADO)
+    function setupInteractiveKeyboard(term, id, svc) {
+      let currentLine = '';
+
+      term.onData(data => {
+        // Enter / Retorno de carro
+        if (data === '\r') {
+          term.write('\r\n');
+          handleCommandExecution(id, currentLine.trim(), svc);
+          currentLine = '';
+          term.write(`\x1b[1;32m${svc}@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+        }
+        // Backspace
+        else if (data === '\u007f') {
+          if (currentLine.length > 0) {
+            currentLine = currentLine.slice(0, -1);
+            term.write('\b \b');
+          }
+        }
+        // Ctrl+C
+        else if (data === '\u0003') {
+          term.write('^C\r\n');
+          currentLine = '';
+          term.write(`\x1b[1;32m${svc}@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+        }
+        // Letras normales
+        else if (data >= ' ') {
+          currentLine += data;
+          term.write(data);
+        }
+      });
+    }
+
+    // EJECUCIÓN SIMULADA DE COMANDOS PTY
+    function handleCommandExecution(id, cmd, svc) {
+      const term = LAB_STATE.terminals[id];
+      if (!term || !cmd) return;
+
+      if (cmd === 'help') {
+        term.writeln('\x1b[1;33mComandos de prueba disponibles:\x1b[0m');
+        term.writeln('  \x1b[36mhelp\x1b[0m                   Muestra este menú');
+        term.writeln('  \x1b[36mstatus\x1b[0m                 Muestra estado, memoria y PID');
+        term.writeln('  \x1b[36mping db\x1b[0m                Comprueba latencia contra 172.30.23.71');
+        term.writeln('  \x1b[36mmanage.py check\x1b[0m        Ejecuta Django system checks');
+        term.writeln('  \x1b[36mgit status\x1b[0m             Estado del repositorio Git');
+        term.writeln('  \x1b[36mclear\x1b[0m                  Limpia la pantalla');
+      } else if (cmd === 'status') {
+        term.writeln(`\x1b[32m● ONLINE\x1b[0m - Servicio: ${svc} | PID: 4819${id} | Memoria RSS: 142MB | Uptime: 4h 12m`);
+      } else if (cmd.includes('ping') || cmd.includes('db')) {
+        term.writeln('\x1b[36mPING 172.30.23.71:5432 (PostgreSQL)...\x1b[0m');
+        term.writeln('\x1b[32m64 bytes from 172.30.23.71: seq=1 time=0.812 ms (Pool: 4 activas / 15 máx)\x1b[0m');
+      } else if (cmd.includes('check')) {
+        term.writeln('System check identified no issues (0 silenced).');
+      } else if (cmd.includes('git')) {
+        term.writeln('\x1b[33mOn branch feature/pna-v2\x1b[0m');
+        term.writeln('Your branch is up to date with origin/feature/pna-v2.');
+        term.writeln('nothing to commit, working tree clean');
+      } else if (cmd === 'clear') {
+        term.clear();
+      } else {
+        term.writeln(`[devconsole] Ejecutado: '${cmd}' -> exit code 0`);
+      }
+    }
+
+    // INYECCIÓN DE CHIPS RÁPIDOS DIRECTAMENTE AL TERMINAL
+    function injectQuickCmd(id, cmd) {
+      const term = LAB_STATE.terminals[id];
+      if (!term) return;
+      term.write(cmd + '\r\n');
+      handleCommandExecution(id, cmd, id === 1 ? 'ms_contratos' : 'celery_worker');
+      term.write(`\x1b[1;32m${id === 1 ? 'ms_contratos' : 'celery_worker'}@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+      showToast(`Comando inyectado: ${cmd}`);
+    }
+
+    // =========================================================================
+    // STREAMING SIMULADO EN VIVO (LOG GENERATOR)
+    // =========================================================================
+    function startSimulatedStreaming() {
+      const LOGS_1 = [
+        '\x1b[36m[HTTP]\x1b[0m GET /api/v1/contratos/list/ 200 OK (18ms)',
+        '\x1b[32m[AUTH]\x1b[0m JWT session verified for user_id=418',
+        '\x1b[36m[HTTP]\x1b[0m POST /api/v1/contratos/evaluar/ 201 CREATED (34ms)',
+        '\x1b[33m[WARN]\x1b[0m Cache miss on key: contratos_meta_8831'
+      ];
+
+      const LOGS_2 = [
+        '\x1b[35m[CELERY]\x1b[0m Task contratos.tasks.calcular_pna[uuid-104] received',
+        '\x1b[32m[CELERY]\x1b[0m Task contratos.tasks.calcular_pna[uuid-104] SUCCESS in 0.12s',
+        '\x1b[34m[AMQP]\x1b[0m Consumer bound to queue cola.contratos.eventos acked message #8812',
+        '\x1b[35m[CELERY]\x1b[0m Task notificaciones.send_email[uuid-105] received'
+      ];
+
+      setInterval(() => {
+        if (!LAB_STATE.isPaused[1] && LAB_STATE.terminals[1]) {
+          const log = LOGS_1[Math.floor(Math.random() * LOGS_1.length)];
+          const time = new Date().toTimeString().split(' ')[0];
+          LAB_STATE.terminals[1].writeln(`\r\n\x1b[90m[${time}]\x1b[0m ${log}`);
+          LAB_STATE.terminals[1].write(`\x1b[1;32mms_contratos@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+        }
+      }, 3500);
+
+      setInterval(() => {
+        if (!LAB_STATE.isPaused[2] && LAB_STATE.terminals[2]) {
+          const log = LOGS_2[Math.floor(Math.random() * LOGS_2.length)];
+          const time = new Date().toTimeString().split(' ')[0];
+          LAB_STATE.terminals[2].writeln(`\r\n\x1b[90m[${time}]\x1b[0m ${log}`);
+          LAB_STATE.terminals[2].write(`\x1b[1;32mcelery_worker@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+        }
+      }, 4200);
+    }
+
+    // =========================================================================
+    // ACCIONES DE CONTROL: CAMBIO DE TEMA, LAYOUT, PAUSA, TAMAÑO
+    // =========================================================================
+    function changeChrome(variant) {
+      document.body.classList.remove('chrome-minimal', 'chrome-glass');
+      if (variant === 'minimal') document.body.classList.add('chrome-minimal');
+      if (variant === 'glass') document.body.classList.add('chrome-glass');
+      setTimeout(() => Object.values(LAB_STATE.terminals).forEach(t => t.refresh(0, t.rows - 1)), 60);
+      showToast(`Chrome visual: ${variant === 'dock' ? 'Dockview · IDE' : variant === 'minimal' ? 'Minimal · Logs' : 'Glass · Operaciones'}`);
+    }
+
+    function toggleTermFilter(id) {
+      LAB_STATE.errorsOnly[id] = !LAB_STATE.errorsOnly[id];
+      const btn = document.querySelector(`#termWin-${id} .secondary-tool[title="Filtrar errores"]`);
+      if (btn) btn.classList.toggle('active', LAB_STATE.errorsOnly[id]);
+      showToast(LAB_STATE.errorsOnly[id] ? 'Filtro conceptual activado: errores' : 'Filtro de errores desactivado');
+    }
+
+    async function copyVisible(id) {
+      const term = LAB_STATE.terminals[id];
+      if (!term) return;
+      const text = term.buffer.active.getLine(term.buffer.active.cursorY)?.translateToString(true) || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Línea visible copiada (demo)');
+      } catch (_) {
+        showToast('Permiso de portapapeles no disponible');
+      }
+    }
+
+    function changeActiveTheme(themeKey) {
+      LAB_STATE.activeThemeKey = themeKey;
+      const theme = THEMES[themeKey];
+      if (!theme) return;
+
+      Object.values(LAB_STATE.terminals).forEach(term => {
+        term.options.theme = theme;
+      });
+
+      // Fondo del canvas container
+      document.querySelectorAll('.term-canvas-wrapper').forEach(wrapper => {
+        wrapper.style.background = theme.background;
+      });
+
+      // Efecto scanline en cyberpunk
+      const scan = document.getElementById('scanlinesEl');
+      if (themeKey === 'cyberpunk') {
+        scan.style.display = 'block';
+      } else {
+        scan.style.display = 'none';
+      }
+
+      showToast(`Tema cambiado a: ${theme.name}`);
+    }
+
+    function changeActiveLayout(layout) {
+      const stage = document.getElementById('termStage');
+      stage.className = `terminal-stage layout-${layout}`;
+
+      const win2 = document.getElementById('termWin-2');
+      if (layout === 'mono') {
+        win2.style.display = 'none';
+      } else {
+        win2.style.display = 'flex';
+      }
+
+      // Redimensionar terminales
+      setTimeout(() => {
+        Object.values(LAB_STATE.terminals).forEach(t => t.refresh(0, t.rows - 1));
+      }, 100);
+
+      showToast(`Layout cambiado a: ${layout}`);
+    }
+
+    function changeFontSize(size) {
+      LAB_STATE.fontSize = parseFloat(size);
+      Object.values(LAB_STATE.terminals).forEach(term => {
+        term.options.fontSize = LAB_STATE.fontSize;
+      });
+      showToast(`Tamaño de fuente: ${size}px`);
+    }
+
+    function toggleTermPause(id) {
+      LAB_STATE.isPaused[id] = !LAB_STATE.isPaused[id];
+      const btn = document.getElementById(`btnPause-${id}`);
+      if (LAB_STATE.isPaused[id]) {
+        btn.classList.add('active');
+        btn.innerText = '▶';
+        showToast(`Terminal ${id}: Stream pausado (congelado)`);
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = '⏸';
+        showToast(`Terminal ${id}: Stream reanudado`);
+      }
+    }
+
+    function clearTerm(id) {
+      const term = LAB_STATE.terminals[id];
+      if (term) {
+        term.clear();
+        term.write(`\x1b[1;32mdevconsole@dev\x1b[0m:\x1b[1;34m~\x1b[0m$ `);
+        showToast(`Terminal ${id}: Pantalla limpiada.`);
+      }
+    }
+
+    function toggleMaximizeTerm(id) {
+      const win = document.getElementById(`termWin-${id}`);
+      const isMax = win.classList.toggle('is-maximized');
+      showToast(isMax ? `Terminal ${id} maximizada a pantalla completa` : `Terminal ${id} restaurada`);
+    }
+
+    function toggleTermSearch(id) {
+      const bar = document.getElementById(`searchBar-${id}`);
+      bar.classList.toggle('show');
+      if (bar.classList.contains('show')) {
+        bar.querySelector('input').focus();
+      }
+    }
+
+    function handleSearchTerm(id, query) {
+      if (!query) return;
+      showToast(`Buscando '${query}' en terminal ${id}...`);
+    }
+
+    function switchTermTab(winId, tabName) {
+      showToast(`Terminal ${winId}: Cambiado a pestaña ${tabName}`);
+    }
+
+    function addNewTab(winId) {
+      showToast(`Terminal ${winId}: Nueva pestaña agregada (ms_notificaciones)`);
+    }
+
+    function closeTermTab(winId) {
+      showToast(`Terminal ${winId}: Pestaña cerrada.`);
+    }
+
+    function closeTermWindow(id) {
+      showToast(`Terminal ${id} cerrada.`);
+    }
+
+    function minimizeTermWindow(id) {
+      showToast(`Terminal ${id} minimizada.`);
+    }
+
+    // MODAL DE COMPARATIVA
+    function openCompModal() {
+      document.getElementById('compModal').style.display = 'flex';
+    }
+    function closeCompModal(e) {
+      if (e.target.id === 'compModal') document.getElementById('compModal').style.display = 'none';
+    }
+
+    // TOAST NOTIFIER
+    function showToast(msg) {
+      const t = document.getElementById('labToast');
+      document.getElementById('toastMsg').innerText = msg;
+      t.style.display = 'flex';
+      clearTimeout(window._labTimer);
+      window._labTimer = setTimeout(() => { t.style.display = 'none'; }, 2200);
+    }
+  </script>
+</body>
+</html>

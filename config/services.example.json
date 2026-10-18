@@ -1,0 +1,83 @@
+{
+  "_comentario": [
+    "Plantilla de catálogo del proyecto. Copiar a config/services.json y ajustar.",
+    "config/services.json NO se versiona: es el catálogo de tu instalación.",
+    "Si falta, la consola funciona igual: descubre los servicios recorriendo la",
+    "carpeta raíz y deduce los puertos del .env de cada servicio.",
+    "Los metadatos que no se pueden deducir del sistema de archivos (k8s_file,",
+    "k8s_deploy, group) se declaran aquí y mandan sobre la heurística."
+  ],
+  "project_name": "MiProyecto",
+  "environments": {
+    "develop": {
+      "label": "DEVELOP",
+      "branch": "develop",
+      "color": "#eab308",
+      "k8s_dir": "config/k8s/01_develop",
+      "namespace": "develop",
+      "description": "Entorno de desarrollo"
+    },
+    "test": {
+      "label": "TEST",
+      "branch": "test",
+      "color": "#3b82f6",
+      "k8s_dir": "config/k8s/02_test",
+      "namespace": "test",
+      "description": "Entorno de pruebas"
+    },
+    "main": {
+      "label": "MAIN",
+      "branch": "main",
+      "color": "#22c55e",
+      "k8s_dir": "config/k8s/03_prod",
+      "namespace": "prod",
+      "description": "Producción"
+    }
+  },
+  "services_backend": [
+    {
+      "name": "ms_ejemplo_uno",
+      "port": 8000,
+      "group": "Backend 1",
+      "k8s_file": "backend/ms_ejemplo_uno.yaml",
+      "k8s_deploy": "ms-ejemplo-uno"
+    },
+    {
+      "name": "ms_ejemplo_dos",
+      "port": 8001,
+      "group": "Backend 1",
+      "k8s_file": "backend/ms_ejemplo_dos.yaml",
+      "k8s_deploy": "ms-ejemplo-dos"
+    }
+  ],
+  "services_frontend": [
+    {
+      "name": "mf_ejemplo_uno",
+      "port": 3000,
+      "k8s_file": "frontend/mf_ejemplo_uno.yaml",
+      "k8s_deploy": "mf-ejemplo-uno"
+    }
+  ],
+  "workers": [
+    {
+      "id": "worker_ejemplo",
+      "name": "Celery de ejemplo",
+      "service": "ms_ejemplo_uno",
+      "queue": "celery",
+      "command": "celery -A config worker -l info -Q celery"
+    }
+  ],
+  "infrastructure": [
+    { "name": "KeyDB", "port": 6379, "container": "keydb", "icon": "⚡" }
+  ],
+  "slices": {
+    "ejemplo": {
+      "title": "Flujo de ejemplo",
+      "description": "Servicios que se levantan juntos para probar un flujo",
+      "services": [
+        ["ms_ejemplo_uno", 8000],
+        ["mf_ejemplo_uno", 3000]
+      ]
+    }
+  }
+}

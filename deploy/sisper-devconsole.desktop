@@ -1,0 +1,13 @@
+# Lanzador de escritorio (ventana dedicada SIN Electron: el navegador en modo
+# aplicación).  Instalar en ~/.local/share/applications/ y ajustar el navegador.
+[Desktop Entry]
+Type=Application
+Name=SISPER DevConsole
+Comment=Panel de orquestación de microservicios SISPER
+Exec=firefox --new-window http://127.0.0.1:9099
+# Alternativa Chromium (ventana sin barra del navegador):
+# Exec=chromium --app=http://127.0.0.1:9099
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;
+StartupNotify=true

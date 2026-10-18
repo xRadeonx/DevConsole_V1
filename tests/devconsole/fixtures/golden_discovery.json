@@ -1,0 +1,291 @@
+{
+  "_comment": "Golden snapshot of devconsole.config.discover_services() against the real workspace. Regenerate with: python3 -m tests.devconsole.regenerate_golden",
+  "captured_at": "2026-10-06T18:26:58+00:00",
+  "captured_at_commit": "c3e99fd9c7c9163bbbe082b01550b7564e7d1527",
+  "base_dir": "/home/proteo/Documentos/Develop",
+  "backend_count": 21,
+  "frontend_count": 10,
+  "backend": [
+    {
+      "name": "ms_sisper_adm_usuario",
+      "port": 8001,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-adm-usuarios",
+      "k8s_file": "backend/ms_adm_usuarios.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_asistente",
+      "port": 8100,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-asistente",
+      "k8s_file": "backend/ms_asistente.yaml",
+      "has_consumer": false,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_beneficios",
+      "port": 8009,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-beneficios",
+      "k8s_file": "backend/ms_beneficios.yaml",
+      "has_consumer": true,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_bitacora",
+      "port": 8003,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-bitacora",
+      "k8s_file": "backend/ms_bitacora.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_carrera_correct_comp",
+      "port": 8017,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-carrera-correct-comp",
+      "k8s_file": "backend/ms_sisper_carrera_correct_comp.yaml",
+      "has_consumer": false,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_contratos",
+      "port": 8006,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-contratos",
+      "k8s_file": "backend/ms_contratos.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_destinaciones",
+      "port": 8008,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-destinaciones",
+      "k8s_file": "backend/ms_destinaciones.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_documentos",
+      "port": 8016,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-documentos",
+      "k8s_file": "backend/ms_documentos.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_firmador",
+      "port": 8013,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-firmador",
+      "k8s_file": "backend/ms_sisper_firmador.yaml",
+      "has_consumer": false,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_form_acad",
+      "port": 8012,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-form-acad",
+      "k8s_file": "backend/ms_form_acad.yaml",
+      "has_consumer": false,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_identificacion",
+      "port": 8002,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-identificacion",
+      "k8s_file": "backend/ms_identificacion.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_perfiles_riesgo",
+      "port": 8018,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-perfiles-riesgo",
+      "k8s_file": "backend/ms_perfiles_riesgo.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_promocion",
+      "port": 8007,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-promocion",
+      "k8s_file": "backend/ms_promocion.yaml",
+      "has_consumer": true,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_promocion_desempeno",
+      "port": 8019,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-promocion-desempeno",
+      "k8s_file": "backend/ms_promocion_desempeno.yaml",
+      "has_consumer": false,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_promocion_otros",
+      "port": 8021,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-promocion-otros",
+      "k8s_file": "backend/ms_promocion_otros.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_promocion_proyec",
+      "port": 8020,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-promocion-proyeccion",
+      "k8s_file": "backend/ms_promocion_proyeccion.yaml",
+      "has_consumer": false,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_replicate",
+      "port": 8036,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-replicate",
+      "k8s_file": "backend/ms_sisper_replicate.yaml",
+      "has_consumer": true,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_retiros",
+      "port": 8010,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-retiros",
+      "k8s_file": "backend/ms_retiros.yaml",
+      "has_consumer": true,
+      "has_worker": false
+    },
+    {
+      "name": "ms_sisper_sesion",
+      "port": 8000,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-sesion",
+      "k8s_file": "backend/ms_sesion.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_solicitudes",
+      "port": 8004,
+      "group": "Backend 1",
+      "k8s_deploy": "ms-solicitudes",
+      "k8s_file": "backend/ms_solicitudes.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    },
+    {
+      "name": "ms_sisper_tto_datos_privado",
+      "port": 8040,
+      "group": "Backend 2",
+      "k8s_deploy": "ms-tto-datos-privado",
+      "k8s_file": "backend/ms_sisper_tto_datos_privado.yaml",
+      "has_consumer": true,
+      "has_worker": true
+    }
+  ],
+  "frontend": [
+    {
+      "name": "mf_sisper_adm_usuario",
+      "port": 3001,
+      "group": null,
+      "k8s_deploy": "mf-administracion",
+      "k8s_file": "frontend/mf_administracion.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_bitacora",
+      "port": 3003,
+      "group": null,
+      "k8s_deploy": "mf-bitacora",
+      "k8s_file": "frontend/mf_bitacora.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_carrera_correct_comp",
+      "port": 3009,
+      "group": null,
+      "k8s_deploy": "mf-carrera-correcto-comportamiento",
+      "k8s_file": "frontend/mf_carrera_correcto_comportamiento.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_contratos",
+      "port": 3006,
+      "group": null,
+      "k8s_deploy": "mf-contratos",
+      "k8s_file": "frontend/mf_contratos.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_documentos",
+      "port": 3007,
+      "group": null,
+      "k8s_deploy": "mf-documentos",
+      "k8s_file": "frontend/mf_documentos.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_identificacion",
+      "port": 3002,
+      "group": null,
+      "k8s_deploy": "mf-identificacion",
+      "k8s_file": "frontend/mf_identificacion.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_perfiles_de_riesgo",
+      "port": 3008,
+      "group": null,
+      "k8s_deploy": "mf-perfiles-riesgo",
+      "k8s_file": "frontend/mf_perfiles_riesgo.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_promocion_otros",
+      "port": 3010,
+      "group": null,
+      "k8s_deploy": "mf-promocion-otros",
+      "k8s_file": "frontend/mf_promocion_otros.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_sesion",
+      "port": 3000,
+      "group": null,
+      "k8s_deploy": "mf-sesion",
+      "k8s_file": "frontend/mf_sesion.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    },
+    {
+      "name": "mf_sisper_solicitudes",
+      "port": 3004,
+      "group": null,
+      "k8s_deploy": "mf-solicitudes",
+      "k8s_file": "frontend/mf_solicitudes.yaml",
+      "has_consumer": null,
+      "has_worker": null
+    }
+  ]
+}

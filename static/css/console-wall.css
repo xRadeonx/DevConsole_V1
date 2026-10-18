@@ -1,0 +1,540 @@
+/* =============================================================================
+   SISPER DevConsole — Muro de consolas (lenguaje del laboratorio de terminales)
+   Se carga DESPUÉS de dashboard.css: redefine la capa visual del muro y de los
+   paneles usando los tokens de temas.css, de modo que los 13 temas apliquen.
+   No cambia la estructura ni los ids que consume dashboard.js.
+   ============================================================================= */
+
+/* ------------------------------- escenario ------------------------------- */
+#tab-consoles.active {
+  background: var(--bg);
+  height: calc(100vh - 58px);
+  overflow: hidden;
+}
+
+.console-workspace {
+  display: grid;
+  grid-template-columns: var(--console-sidebar-w, 248px) minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.console-stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.console-mosaic-grid {
+  gap: 5px;
+  padding: 5px;
+  align-content: start;
+  background: transparent;
+}
+
+/* --------------------------- panel (tarjeta) --------------------------- */
+.console-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--card-bg-solid);
+  border: 1px solid var(--card-border);
+  border-left: 2px solid var(--edge, var(--accent));
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.console-panel:hover {
+  border-color: var(--card-border-hover);
+}
+
+.console-panel.is-maximized {
+  border-left-width: 3px;
+  box-shadow: var(--shadow-xl);
+}
+
+/* cabecera: identidad siempre visible */
+.console-panel-header {
+  flex: 0 0 auto;
+  height: 27px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--card-bg-solid) 72%, #000 28%);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.console-panel-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.console-panel-dot.running, .console-panel-dot.activo { background: var(--success); box-shadow: 0 0 7px var(--accent-subtle); }
+.console-panel-dot.stopped, .console-panel-dot.detenido { background: var(--danger); }
+.console-panel-dot.starting, .console-panel-dot.pending { background: var(--warn); }
+
+.console-panel-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.console-panel-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 11px var(--font-mono);
+  color: var(--text);
+}
+
+.console-panel-port {
+  flex: 0 0 auto;
+  font: 10px var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* el tipo ya se muestra en el pie: en la cabecera estorba */
+.console-panel-type { display: none !important; }
+
+.console-panel-tools { flex: 0 0 auto; display: flex; gap: 3px; }
+
+.console-tool-btn {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.console-tool-btn:hover { border-color: var(--accent); color: var(--text); }
+.console-tool-btn.btn-control { color: var(--accent); }
+.console-tool-btn.btn-monitor { color: var(--warn); }
+
+/* ----------------------------- menú del panel ----------------------------- */
+.cw-menu {
+  position: fixed;
+  z-index: var(--z-dropdown, 60);
+  display: none;
+  flex-direction: column;
+  min-width: 252px;
+  max-height: min(78vh, 560px);
+  overflow: auto;
+  padding: 6px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--edge, var(--accent));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+.cw-menu.open { display: flex; }
+
+.cw-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px 7px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--card-border);
+}
+.cw-mh-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 650 12px var(--font-mono); color: var(--accent); }
+.cw-mh-port { font: 10px var(--font-mono); color: var(--text-muted); }
+.cw-mh-state { padding: 1px 6px; border: 1px solid var(--card-border); border-radius: var(--radius-pill); font: 9px var(--font-mono); color: var(--text-muted); }
+.cw-mh-state.running { color: var(--success); border-color: color-mix(in srgb, var(--success) 45%, transparent); }
+.cw-mh-state.stopped { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+
+.cw-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 29px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: 12.5px var(--font-sans);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cw-menu button:hover { background: var(--accent-subtle); color: var(--text); }
+.cw-menu button .k { width: 17px; text-align: center; color: var(--accent); }
+.cw-menu button[hidden] { display: none; }
+.cw-menu button.on .tick { opacity: 1; }
+.cw-menu .tick { margin-left: auto; opacity: 0; color: var(--accent); }
+.cw-role-sep { height: 1px; margin: 5px 6px; background: var(--card-border); }
+.cw-role-title { padding: 7px 9px 3px; color: var(--text-muted); font: 9px var(--font-mono); text-transform: uppercase; letter-spacing: .09em; }
+
+.cw-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 2px 6px 4px; }
+.cw-chip {
+  height: 23px;
+  padding: 0 4px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--text-muted);
+  font: 9.5px var(--font-mono);
+  cursor: pointer;
+}
+.cw-chip:hover { border-color: var(--accent); color: var(--accent); }
+.cw-chip.on { border-color: var(--accent); color: var(--text); background: var(--accent-subtle); }
+
+.cw-font { display: flex; align-items: center; gap: 6px; padding: 2px 8px 4px; }
+.cw-font button {
+  flex: 1;
+  justify-content: center;
+  height: 24px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--text);
+  font: 12px var(--font-mono);
+  cursor: pointer;
+}
+.cw-font button:hover { border-color: var(--accent); color: var(--accent); }
+.cw-font .cw-fv { min-width: 52px; text-align: center; color: var(--text-muted); font: 10px var(--font-mono); }
+
+/* --------------------------- búsqueda del panel --------------------------- */
+.cw-search {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: var(--card-bg-solid);
+  border-bottom: 1px solid var(--edge, var(--accent));
+}
+.cw-search.open { display: flex; }
+.cw-search input {
+  flex: 1;
+  min-width: 0;
+  height: 23px;
+  padding: 0 6px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--text);
+  font: 11px var(--font-mono);
+}
+.cw-search input:focus { outline: none; border-color: var(--accent); }
+/* El anillo de foco por teclado manda sobre el outline: none del campo. */
+.cw-search input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+.cw-count { color: var(--text-muted); font: 10px var(--font-mono); white-space: nowrap; }
+.cw-nav {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: var(--surface-elevated);
+  color: var(--text);
+  cursor: pointer;
+}
+.cw-nav:hover { border-color: var(--accent); }
+
+/* ------------------------------- cuerpo ------------------------------- */
+.console-body-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.console-monitor-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 5px 8px;
+  background: var(--console-bg);
+  color: var(--console-fg);
+  font-family: var(--font-mono);
+  font-size: var(--cw-font-size, 11px);
+  line-height: var(--cw-line-height, 1.5);
+}
+
+.console-vacio {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  margin: 2px 0;
+  border: 1px dashed var(--card-border);
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.06);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.console-vacio .cv-titulo { font-weight: 700; color: var(--text); }
+.console-vacio .cv-detalle { color: var(--text-secondary); }
+.console-vacio .cv-ayuda { color: var(--text-muted); font-size: 11px; }
+.console-vacio.is-parado .cv-titulo { color: var(--warn); }
+.console-vacio.is-marcha .cv-titulo { color: var(--ok); }
+
+.console-line {
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre-wrap;
+  /* `word-break: break-word` equivale a `overflow-wrap: anywhere`, que parte
+     palabras por la mitad ("accept ed", "develop ment server").  Con
+     `overflow-wrap: break-word` sólo se parte un token que no cabe solo. */
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.console-line.is-error { color: var(--danger); }
+.console-line.is-warn { color: var(--warn); }
+.console-line.is-info { color: var(--text-secondary); }
+.console-line mark { background: var(--accent); color: var(--bg); border-radius: 2px; padding: 0 1px; }
+
+.console-jump-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 4px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  background: var(--surface-elevated);
+  color: var(--accent);
+  font: 11px var(--font-sans);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+
+/* -------------------------------- pie -------------------------------- */
+.console-panel-footer {
+  flex: 0 0 auto;
+  height: 19px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  background: color-mix(in srgb, var(--card-bg-solid) 72%, #000 28%);
+  border-top: 1px solid var(--edge, var(--accent));
+  color: var(--text-muted);
+  font: 9px var(--font-mono);
+  overflow: hidden;            /* red de seguridad: nada se pinta fuera del pie */
+}
+
+.cw-foot-name {
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 3.5em;            /* el nombre nunca desaparece del todo */
+}
+
+.cw-foot-chip {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-xs);
+  color: var(--warn);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cw-foot-chip[hidden] { display: none; }
+
+.cw-foot-filter { color: var(--warn); }
+.cw-foot-filter:empty { display: none; }
+
+/* El grupo derecho encoge antes que el nombre, pero nunca deja que un hijo se
+   pinte fuera del pie: la etiqueta de runtime es la única que cede ancho
+   (min-width: 0 + elipsis); lo demás queda recortado dentro del propio grupo. */
+.console-panel-footer-right { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: 0 1 auto; min-width: 0; overflow: hidden; }
+
+.console-footer-status { color: var(--success); }
+.console-paused-pill {
+  padding: 0 4px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-xs);
+  color: var(--warn);
+  cursor: pointer;
+}
+.console-footer-runtime-tag {
+  color: var(--text-dim);
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Con 7 u 8 columnas la tarjeta es la más estrecha: el pie prioriza nombre y
+   frescura, y la etiqueta de runtime (decorativa) cede su sitio. */
+#tab-consoles .console-mosaic-grid[data-cols="7"] .console-footer-runtime-tag,
+#tab-consoles .console-mosaic-grid[data-cols="8"] .console-footer-runtime-tag { display: none; }
+
+/* A 8 columnas el estado se reduce a su LED: el color del punto, el título del
+   LED de cabecera y el menú de la tarjeta conservan la etiqueta completa. */
+#tab-consoles .console-mosaic-grid[data-cols="8"] .console-footer-status {
+  max-width: 1.4ch;
+  overflow: hidden;
+}
+
+/* --------------------- frescura de tráfico (Fase 4) ----------------------
+   "hace 15s" delata de un vistazo qué microservicio lleva rato en reposo.
+   Sutil por defecto; sólo el reposo prolongado sube a --warn.              */
+.cw-foot-fresh {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cw-foot-fresh[hidden] { display: none; }
+.cw-foot-fresh.is-fresh { color: var(--text-dim); }
+.cw-foot-fresh.is-idle { color: var(--text-muted); }
+.cw-foot-fresh.is-stale { color: var(--warn); }
+.cw-foot-fresh.is-silent { color: var(--text-dim); opacity: 0.72; font-style: italic; }
+
+/* ------------------------- barra lateral del muro ------------------------- */
+.console-sidebar {
+  background: var(--surface-base);
+  border-right: 1px solid var(--card-border);
+}
+.console-svc-card, .console-svc-header-row { border-radius: var(--radius-sm); }
+.console-svc-name { font: 600 11px var(--font-mono); }
+
+/* ------------------------------ densidad ------------------------------ */
+#tab-consoles .console-mosaic-grid[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#tab-consoles .console-mosaic-grid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#tab-consoles .console-mosaic-grid[data-cols="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#tab-consoles .console-mosaic-grid[data-cols="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.cw-zoom { display: inline-flex; align-items: center; gap: 2px; padding: 0 3px; border: 1px solid var(--card-border); border-radius: var(--radius-sm); background: var(--surface-elevated); height: 26px; }
+.cw-zoom button { height: 20px; padding: 0 7px; border: 0; background: transparent; color: var(--text); font: 12px var(--font-mono); cursor: pointer; border-radius: var(--radius-xs); }
+.cw-zoom button:hover { background: var(--accent-subtle); color: var(--accent); }
+.cw-zoom .cw-zv { min-width: 40px; text-align: center; color: var(--text-muted); font: 10px var(--font-mono); }
+
+/* =============================================================================
+   1:1 con el laboratorio: sin barra lateral, muro a todo el ancho
+   ============================================================================= */
+#consoleSidebar, #consoleSidebarRail, #btnToggleSidebar, #btnMenuHideSidebar { display: none !important; }
+.console-workspace { grid-template-columns: minmax(0, 1fr) !important; }
+.console-workspace-header { display: none !important; }
+.console-stage { height: 100%; }
+
+/* barra del muro (equivalente a la del laboratorio) */
+.cw-toolbar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 5px 7px;
+  background: var(--surface-base);
+  border-bottom: 1px solid var(--card-border);
+}
+.cw-field { display: inline-flex; align-items: center; gap: 5px; font: 9px var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; }
+.cw-toolbar select {
+  height: 26px; padding: 0 6px;
+  background: var(--surface-elevated); color: var(--text);
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  font: 11px var(--font-mono);
+}
+.cw-btn {
+  height: 26px; padding: 0 9px;
+  background: var(--surface-elevated); color: var(--text);
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  font: 11px var(--font-sans); cursor: pointer; white-space: nowrap;
+}
+.cw-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cw-btn.on { border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
+.cw-btn[hidden] { display: none; }
+.cw-spacer { flex: 1 1 auto; }
+.cw-sep-v { width: 1px; height: 18px; background: var(--card-border); }
+.cw-chips-global { display: flex; gap: 3px; flex-wrap: wrap; }
+.cw-input {
+  height: 26px; min-width: 170px; padding: 0 8px;
+  background: var(--surface-elevated); color: var(--text);
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  font: 11px var(--font-mono);
+}
+.cw-check { display: inline-flex; align-items: center; gap: 4px; font: 10px var(--font-sans); color: var(--text-muted); white-space: nowrap; }
+.cw-check input { accent-color: var(--accent); }
+
+/* modo enfoque 1/2/3 con plantillas */
+.console-focus-layer { background: var(--bg); padding: 5px; }
+.cw-focus-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 4px 8px; margin-bottom: 5px;
+  background: var(--surface-base); border: 1px solid var(--edge, var(--accent));
+  border-radius: var(--radius-sm); color: var(--text-muted); font: 11px var(--font-sans);
+}
+.cw-focus-grid { display: grid; gap: 4px; height: calc(100% - 42px); min-height: 0; }
+.cw-focus-grid[data-count="1"] { grid-template-columns: 1fr; }
+.cw-focus-grid[data-count="2"][data-layout="cols"] { grid-template-columns: 1fr 1fr; }
+.cw-focus-grid[data-count="2"][data-layout="rows"] { grid-template-rows: 1fr 1fr; }
+.cw-focus-grid[data-count="3"][data-layout="cols"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cw-focus-grid[data-count="3"][data-layout="big"] { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
+.cw-focus-grid[data-count="3"][data-layout="big"] > .console-panel:first-child { grid-row: span 2; }
+.cw-focus-grid > .console-panel { height: auto; max-height: none; }
+
+#tab-consoles .console-mosaic-grid[data-cols="6"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+#tab-consoles .console-mosaic-grid[data-cols="7"] { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+#tab-consoles .console-mosaic-grid[data-cols="8"] { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+/* Cada panel mide un número entero de líneas (--cw-rows): antes las filas se
+   estiraban al alto disponible y la última línea salía cortada.  El muro se
+   desplaza en vertical en vez de estirar. */
+#tab-consoles .console-mosaic-grid {
+  grid-auto-rows: auto;
+  align-content: start;
+}
+#tab-consoles .console-mosaic-grid .console-panel {
+  height: calc(var(--cw-rows, 12) * var(--cw-font-size, 11px) * var(--cw-line-height, 1.5) + 62px);
+}
+
+/* reordenar por arrastre */
+.console-panel-header { cursor: grab; }
+.console-panel-header:active { cursor: grabbing; }
+.console-panel.dragging { opacity: .45; }
+.console-panel.drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+.console-panel.drop-after { box-shadow: inset -3px 0 0 var(--accent); }
+
+/* ventana dedicada al muro (⧉ Ventana) */
+body.wall-only .topbar { display: none !important; }
+body.wall-only .sidebar { display: none !important; }
+body.wall-only .app-shell { grid-template-columns: minmax(0, 1fr) !important; }
+body.wall-only .console-stage-footer { display: none !important; }
+body.wall-only #tab-consoles.active { height: 100vh; }
+
+/* =============================================================================
+   Ajustes de "Servicios y consolas"
+   ============================================================================= */
+
+/* 6) el contenido del menú va alineado a la izquierda (el botón global centra) */
+.cw-menu button { justify-content: flex-start; text-align: left; }
+.cw-menu button .k { flex: 0 0 auto; }
+.cw-menu .tick { margin-left: auto; }
+
+/* 4) el menú "Más" y la barra deben quedar por encima de los terminales */
+.console-stage-toolbar, .cw-toolbar { position: relative; z-index: 30; }
+.console-menu-wrap { position: relative; z-index: 31; }
+.console-menu { z-index: 60; }
+.console-menu-item { justify-content: flex-start !important; text-align: left; }
+
+/* 1) la rueda solo desplaza la consola cuando está activada con un clic */
+.console-panel.is-wheel-active { border-left-color: var(--accent); }
+.console-panel.is-wheel-active .console-monitor-body { box-shadow: inset 0 0 0 1px var(--accent-subtle); }
+.console-panel .console-monitor-body { cursor: default; }
+.console-panel.is-wheel-active .console-monitor-body { cursor: text; }
+
+/* 7) consolas marcadas para el modo Enfoque */
+.console-panel.is-enfoque { box-shadow: inset 0 0 0 2px var(--accent); }
+.console-panel.is-enfoque .console-panel-header::after {
+  content: 'ENFOQUE'; margin-left: 6px; padding: 0 4px; border-radius: 3px;
+  background: var(--accent-subtle); color: var(--accent);
+  font: 8px var(--font-mono); letter-spacing: .05em;
+}
+
+/* 8) el texto se ancla abajo con un relleno calculado en JS (con flex-end el
+   inicio del scroll quedaba inalcanzable). */
+.console-monitor-body { overflow-anchor: none; }

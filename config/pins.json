@@ -1,0 +1,21 @@
+{
+  "roles": {
+    "admin": {
+      "algo": "scrypt",
+      "hash": "7115afe1321ad00f8417c735f174a2cdf5161adc38f4fd9de86db427e029614b",
+      "n": 16384,
+      "p": 1,
+      "r": 8,
+      "salt": "4f7018da7759da155e237d2f65a449e2"
+    },
+    "dev": {
+      "algo": "scrypt",
+      "hash": "ab354e8e7bdb77527c4f40e40a3a8b463a74cc5e15f599c97c98a2fffa1937a7",
+      "n": 16384,
+      "p": 1,
+      "r": 8,
+      "salt": "c8ebdec9a4ea7110b4919822da2841b1"
+    }
+  },
+  "version": 1
+}

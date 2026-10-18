@@ -1,0 +1,35 @@
+# Plantilla: SISPER DevConsole como servicio de USUARIO.
+#   sed -e "s|__USUARIO__|$USER|g" -e "s|__RUTA__|$HOME/devconsole|g" \
+#       deploy/sisper-dashboard.service > ~/.config/systemd/user/sisper-dashboard.service
+[Unit]
+Description=SISPER DevConsole - Dashboard Web Orquestador (tmux & microservicios)
+After=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=__RUTA__
+ExecStart=/usr/bin/python3 __RUTA__/dashboard.py
+Restart=always
+RestartSec=3
+
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/home/__USUARIO__/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+# Sólo loopback por defecto.  Exponer en LAN exige SISPER_HOST explícito.
+Environment=SISPER_HOST=127.0.0.1
+Environment=SISPER_PORT=9099
+# PIN propio de cada usuario (Administrador y Desarrollador), HASHEADO:
+#   python3 -m devconsole.pins set --role admin
+# Alternativa en claro por entorno (menos recomendable):
+# Environment=SISPER_ADMIN_PIN=cambia-este-pin
+# Environment=SISPER_DEV_PIN=cambia-este-pin
+# Almacén de hashes (por defecto ~/.config/sisper-dashboard/secrets.json):
+# Environment=SISPER_SECRETS_FILE=%h/.config/sisper-dashboard/secrets.json
+# Más fuerte: credencial cifrada con la clave del equipo.
+# LoadCredentialEncrypted=admin_pin:%h/.config/sisper-dashboard/admin_pin.cred
+# Backend de consolas: tmux (recomendado).  Sin esto se usa el lanzador legacy de Tilix.
+Environment=SISPER_TERMINAL_BACKEND=tmux
+# Necesario para que el visor de Tilix pueda abrir ventanas de la sesión gráfica.
+PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
+
+[Install]
+WantedBy=default.target

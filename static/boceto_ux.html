@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boceto Interactivo UX/UI — SISPER DevConsole V2</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-panel: #0d1322;
+      --bg-card: rgba(15, 23, 42, 0.72);
+      --bg-card-hover: rgba(22, 34, 60, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(56, 189, 248, 0.35);
+      --accent: #38bdf8;
+      --accent-rgb: 56, 189, 248;
+      --accent-hover: #0284c7;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --purple: #a855f7;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+
+    /* Top Banner de Boceto */
+    .prototype-banner {
+      background: linear-gradient(90deg, #1e1b4b, #0f2744, #042f2e);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: #cbd5e1;
+    }
+    .prototype-badge {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 48px;
+      background: rgba(13, 19, 34, 0.95);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: -0.2px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kpi-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .kpi-item { display: flex; align-items: center; gap: 4px; }
+    .kpi-val { font-weight: 700; }
+    .kpi-sep { color: var(--border); }
+
+    /* Shell Principal */
+    .app-shell {
+      display: flex;
+      height: calc(100vh - 78px);
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-nav {
+      padding: 10px 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 6px 8px 2px 8px;
+      letter-spacing: 0.5px;
+    }
+    .sidebar-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .sidebar-btn:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+    .sidebar-btn.active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent);
+    }
+    .sidebar-btn .icon { font-size: 15px; }
+    .sidebar-footer {
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Main Container */
+    .main-view {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* =========================================================================
+       PESTAÑA 1: MICROSERVICIOS (V2 REDISEÑADO)
+       ========================================================================= */
+    .tab-content { display: none; padding: 16px 20px 80px 20px; }
+    .tab-content.active { display: block; }
+
+    /* Toolbar de 2 Filas Unificada */
+    .services-toolbar-v2 {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .st-row-1, .st-row-2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .search-box-v2 {
+      display: flex;
+      align-items: center;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      min-width: 290px;
+      flex: 1;
+    }
+    .search-box-v2:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+    .search-box-v2 input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 12.5px;
+      outline: none;
+      width: 100%;
+      margin-left: 6px;
+    }
+    .kbd-hint {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .status-filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pill-filter {
+      padding: 3px 9px;
+      border-radius: 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .pill-filter:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .pill-filter.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .pill-filter.pill-danger.active {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--danger);
+      color: #fca5a5;
+    }
+
+    .slice-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .slice-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-right: 2px;
+    }
+    .chip-slice {
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip-slice:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .chip-slice.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    /* Botones y dropdowns */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+    .btn-hero {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-color: #38bdf8;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+    .btn-hero:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45);
+    }
+    .btn-sm { padding: 3px 8px; font-size: 11px; }
+
+    /* Grid de Microservicios */
+    .services-grid-v2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* Tarjeta V2 con Quick Actions */
+    .svc-card-v2 {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+    .svc-card-v2:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 14px rgba(56, 189, 248, 0.1);
+    }
+    .svc-card-v2.highlight-flash {
+      animation: flashBorder 2s ease;
+    }
+    @keyframes flashBorder {
+      0% { border-color: #f59e0b; box-shadow: 0 0 24px rgba(245, 158, 11, 0.6); }
+      100% { border-color: var(--border); box-shadow: none; }
+    }
+
+    /* Top Row de la tarjeta */
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card-id-block {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .card-name {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-port {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-badge.online {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+    .status-badge.offline {
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: #94a3b8;
+    }
+    .dot-live {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* Barra de Quick Actions de la tarjeta (Zero-Click) */
+    .card-quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .quick-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .quick-action-btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #fff;
+    }
+    .quick-action-btn.active-link {
+      color: #38bdf8;
+    }
+
+    /* Sub-procesos (API, Worker, Consumer) */
+    .proc-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      margin-left: auto;
+    }
+    .proc-dot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-dim);
+    }
+    .proc-dot-badge.is-on {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    /* Fila Git */
+    .card-git-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+    }
+    .git-branch-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(240, 80, 50, 0.12);
+      border: 1px solid rgba(240, 80, 50, 0.3);
+      color: #fca5a5;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      cursor: pointer;
+    }
+    .git-branch-btn:hover { background: rgba(240, 80, 50, 0.2); }
+    .git-pills-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .git-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .git-pill.behind { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
+    .git-pill.ahead { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 1px solid #0284c7; }
+    .git-pill.dirty { color: #fbbf24; }
+
+    /* Fila Bottom: Botón principal y Kebab */
+    .card-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 8px;
+    }
+    .btn-power {
+      flex: 1;
+      justify-content: center;
+      padding: 5px 10px;
+      font-weight: 700;
+    }
+    .btn-power.start {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .btn-power.start:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+    .btn-power.restart {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: #7dd3fc;
+    }
+    .btn-power.restart:hover {
+      background: rgba(56, 189, 248, 0.22);
+    }
+    .btn-kebab-v2 {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      margin-left: 6px;
+    }
+    .btn-kebab-v2:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+    /* Dock Flotante de Acciones Masivas */
+    .floating-bulk-bar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 8px 18px;
+      display: none;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.2);
+      backdrop-filter: blur(16px);
+      z-index: 200;
+      animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translate(-50%, 20px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+    .bulk-count-badge {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+
+    /* =========================================================================
+       PESTAÑA 2: SERVICIOS Y CONSOLAS (V2 REDISEÑADO)
+       ========================================================================= */
+    .consoles-workspace-v2 {
+      display: flex;
+      height: calc(100vh - 128px);
+      background: #020409;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Sidebar de Consolas */
+    .c-sidebar {
+      width: 250px;
+      background: #0a0f1d;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .c-sidebar-header {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .c-filter-chips {
+      display: flex;
+      gap: 4px;
+    }
+    .c-filter-chip {
+      flex: 1;
+      text-align: center;
+      padding: 3px 0;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .c-filter-chip.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .c-svc-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .c-svc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .c-svc-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .c-svc-item.is-monitored {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.25);
+    }
+    .activity-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: pulseAnim 1.2s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.4); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+    .c-svc-title { font-size: 11.5px; font-weight: 700; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-svc-port { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+    .badge-error-indicator {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* Stage de Consolas */
+    .c-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #020409;
+      overflow: hidden;
+    }
+    .c-stage-toolbar {
+      height: 38px;
+      background: #0a0f1d;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+    .c-tool-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .c-seg-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .c-seg-btn {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .c-seg-btn.active {
+      background: #0284c7;
+      color: #fff;
+    }
+    .c-select {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    /* Mosaico de Consolas */
+    .c-mosaic-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .c-mosaic-view.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .c-mosaic-view.cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .c-mosaic-view.cols-1 {
+      grid-template-columns: 1fr;
+    }
+
+    /* Tarjeta de Consola en Mosaico */
+    .c-panel {
+      background: #020409;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      height: 340px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .c-panel.is-pty-interactive {
+      border: 1.5px solid #38bdf8 !important;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+    .pty-active-banner {
+      background: linear-gradient(90deg, #0284c7, #0369a1);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: 0.5px;
+    }
+    .c-panel-header {
+      height: 32px;
+      background: #0a0f1d;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      flex-shrink: 0;
+    }
+    .c-panel-title-area {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .c-panel-tools {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .c-icon-action {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .c-icon-action:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .c-icon-action.active-flag {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #f59e0b;
+      color: #fde68a;
+    }
+
+    /* Contenido Terminal */
+    .c-viewport {
+      flex: 1;
+      padding: 8px 10px;
+      background: #020409;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.5;
+      color: #e2e8f0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-line.is-info { color: #94a3b8; }
+    .log-line.is-warn { color: #fde68a; background: rgba(245, 158, 11, 0.06); }
+    .log-line.is-error { color: #fca5a5; background: rgba(239, 68, 68, 0.12); font-weight: 600; }
+    .log-line.is-success { color: #86efac; }
+
+    .c-panel-footer {
+      height: 24px;
+      background: #060913;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 10px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      font-size: 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Modal Fake */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+    }
+    .modal-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-accent);
+      border-radius: 12px;
+      width: 480px;
+      padding: 18px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Banner Informativo -->
+  <div class="prototype-banner">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="prototype-badge">Boceto Navegable</span>
+      <span><strong>Propuesta UX/UI V2</strong>: Paneles "Microservicios" y "Servicios y Consolas". Haz clic libremente para probar las interacciones.</span>
+    </div>
+    <div>
+      <span style="opacity:0.7;">Atajo: Haz clic en <strong>📺 Consola</strong> en cualquier microservicio para probar el salto directo.</span>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-title">
+        <span style="color:var(--accent);">⚡ SISPER</span> DevConsole
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-item">
+          <span>●</span>
+          <span class="kpi-val" style="color:#34d399;" id="kpiActiveCount">8</span> activos
+        </div>
+        <span class="kpi-sep">|</span>
+        <div class="kpi-item">
+          <span style="color:#fca5a5;">⬇️</span>
+          <span class="kpi-val" style="color:#fca5a5;">3</span> desactualizados
+        </div>
+        <span class="kpi-sep">|</span>
+        <div class="kpi-item">
+          <span style="color:#fbbf24;">●</span>
+          <span class="kpi-val" style="color:#fde68a;">2</span> sucios
+        </div>
+      </div>
+    </div>
+    <div>
+      <span class="pill-filter active" style="font-size:11px;">🟡 DEVELOP</span>
+    </div>
+  </header>
+
+  <!-- App Shell -->
+  <div class="app-shell">
+
+    <!-- Sidebar Principal -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Monitoreo Principal</div>
+        <button class="sidebar-btn active" id="btnTabServices" onclick="switchMainTab('services')">
+          <span class="icon">📊</span>
+          <span>Microservicios</span>
+        </button>
+        <button class="sidebar-btn" id="btnTabConsoles" onclick="switchMainTab('consoles')">
+          <span class="icon">🖥️</span>
+          <span>Servicios y Consolas</span>
+        </button>
+        <div class="sidebar-section-title" style="margin-top:14px;">Otros Paneles</div>
+        <button class="sidebar-btn" onclick="showToast('Panel Workspace disponible en consola principal')">
+          <span class="icon">📁</span>
+          <span>Workspace & Git</span>
+        </button>
+        <button class="sidebar-btn" onclick="showToast('Panel Kubernetes disponible en consola principal')">
+          <span class="icon">☸️</span>
+          <span>Kubernetes</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <span>DevConsole v2.1-UI</span>
+        <span>🔑 Admin</span>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-view">
+
+      <!-- ================================================================= -->
+      <!-- PESTAÑA 1: MICROSERVICIOS                                         -->
+      <!-- ================================================================= -->
+      <section id="pane-services" class="tab-content active">
+
+        <!-- Toolbar Unificada de 2 Filas -->
+        <div class="services-toolbar-v2">
+          <!-- Fila 1: Búsqueda, Filtros de Estado y Vista -->
+          <div class="st-row-1">
+            <div class="search-box-v2">
+              <span>🔍</span>
+              <input type="text" id="svcSearch" placeholder="Buscar por nombre o puerto (ej: contratos, 8002)..." oninput="filterServices()">
+              <span class="kbd-hint">Ctrl+K</span>
+            </div>
+
+            <div class="status-filter-pills">
+              <span class="pill-filter active" onclick="setStatusFilter('all', this)">Todos (27)</span>
+              <span class="pill-filter" onclick="setStatusFilter('online', this)">🟢 Activos (8)</span>
+              <span class="pill-filter" onclick="setStatusFilter('offline', this)">⚪ Apagados (19)</span>
+              <span class="pill-filter pill-danger" onclick="setStatusFilter('behind', this)">⬇️ Desactualizados (3)</span>
+              <span class="pill-filter" onclick="setStatusFilter('dirty', this)">● Sucios (2)</span>
+            </div>
+
+            <div style="display:flex; gap:4px;">
+              <button class="btn btn-sm" id="btnViewGrid" onclick="setServicesView('grid')" title="Cuadrícula">⊞ Tarjetas</button>
+              <button class="btn btn-sm" id="btnViewList" onclick="setServicesView('list')" title="Lista">☰ Lista</button>
+            </div>
+          </div>
+
+          <!-- Fila 2: Flujos Funcionales (Slices) y Lanzadores Globales -->
+          <div class="st-row-2">
+            <div class="slice-chips-row">
+              <span class="slice-label">Flujo / Slice:</span>
+              <span class="chip-slice active" onclick="setSliceFilter('all', this)">Todos (27)</span>
+              <span class="chip-slice" onclick="setSliceFilter('contratos', this)">Contratos (7)</span>
+              <span class="chip-slice" onclick="setSliceFilter('solicitudes', this)">Solicitudes (7)</span>
+              <span class="chip-slice" onclick="setSliceFilter('perfiles', this)">Perfiles (6)</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn btn-hero" onclick="showToast('🚀 Lanzando flujo seleccionado en Tilix...')">
+                🖥️ Abrir Todo en Tilix ▾
+              </button>
+              <button class="btn btn-sm" onclick="showToast('🔄 GitLab sincronizado con éxito.')">
+                🔄 Comprobar GitLab
+              </button>
+              <button class="btn btn-sm" style="color:#f87171;" onclick="showToast('⏹ Deteniendo servicios activos...')">
+                ⏹ Detener
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Tarjetas -->
+        <div class="services-grid-v2" id="servicesGrid">
+          <!-- Renderizado dinámico vía JS -->
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- PESTAÑA 2: SERVICIOS Y CONSOLAS (WORKSPACE OPERACIONAL V2)        -->
+      <!-- ================================================================= -->
+      <section id="pane-consoles" class="tab-content">
+
+        <div class="consoles-workspace-v2">
+
+          <!-- Sidebar Izquierda Inteligente -->
+          <aside class="c-sidebar">
+            <div class="c-sidebar-header">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:12px; color:#fff;">Servicios (27)</span>
+                <span style="font-size:10.5px; color:var(--accent);" id="sidebarMonitoredCount">3 abiertas</span>
+              </div>
+              <div class="c-filter-chips">
+                <span class="c-filter-chip active" onclick="filterConsoleSidebar('all', this)">Todos</span>
+                <span class="c-filter-chip" onclick="filterConsoleSidebar('online', this)">▶ Activos</span>
+                <span class="c-filter-chip" onclick="filterConsoleSidebar('error', this)">⚠ Errores</span>
+              </div>
+              <div style="display:flex; gap:4px;">
+                <button class="btn btn-sm" style="flex:1; font-size:10.5px;" onclick="presetConsoleSlice('contratos')">⚡ Slice Contratos</button>
+                <button class="btn btn-sm" style="font-size:10.5px;" onclick="clearAllConsoles()">✕ Limpiar</button>
+              </div>
+            </div>
+
+            <!-- Listado de Servicios con indicadores de actividad en tiempo real -->
+            <div class="c-svc-list" id="consoleSidebarList">
+              <!-- Rellenado dinámicamente -->
+            </div>
+          </aside>
+
+          <!-- Stage Derecho (Mosaico / Pestañas) -->
+          <div class="c-stage">
+            <!-- Toolbar de Stage -->
+            <div class="c-stage-toolbar">
+              <div class="c-tool-group">
+                <div class="c-seg-group">
+                  <button class="c-seg-btn active" id="btnModeMosaic" onclick="setConsoleMode('mosaic')">▦ Mosaico</button>
+                  <button class="c-seg-btn" id="btnModeTabs" onclick="setConsoleMode('tabs')">▤ Pestañas</button>
+                </div>
+
+                <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
+                  <span>Columnas:</span>
+                  <select class="c-select" id="colSelect" onchange="changeColumns(this.value)">
+                    <option value="2" selected>2 cols (Dual View ⭐)</option>
+                    <option value="3">3 cols</option>
+                    <option value="1">1 col (Ancho Total)</option>
+                  </select>
+                </label>
+
+                <div style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.35); border:1px solid var(--border); border-radius:4px; padding:2px 8px;">
+                  <span style="font-size:10px;">🔍</span>
+                  <input type="text" placeholder="Filtrar logs..." style="background:transparent; border:none; color:#fff; font-size:11px; outline:none; width:120px;" oninput="filterLogOutput(this.value)">
+                </div>
+              </div>
+
+              <div class="c-tool-group">
+                <span style="font-size:11px; color:#34d399; display:flex; align-items:center; gap:4px;">
+                  <span class="activity-pulse"></span> Streaming Activo
+                </span>
+              </div>
+            </div>
+
+            <!-- Mosaico de Consolas -->
+            <div class="c-mosaic-view cols-2" id="consoleMosaicGrid">
+              <!-- Paneles de consola renderizados -->
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Dock Flotante de Acciones Masivas (Aparece cuando seleccionas 1+ servicios) -->
+  <div class="floating-bulk-bar" id="bulkBar">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span class="bulk-count-badge" id="bulkCount">0</span>
+      <span style="font-weight:700; color:#fff;">servicios seleccionados</span>
+    </div>
+    <div style="height:18px; width:1px; background:rgba(255,255,255,0.15);"></div>
+    <div style="display:flex; gap:6px;">
+      <button class="btn btn-sm btn-hero" onclick="showToast('▶ Iniciando servicios seleccionados...')">▶ Iniciar</button>
+      <button class="btn btn-sm" onclick="showToast('⏹ Deteniendo servicios...')">⏹ Detener</button>
+      <button class="btn btn-sm" onclick="showToast('⬇️ Ejecutando Git Pull en seleccionados...')">⬇️ Git Pull</button>
+      <button class="btn btn-sm" style="border-color:var(--accent); color:var(--accent);" onclick="openSelectedInConsoles()">📺 Abrir en Consolas</button>
+      <button class="btn btn-sm" style="opacity:0.7;" onclick="deselectAll()">✕ Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal Mockup (.env) -->
+  <div class="modal-overlay" id="envModal" onclick="closeEnvModal(event)">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:14px; font-weight:800; color:#fff;" id="envModalTitle">📝 Editor .env — ms_contratos</h3>
+        <button style="background:transparent; border:none; color:#fff; font-size:16px; cursor:pointer;" onclick="document.getElementById('envModal').style.display='none'">&times;</button>
+      </div>
+      <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Variables de entorno cargadas para el servicio.</p>
+      <textarea style="width:100%; height:180px; background:#020409; border:1px solid var(--border); border-radius:6px; color:#38bdf8; font-family:var(--font-mono); font-size:11px; padding:10px; outline:none;" readonly>
+DEBUG=True
+PORT=8002
+DB_HOST=172.30.23.71
+RABBITMQ_HOST=localhost
+CELERY_BROKER_URL=amqp://guest:guest@localhost:5672//
+ALLOWED_HOSTS=*
+      </textarea>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+        <button class="btn btn-sm" onclick="document.getElementById('envModal').style.display='none'">Cerrar</button>
+        <button class="btn btn-sm btn-hero" onclick="showToast('Guardado simulado de .env'); document.getElementById('envModal').style.display='none'">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifier -->
+  <div class="toast-container" id="toastBox">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">Mensaje</span>
+  </div>
+
+  <script>
+    // Datos de Microservicios Simulados
+    const SERVICES_DATA = [
+      { id: 'ms_contratos', name: 'ms_contratos', type: 'backend', port: 8002, branch: 'feature/pna-v2', online: true, behind: 2, ahead: 0, dirty: 1, slice: 'contratos', worker: true, consumer: true, hasError: false },
+      { id: 'ms_solicitudes', name: 'ms_solicitudes', type: 'backend', port: 8003, branch: 'develop', online: true, behind: 0, ahead: 1, dirty: 0, slice: 'solicitudes', worker: false, consumer: true, hasError: false },
+      { id: 'ms_perfiles', name: 'ms_perfiles', type: 'backend', port: 8004, branch: 'test', online: false, behind: 1, ahead: 0, dirty: 0, slice: 'perfiles', worker: false, consumer: false, hasError: false },
+      { id: 'ms_notificaciones', name: 'ms_notificaciones', type: 'backend', port: 8005, branch: 'develop', online: true, behind: 0, ahead: 0, dirty: 0, slice: 'contratos', worker: true, consumer: true, hasError: true },
+      { id: 'ms_autenticacion', name: 'ms_autenticacion', type: 'backend', port: 8001, branch: 'develop', online: true, behind: 0, ahead: 0, dirty: 0, slice: 'all', worker: false, consumer: false, hasError: false },
+      { id: 'mf_contratos', name: 'mf_contratos', type: 'frontend', port: 3002, branch: 'feature/pna-v2', online: true, behind: 1, ahead: 0, dirty: 1, slice: 'contratos', worker: false, consumer: false, hasError: false },
+      { id: 'mf_solicitudes', name: 'mf_solicitudes', type: 'frontend', port: 3003, branch: 'develop', online: true, behind: 0, ahead: 0, dirty: 0, slice: 'solicitudes', worker: false, consumer: false, hasError: false },
+      { id: 'mf_shell', name: 'mf_shell', type: 'frontend', port: 3000, branch: 'develop', online: true, behind: 0, ahead: 2, dirty: 0, slice: 'all', worker: false, consumer: false, hasError: false },
+      { id: 'ms_evaluador', name: 'ms_evaluador', type: 'backend', port: 8006, branch: 'develop', online: false, behind: 0, ahead: 0, dirty: 0, slice: 'contratos', worker: true, consumer: false, hasError: false }
+    ];
+
+    let currentMainTab = 'services';
+    let currentSlice = 'all';
+    let currentStatusFilter = 'all';
+    let monitoredConsoles = new Set(['ms_contratos', 'ms_notificaciones', 'mf_contratos']);
+    let interactivePtyMap = new Set();
+    let errorFilterMap = new Set();
+    let selectedForBulk = new Set();
+
+    // Logs simulados por servicio
+    const SAMPLE_LOGS = {
+      ms_contratos: [
+        { type: 'info', text: '[2026-10-10 02:15:01] INFO [django.server] "GET /api/v1/contratos/ HTTP/1.1" 200 4820' },
+        { type: 'info', text: '[2026-10-10 02:15:03] INFO [celery.worker] Task contratos.tasks.calcular_pna[uuid-9281] received' },
+        { type: 'warn', text: '[2026-10-10 02:15:04] WARN [db.connection] Read query took 184ms (threshold: 100ms)' },
+        { type: 'success', text: '[2026-10-10 02:15:05] SUCCESS [celery.worker] Task contratos.tasks.calcular_pna succeeded in 0.18s' }
+      ],
+      ms_notificaciones: [
+        { type: 'info', text: '[2026-10-10 02:14:50] INFO [consumer] Consuming from queue: q.notifications.dispatch' },
+        { type: 'error', text: '[2026-10-10 02:14:52] ERROR [rabbitmq.client] ConnectionResetError: RabbitMQ channel abruptly closed' },
+        { type: 'error', text: '[2026-10-10 02:14:53] CRITICAL Traceback (most recent call last):\n  File "/app/consumer.py", line 42, in process_msg\n    channel.basic_ack(delivery_tag)' },
+        { type: 'warn', text: '[2026-10-10 02:14:55] WARN [retry] Scheduling reconnect in 5.0 seconds...' }
+      ],
+      mf_contratos: [
+        { type: 'info', text: '<i> [webpack-dev-server] Project is running at: http://localhost:3002/' },
+        { type: 'info', text: '<i> [webpack-dev-middleware] Compiling client bundle...' },
+        { type: 'success', text: '<i> [webpack-dev-middleware] Compiled successfully in 842 ms (32 modules)' }
+      ]
+    };
+
+    // Render Inicial
+    document.addEventListener('DOMContentLoaded', () => {
+      renderServicesGrid();
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+    });
+
+    // Cambio de Pestaña Principal
+    function switchMainTab(tabId) {
+      currentMainTab = tabId;
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      if (tabId === 'services') {
+        document.getElementById('btnTabServices').classList.add('active');
+        document.getElementById('pane-services').classList.add('active');
+      } else {
+        document.getElementById('btnTabConsoles').classList.add('active');
+        document.getElementById('pane-consoles').classList.add('active');
+      }
+    }
+
+    // =========================================================================
+    // LÓGICA DE MICROSERVICIOS
+    // =========================================================================
+    function renderServicesGrid() {
+      const grid = document.getElementById('servicesGrid');
+      grid.innerHTML = '';
+
+      const query = (document.getElementById('svcSearch')?.value || '').toLowerCase();
+
+      const filtered = SERVICES_DATA.filter(s => {
+        const matchesQuery = s.name.toLowerCase().includes(query) || String(s.port).includes(query);
+        const matchesSlice = (currentSlice === 'all') || (s.slice === currentSlice);
+        let matchesStatus = true;
+        if (currentStatusFilter === 'online') matchesStatus = s.online;
+        if (currentStatusFilter === 'offline') matchesStatus = !s.online;
+        if (currentStatusFilter === 'behind') matchesStatus = s.behind > 0;
+        if (currentStatusFilter === 'dirty') matchesStatus = s.dirty > 0;
+        return matchesQuery && matchesSlice && matchesStatus;
+      });
+
+      filtered.forEach(s => {
+        const card = document.createElement('div');
+        card.className = `svc-card-v2`;
+        card.id = `card-${s.name}`;
+
+        const isChecked = selectedForBulk.has(s.name);
+        const techIcon = s.type === 'backend' ? '🐍' : '⚛️';
+
+        card.innerHTML = `
+          <!-- Top Row -->
+          <div class="card-top">
+            <div class="card-id-block">
+              <input type="checkbox" onchange="toggleBulkSelect('${s.name}', this.checked)" ${isChecked ? 'checked' : ''} style="cursor:pointer;">
+              <span style="font-size:14px;">${techIcon}</span>
+              <span class="card-name" title="${s.name}">${s.name}</span>
+              <span class="card-port">:${s.port}</span>
+            </div>
+            <span class="status-badge ${s.online ? 'online' : 'offline'}">
+              <span class="dot-live"></span>
+              <span>${s.online ? 'Activo' : 'Apagado'}</span>
+            </span>
+          </div>
+
+          <!-- Quick Actions Bar (ZERO-CLICK ACCESSIBILITY) -->
+          <div class="card-quick-actions">
+            <button class="quick-action-btn active-link" onclick="jumpToConsole('${s.name}')" title="Abrir y enfocar en Servicios y Consolas">
+              <span>📺</span> <span>Consola</span>
+            </button>
+            <button class="quick-action-btn" onclick="openServiceWeb(${s.port})" title="Abrir en navegador">
+              <span>🌐</span> <span>Web</span>
+            </button>
+            <button class="quick-action-btn" onclick="openEnvModal('${s.name}')" title="Editar variables de entorno">
+              <span>📝</span> <span>.env</span>
+            </button>
+
+            <!-- Procesos Auxiliares (Worker / Consumer) -->
+            ${s.type === 'backend' ? `
+              <div class="proc-cluster">
+                <span class="proc-dot-badge ${s.online ? 'is-on' : ''}" title="API HTTP :${s.port}">API</span>
+                <span class="proc-dot-badge ${s.worker ? 'is-on' : ''}" title="Celery Worker">W</span>
+                <span class="proc-dot-badge ${s.consumer ? 'is-on' : ''}" title="RabbitMQ Consumer">C</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Git Row -->
+          <div class="card-git-row">
+            <button class="git-branch-btn" onclick="showToast('Ramas para ${s.name}: develop, test, feature/pna-v2')">
+              <span>🔀</span> <span>${s.branch}</span>
+            </button>
+            <div class="git-pills-wrap">
+              ${s.behind > 0 ? `<span class="git-pill behind" title="${s.behind} commits pendientes de bajar">⬇️ ${s.behind}</span>` : ''}
+              ${s.ahead > 0 ? `<span class="git-pill ahead" title="${s.ahead} commits locales por subir">⬆️ ${s.ahead}</span>` : ''}
+              ${s.dirty > 0 ? `<span class="git-pill dirty" title="Archivos modificados sin commitear">● ${s.dirty}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Bottom Row: Primary Power Button + Kebab -->
+          <div class="card-bottom-row">
+            <button class="btn btn-sm btn-power ${s.online ? 'restart' : 'start'}" onclick="toggleServiceState('${s.name}')">
+              ${s.online ? '🔄 Reiniciar' : '▶ Iniciar Servicio'}
+            </button>
+            <button class="btn-kebab-v2" onclick="showToast('Opciones avanzadas: Git Push, Git Pull, Pipenv Shell, Tilix Nativo')" title="Más opciones">
+              ⋮
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleServiceState(name) {
+      const svc = SERVICES_DATA.find(s => s.name === name);
+      if (svc) {
+        svc.online = !svc.online;
+        renderServicesGrid();
+        renderConsoleSidebar();
+        showToast(svc.online ? `▶ ${name} iniciado correctamente` : `⏹ ${name} detenido`);
+      }
+    }
+
+    function setSliceFilter(slice, el) {
+      currentSlice = slice;
+      document.querySelectorAll('.chip-slice').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderServicesGrid();
+    }
+
+    function setStatusFilter(filter, el) {
+      currentStatusFilter = filter;
+      document.querySelectorAll('.pill-filter').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderServicesGrid();
+    }
+
+    function filterServices() {
+      renderServicesGrid();
+    }
+
+    function toggleBulkSelect(name, checked) {
+      if (checked) selectedForBulk.add(name);
+      else selectedForBulk.delete(name);
+
+      const bulkBar = document.getElementById('bulkBar');
+      const countEl = document.getElementById('bulkCount');
+      if (selectedForBulk.size > 0) {
+        bulkBar.style.display = 'flex';
+        countEl.innerText = selectedForBulk.size;
+      } else {
+        bulkBar.style.display = 'none';
+      }
+    }
+
+    function deselectAll() {
+      selectedForBulk.clear();
+      document.getElementById('bulkBar').style.display = 'none';
+      renderServicesGrid();
+    }
+
+    function openSelectedInConsoles() {
+      selectedForBulk.forEach(name => monitoredConsoles.add(name));
+      deselectAll();
+      switchMainTab('consoles');
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+      showToast('📺 Consolas seleccionadas abiertas en el Mosaico.');
+    }
+
+    function openServiceWeb(port) {
+      showToast(`🌐 Abriendo http://localhost:${port}/ en nueva pestaña...`);
+    }
+
+    function openEnvModal(name) {
+      document.getElementById('envModalTitle').innerText = `📝 Editor .env — ${name}`;
+      document.getElementById('envModal').style.display = 'flex';
+    }
+
+    function closeEnvModal(e) {
+      if (e.target.id === 'envModal') document.getElementById('envModal').style.display = 'none';
+    }
+
+    // =========================================================================
+    // SALTO CRUZADO (CROSS-TAB DEEP-LINK): MICROSERVICIOS -> CONSOLAS
+    // =========================================================================
+    function jumpToConsole(name) {
+      monitoredConsoles.add(name);
+      switchMainTab('consoles');
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+
+      setTimeout(() => {
+        const panel = document.getElementById(`console-panel-${name}`);
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          panel.classList.add('highlight-flash');
+          setTimeout(() => panel.classList.remove('highlight-flash'), 2000);
+        }
+      }, 100);
+
+      showToast(`📺 Enfocando consola de ${name}`);
+    }
+
+    // =========================================================================
+    // LÓGICA DE SERVICIOS Y CONSOLAS
+    // =========================================================================
+    function renderConsoleSidebar(filterType = 'all') {
+      const list = document.getElementById('consoleSidebarList');
+      list.innerHTML = '';
+
+      let services = SERVICES_DATA;
+      if (filterType === 'online') services = services.filter(s => s.online);
+      if (filterType === 'error') services = services.filter(s => s.hasError);
+
+      services.forEach(s => {
+        const isMonitored = monitoredConsoles.has(s.name);
+        const item = document.createElement('div');
+        item.className = `c-svc-item ${isMonitored ? 'is-monitored' : ''}`;
+        item.onclick = () => toggleConsoleMonitor(s.name);
+
+        item.innerHTML = `
+          <input type="checkbox" ${isMonitored ? 'checked' : ''} style="pointer-events:none;">
+          <span style="font-size:12px;">${s.type === 'backend' ? '🐍' : '⚛️'}</span>
+          <span class="c-svc-title">${s.name}</span>
+          ${s.hasError ? `<span class="badge-error-indicator">⚠ Error</span>` : ''}
+          ${s.online && !s.hasError ? `<span class="activity-pulse" title="Emisión de logs activa"></span>` : ''}
+          <span class="c-svc-port">:${s.port}</span>
+        `;
+        list.appendChild(item);
+      });
+
+      document.getElementById('sidebarMonitoredCount').innerText = `${monitoredConsoles.size} abiertas`;
+    }
+
+    function toggleConsoleMonitor(name) {
+      if (monitoredConsoles.has(name)) monitoredConsoles.delete(name);
+      else monitoredConsoles.add(name);
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+    }
+
+    function filterConsoleSidebar(type, el) {
+      document.querySelectorAll('.c-filter-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderConsoleSidebar(type);
+    }
+
+    function presetConsoleSlice(slice) {
+      monitoredConsoles.clear();
+      SERVICES_DATA.filter(s => s.slice === slice).forEach(s => monitoredConsoles.add(s.name));
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+      showToast(`⚡ Flujo ${slice} cargado en el Mosaico (${monitoredConsoles.size} consolas)`);
+    }
+
+    function clearAllConsoles() {
+      monitoredConsoles.clear();
+      renderConsoleSidebar();
+      renderConsoleMosaic();
+      showToast('✕ Todas las consolas cerradas');
+    }
+
+    function renderConsoleMosaic() {
+      const grid = document.getElementById('consoleMosaicGrid');
+      grid.innerHTML = '';
+
+      if (monitoredConsoles.size === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align:center; padding:60px 20px; color:var(--text-dim);">
+            <div style="font-size:40px; margin-bottom:10px;">🖥️</div>
+            <h3 style="font-size:15px; color:#fff; margin-bottom:6px;">No hay consolas abiertas</h3>
+            <p style="font-size:12px; margin-bottom:14px;">Haz clic en cualquier servicio en el panel lateral para abrir su consola en vivo.</p>
+            <button class="btn btn-hero btn-sm" onclick="presetConsoleSlice('contratos')">Abrir Slice Contratos</button>
+          </div>
+        `;
+        return;
+      }
+
+      monitoredConsoles.forEach(name => {
+        const s = SERVICES_DATA.find(x => x.name === name) || { name, port: 8000, type: 'backend' };
+        const panel = document.createElement('div');
+        const isPty = interactivePtyMap.has(name);
+        const onlyErrors = errorFilterMap.has(name);
+
+        panel.className = `c-panel ${isPty ? 'is-pty-interactive' : ''}`;
+        panel.id = `console-panel-${name}`;
+
+        const logs = SAMPLE_LOGS[name] || [
+          { type: 'info', text: `[2026-10-10 02:16:00] INFO [runtime] Service ${name} listening on port ${s.port}` },
+          { type: 'info', text: `[2026-10-10 02:16:04] INFO [healthcheck] Health OK (status 200)` }
+        ];
+
+        const renderedLogs = onlyErrors
+          ? logs.filter(l => l.type === 'error' || l.type === 'warn')
+          : logs;
+
+        panel.innerHTML = `
+          ${isPty ? `
+            <div class="pty-active-banner">
+              <span>🎮 MODO INTERACTIVO (xterm PTY) ACTIVO</span>
+              <span style="font-size:9.5px; opacity:0.8;">Presiona Esc o el botón 👁 para volver a lectura</span>
+            </div>
+          ` : ''}
+
+          <!-- Panel Header -->
+          <div class="c-panel-header">
+            <div class="c-panel-title-area">
+              <span class="activity-pulse"></span>
+              <strong style="color:#fff; font-size:12px;">${name}</strong>
+              <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--accent);">:${s.port}</span>
+              <span style="font-size:9.5px; background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:3px; color:var(--text-dim); text-transform:uppercase;">${s.type}</span>
+            </div>
+
+            <!-- Header Micro-Tools -->
+            <div class="c-panel-tools">
+              <!-- Clear Screen -->
+              <button class="c-icon-action" onclick="clearConsoleBuffer('${name}')" title="Limpiar buffer local de esta consola">
+                🧹
+              </button>
+              <!-- Solo Errores Filter -->
+              <button class="c-icon-action ${onlyErrors ? 'active-flag' : ''}" onclick="toggleErrorFilter('${name}')" title="Filtrar sólo errores y advertencias">
+                ⚠️
+              </button>
+              <!-- Copiar Logs -->
+              <button class="c-icon-action" onclick="copyConsoleLogs('${name}')" title="Copiar logs al portapapeles">
+                📋
+              </button>
+              <!-- Toggle Control / Monitor -->
+              <button class="c-icon-action" style="${isPty ? 'color:#38bdf8;' : ''}" onclick="toggleInteractivePty('${name}')" title="${isPty ? 'Volver a sólo lectura (Monitor)' : 'Tomar control interactivo (PTY)'}">
+                ${isPty ? '👁' : '🎮'}
+              </button>
+              <!-- Close -->
+              <button class="c-icon-action" onclick="toggleConsoleMonitor('${name}')" title="Cerrar consola">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Viewport Terminal -->
+          <div class="c-viewport" id="viewport-${name}">
+            ${renderedLogs.length === 0 ? `<div style="color:var(--text-dim); padding:20px; text-align:center;">No hay líneas que coincidan con el filtro de error</div>` : ''}
+            ${renderedLogs.map(l => `<div class="log-line is-${l.type}">${escapeHtml(l.text)}</div>`).join('')}
+          </div>
+
+          <!-- Footer -->
+          <div class="c-panel-footer">
+            <span style="color:#34d399; display:flex; align-items:center; gap:4px;">
+              <span>●</span> LIVE · ${renderedLogs.length} líneas
+            </span>
+            <span>tmux / devconsole</span>
+          </div>
+        `;
+
+        grid.appendChild(panel);
+      });
+    }
+
+    function toggleInteractivePty(name) {
+      if (interactivePtyMap.has(name)) {
+        interactivePtyMap.delete(name);
+        showToast(`👁 ${name}: Modo monitor (sólo lectura) restaurado`);
+      } else {
+        interactivePtyMap.add(name);
+        showToast(`🎮 ${name}: Control interactivo activo. Puedes tipear comandos.`);
+      }
+      renderConsoleMosaic();
+    }
+
+    function toggleErrorFilter(name) {
+      if (errorFilterMap.has(name)) {
+        errorFilterMap.delete(name);
+        showToast(`Mostrar todos los logs en ${name}`);
+      } else {
+        errorFilterMap.add(name);
+        showToast(`⚠️ Filtrando solo Errores/Warnings en ${name}`);
+      }
+      renderConsoleMosaic();
+    }
+
+    function clearConsoleBuffer(name) {
+      SAMPLE_LOGS[name] = [];
+      renderConsoleMosaic();
+      showToast(`🧹 Buffer de ${name} limpiado`);
+    }
+
+    function copyConsoleLogs(name) {
+      showToast(`📋 Logs de ${name} copiados al portapapeles`);
+    }
+
+    function changeColumns(cols) {
+      const grid = document.getElementById('consoleMosaicGrid');
+      grid.className = `c-mosaic-view cols-${cols}`;
+      showToast(`Diseño cambiado a ${cols} columna(s)`);
+    }
+
+    function setConsoleMode(mode) {
+      document.getElementById('btnModeMosaic').classList.toggle('active', mode === 'mosaic');
+      document.getElementById('btnModeTabs').classList.toggle('active', mode === 'tabs');
+      showToast(mode === 'tabs' ? 'Modo pestañas activado' : 'Modo mosaico activado');
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      document.getElementById('toastMsg').innerText = msg;
+      box.style.display = 'flex';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { box.style.display = 'none'; }, 2600);
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>

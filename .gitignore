@@ -1,0 +1,25 @@
+# Configuración local y sensible (no versionar credenciales ni rutas del host)
+/config/panel.json
+/config/secrets.json
+/config/services.json
+/config/settings.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.bak
+
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+
+# Temporales y logs
+*.swp
+*~
+.DS_Store
+*.log
+/tmp/
+.sisper_admin_sessions.json
+.codebase-memory/

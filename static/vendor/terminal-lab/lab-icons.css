@@ -1,0 +1,5 @@
+/* Lucide static SVG assets bundled locally from lucide-static 1.56.0. */
+.lab-icon{display:inline-block;width:14px;height:14px;background-color:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;vertical-align:middle}
+.lab-icon-search{mask-image:url('./icons/search.svg');-webkit-mask-image:url('./icons/search.svg')}
+.lab-icon-trash{mask-image:url('./icons/trash.svg');-webkit-mask-image:url('./icons/trash.svg')}
+.lab-icon-fullscreen{mask-image:url('./icons/fullscreen.svg');-webkit-mask-image:url('./icons/fullscreen.svg')}
