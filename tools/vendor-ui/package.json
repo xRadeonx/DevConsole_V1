@@ -1,0 +1,17 @@
+{
+  "name": "devconsole-ui-vendor",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build-only dependencies used to produce self-hosted DevConsole browser bundles.",
+  "dependencies": {
+    "@codemirror/lang-json": "6.0.2",
+    "@codemirror/lang-yaml": "6.1.2",
+    "@codemirror/theme-one-dark": "6.1.2",
+    "codemirror": "6.0.2",
+    "gridjs": "6.2.0",
+    "split.js": "1.6.5"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.11"
+  }
+}
