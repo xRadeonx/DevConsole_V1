@@ -87,19 +87,28 @@ def _start_probe_refresher() -> None:
 
 
 def main():
-    # Enable the trust token only for the actual server lifecycle.  Merely
-    # importing devconsole.server must not mutate the environment of tests or
-    # embedding tools.  Explicit operator configuration always wins.
     os.environ.setdefault("SISPER_LOCAL_TOKEN_REQUIRED", "1")
 
-    # Never infer that a Git lock is stale and delete it.  Patch the historical
-    # handler call site after all compatibility modules are loaded; this applies
-    # to both V1.1 and the emergency V1 HTTP facade without removing a feature.
     try:
         from devconsole.services.git_safety import install_checkout_guard
         install_checkout_guard()
     except Exception as exc:
         print(f"[!] No se pudo instalar el guard de Git: {exc}", file=sys.stderr)
+
+    # Prefer safe tmux process ownership when the host provides it, but never
+    # remove Tilix: it remains the external viewer and the fallback when tmux is
+    # unavailable or explicitly selected by the operator.
+    try:
+        from devconsole.services.terminal.hardening import activate_safe_terminal_runtime
+        terminal_policy = activate_safe_terminal_runtime(BASE_DIR)
+        print(
+            "[*] Terminal runtime: "
+            f"{terminal_policy['selected']} "
+            f"(safe_wrapper={terminal_policy['safe_wrapper']}, "
+            f"tilix_viewer={terminal_policy['tilix_viewer_available']})"
+        )
+    except Exception as exc:
+        print(f"[!] Hardening de terminal omitido; se conserva backend configurado: {exc}", file=sys.stderr)
 
     _log_bind_notice()
     try:
