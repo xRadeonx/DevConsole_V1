@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from devconsole import v11_multienv
+from devconsole import v11_telemetry_compat
 
 
 class V11MultiEnvironmentTests(unittest.TestCase):
@@ -175,6 +176,30 @@ class V11MultiEnvironmentTests(unittest.TestCase):
         self.assertIn("main", status["activity_available"])
         self.assertNotIn("do-not-render", repr(status))
         self.assertNotIn("c-secret", repr(status))
+
+    def test_recovered_test_and_main_receive_legacy_telemetry_display_names(self):
+        mapping = {
+            "test": {
+                "url": "https://test.invalid",
+                "realm": "SISPER",
+                "client_id": "backend",
+                "client_secret": "test-secret",
+            },
+            "main": {
+                "url": "https://main.invalid",
+                "realm": "SISPER",
+                "client_id": "backend",
+                "client_secret": "main-secret",
+            },
+        }
+
+        changed = v11_telemetry_compat._apply_to_map(mapping)
+
+        self.assertTrue(changed)
+        self.assertEqual("TEST", mapping["test"]["name"])
+        self.assertEqual("MAIN", mapping["main"]["name"])
+        self.assertEqual("test-secret", mapping["test"]["client_secret"])
+        self.assertEqual("main-secret", mapping["main"]["client_secret"])
 
     def test_map_candidates_use_workspace_then_bundled_fallback(self):
         import devconsole.config as config
