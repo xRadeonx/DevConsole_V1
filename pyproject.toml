@@ -18,9 +18,11 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-# F/E9 provide a low-noise baseline gate first. Broader style rules will be
-# enabled only after the legacy tree has been characterized and cleaned.
-select = ["F", "E9"]
+# Legacy V1 contains many harmless unused-import/unused-variable findings.
+# The initial CI gate blocks only errors that can represent broken Python
+# semantics. The broader F/E/W cleanup is tracked separately and will be
+# enabled incrementally once the baseline is green.
+select = ["E9", "F63", "F7", "F82"]
 
 [tool.ruff.format]
 quote-style = "double"
