@@ -52,6 +52,7 @@ jobs:
             tests.devconsole.test_yaml_service \
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_v11_yaml_catalog \
+            tests.devconsole.test_v11_nonsecret_catalog \
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
@@ -101,6 +102,7 @@ jobs:
             tests.devconsole.test_yaml_service \
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_v11_yaml_catalog \
+            tests.devconsole.test_v11_nonsecret_catalog \
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
@@ -138,7 +140,10 @@ jobs:
             devconsole/v11_env_safety.py \
             devconsole/v11_environment_secrets.py \
             devconsole/v11_infra_catalog.py \
+            devconsole/v11_k8s_configmaps.py \
+            devconsole/v11_k8s_secrets.py \
             devconsole/v11_legacy_profile.py \
+            devconsole/v11_local_env_catalog.py \
             devconsole/v11_multienv.py \
             devconsole/v11_read_policy.py \
             devconsole/v11_yaml_catalog.py \
@@ -163,6 +168,7 @@ jobs:
             tests/devconsole/test_process_observer.py \
             tests/devconsole/test_yaml_service.py \
             tests/devconsole/test_v11_yaml_catalog.py \
+            tests/devconsole/test_v11_nonsecret_catalog.py \
             tests/devconsole/test_v11_yaml_promotion.py \
             tests/devconsole/test_config_schema.py \
             tests/devconsole/test_v11_ui.py \
