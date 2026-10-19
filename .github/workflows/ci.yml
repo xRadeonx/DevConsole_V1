@@ -250,9 +250,9 @@ jobs:
             echo "xterm-addon-webgl 0.11.4 — MIT — https://github.com/xtermjs/xterm.js"
             echo
             echo "---- package license metadata ----"
-            node - <<'NODE'
+            NODE_ROOT="$NODE" node - <<'NODE'
           const path = require('path');
-          const root = process.argv[1];
+          const root = process.env.NODE_ROOT;
           const packages = [
             'split.js',
             'gridjs',
