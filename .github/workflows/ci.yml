@@ -50,6 +50,8 @@ jobs:
             tests.devconsole.test_yaml_service \
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_config_schema \
+            tests.devconsole.test_v11_legacy_profile \
+            tests.devconsole.test_v11_multienv \
             tests.devconsole.test_v11_ui
 
   modernization-tooling:
@@ -92,6 +94,8 @@ jobs:
             tests.devconsole.test_yaml_service \
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_config_schema \
+            tests.devconsole.test_v11_legacy_profile \
+            tests.devconsole.test_v11_multienv \
             tests.devconsole.test_v11_ui
 
   v11-quality:
@@ -122,6 +126,8 @@ jobs:
             devconsole/v11_capabilities.py \
             devconsole/v11_git_safety.py \
             devconsole/v11_env_safety.py \
+            devconsole/v11_legacy_profile.py \
+            devconsole/v11_multienv.py \
             devconsole/v11_read_policy.py \
             devconsole/v11_yaml_promotion.py \
             devconsole/v11_ui.py \
@@ -133,6 +139,8 @@ jobs:
             tests/devconsole/test_v11_access.py \
             tests/devconsole/test_v11_git_safety.py \
             tests/devconsole/test_v11_env_safety.py \
+            tests/devconsole/test_v11_legacy_profile.py \
+            tests/devconsole/test_v11_multienv.py \
             tests/devconsole/test_v11_read_policy.py \
             tests/devconsole/test_project_detector.py \
             tests/devconsole/test_v11_capabilities.py \
@@ -147,7 +155,9 @@ jobs:
           for file in \
             static/js/v11/app.js \
             static/js/v11/core/events.js \
-            static/js/v11/core/features.js; do
+            static/js/v11/core/features.js \
+            static/js/v11/features/multi-env.js \
+            static/js/v11/features/terminal-addons.js; do
             node --input-type=module --check < "$file"
           done
 
