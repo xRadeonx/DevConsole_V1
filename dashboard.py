@@ -37,6 +37,7 @@ from devconsole.config import (
 # the incremental migration.
 from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
+from devconsole.v11_catalog_aliases import install as install_v11_catalog_aliases
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
@@ -66,6 +67,10 @@ install_v11_legacy_profile()
 # explicit 0600 secrets store. This avoids asking the operator to duplicate
 # configuration that already exists in the selected project.
 install_v11_yaml_catalog()
+# Normalize the additional names used by real SISPER manifests (for example
+# CONTRATOS_DB, CTTO_USER, DESTINACIONES_DATABASE, PGDATABASE/PGUSER) before the
+# specialized .env/ConfigMap/Secret adapters parse their sources.
+install_v11_catalog_aliases()
 # Local service .env files describe DEVELOP. Recover only non-secret connection
 # metadata (Keycloak endpoint/realm/client_id and PostgreSQL host/port/name/user)
 # so the local environment does not require duplicate panel.json entries.
