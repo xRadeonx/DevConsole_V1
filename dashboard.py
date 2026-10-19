@@ -39,6 +39,7 @@ from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_git_safety import install as install_v11_git_safety
+from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
 from devconsole.v11_yaml_promotion import install as install_v11_yaml_promotion
 
 install_v11_access()
@@ -46,6 +47,10 @@ install_v11_capabilities()
 install_v11_git_safety()
 install_v11_env_safety()
 install_v11_yaml_promotion()
+# Fresh ZIP checkouts do not contain panel.json/services.json. Install the
+# compatibility guards before handlers import infra/telemetry functions by
+# value so filesystem discovery and the read-only dashboard still work.
+install_v11_runtime_compat()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
 from devconsole.api import handlers as handlers_module
