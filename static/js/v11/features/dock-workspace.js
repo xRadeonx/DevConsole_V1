@@ -1,6 +1,6 @@
 const DOCKVIEW_JS = "/static/vendor/terminal-lab/dockview.js";
 const DOCKVIEW_CSS = "/static/vendor/terminal-lab/dockview.css";
-const LAYOUT_KEY = "devconsole.v11.dockview.layout";
+const LAYOUT_KEY = "devconsole.v1.1.dockview.layout";
 const MAX_INITIAL_PANELS = 6;
 
 let loadPromise = null;
@@ -120,8 +120,11 @@ class ServiceLogPanel {
   }
 }
 
-async function fetchMosaic(maxLines = 120) {
-  const response = await fetch(`/api/services/mosaic?max_lines=${maxLines}`, { cache: "no-store" });
+async function fetchMosaic(maxLines = 120, services = []) {
+  const query = new URLSearchParams({ max_lines: String(maxLines) });
+  const names = services.filter(Boolean);
+  if (names.length) query.set("services", names.join(","));
+  const response = await fetch(`/api/services/mosaic?${query.toString()}`, { cache: "no-store" });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const payload = await response.json();
   return Array.isArray(payload?.services) ? payload.services : [];
@@ -143,7 +146,10 @@ function updateViews(items) {
 async function refreshPanels() {
   if (!visible) return;
   try {
-    updateViews(await fetchMosaic(120));
+    const services = [...panelViews.keys()];
+    // Once the layout exists, only capture tmux panes that are actually open
+    // in Dockview. The initial catalog fetch is the only all-services request.
+    updateViews(await fetchMosaic(120, services));
   } catch (error) {
     const badge = document.getElementById("dcV11DockLiveBadge");
     if (badge) badge.textContent = "sin conexión";
