@@ -14,7 +14,7 @@ class V11DockWorkspaceTests(unittest.TestCase):
         self.assertTrue((vendor / "dockview.css").is_file())
         self.assertTrue((vendor / "LICENSE-dockview.md").is_file())
 
-    def test_production_module_is_lazy_and_preserves_legacy_wall(self):
+    def test_dockview_remains_available_but_is_not_a_duplicate_default_workspace(self):
         module = (ROOT / "static" / "js" / "v11" / "features" / "dock-workspace.js").read_text(
             encoding="utf-8"
         )
@@ -23,10 +23,11 @@ class V11DockWorkspaceTests(unittest.TestCase):
 
         self.assertIn('/static/vendor/terminal-lab/dockview.js', module)
         self.assertIn("function loadDockview()", module)
-        self.assertIn("btnV11DockWorkspace", module)
         self.assertIn("/api/services/mosaic", module)
-        self.assertIn("bootDockWorkspace", app)
-        # The existing console wall remains the default and recovery path.
+        # The user-facing Consolas tab is canonical; no second Modo IDE is
+        # bootstrapped alongside it. Dockview stays vendored for future reuse.
+        self.assertNotIn('from "./features/dock-workspace.js"', app)
+        self.assertNotIn("bootDockWorkspace()", app)
         self.assertIn('id="consoleWallToolbar"', legacy_index)
         self.assertIn('id="consoleMosaicGrid"', legacy_index)
 
