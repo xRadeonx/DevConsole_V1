@@ -1,0 +1,67 @@
+:root.dc-v11-foundation {
+  --dc-space-1: 0.25rem;
+  --dc-space-2: 0.5rem;
+  --dc-space-3: 0.75rem;
+  --dc-space-4: 1rem;
+  --dc-space-5: 1.5rem;
+  --dc-space-6: 2rem;
+  --dc-radius-sm: 6px;
+  --dc-radius-md: 10px;
+  --dc-radius-lg: 14px;
+  --dc-control-height: 2.25rem;
+  --dc-focus-ring: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/*
+ * V1.1 styles are deliberately namespaced. Nothing below overrides existing
+ * dashboard selectors; components opt in with the dc-v11-* prefix so the
+ * legacy UI remains the fallback while features are migrated one at a time.
+ */
+.dc-v11-surface {
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--dc-radius-md);
+  overflow: hidden;
+}
+
+.dc-v11-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dc-space-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+.dc-v11-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dc-space-2);
+  min-width: 0;
+}
+
+.dc-v11-scroll {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.dc-v11-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--dc-focus-ring);
+}
+
+.dc-v11-muted {
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-v11-foundation *,
+  .dc-v11-foundation *::before,
+  .dc-v11-foundation *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
