@@ -28,7 +28,10 @@ from pathlib import Path
 
 from devconsole.local_trust import runtime_dir
 
-ADMIN_PIN = os.environ.get("SISPER_ADMIN_PIN", "sisper2026")
+# Backwards-compatible export only.  Product credentials are validated by
+# ``devconsole.pins`` and are stored as scrypt hashes; there is deliberately no
+# built-in plaintext administrator password in runtime code.
+ADMIN_PIN = os.environ.get("SISPER_ADMIN_PIN", "")
 
 #: Name of the admin-session cookie.
 ADMIN_COOKIE_NAME = "sisper_admin_session"
