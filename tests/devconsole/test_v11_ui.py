@@ -15,7 +15,8 @@ class V11UiTests(unittest.TestCase):
         self.static = Path(self.tmp.name)
         (self.static / "css").mkdir()
         (self.static / "js" / "v11").mkdir(parents=True)
-        (self.static / "css" / "v11-foundation.css").write_text("/* css */", encoding="utf-8")
+        (self.static / "css" / "v11-foundation.css").write_text("/* foundation */", encoding="utf-8")
+        (self.static / "css" / "v11-libraries.css").write_text("/* libraries */", encoding="utf-8")
         (self.static / "js" / "v11" / "app.js").write_text("// js", encoding="utf-8")
 
     def test_injection_is_additive_and_idempotent(self):
@@ -25,9 +26,11 @@ class V11UiTests(unittest.TestCase):
         self.assertIn("legacy.css", once)
         self.assertIn("legacy.js", once)
         self.assertIn("v11-foundation.css", once)
+        self.assertIn("v11-libraries.css", once)
         self.assertIn("/static/js/v11/app.js", once)
         self.assertEqual(once, twice)
         self.assertEqual(2, once.count('data-devconsole-v11="ui-foundation"'))
+        self.assertEqual(1, once.count('data-devconsole-v11="ui-libraries"'))
 
     def test_render_preserves_dashboard_version_marker(self):
         index = self.static / "index.html"
@@ -44,6 +47,7 @@ class V11UiTests(unittest.TestCase):
         self.assertIn("window.__UI_VERSION=\"abc123\"", html)
         self.assertIn('src="/static/js/dashboard.js?v=abc123"', html)
         self.assertIn("/static/js/v11/app.js", html)
+        self.assertIn("/static/css/v11-libraries.css", html)
 
     def test_missing_index_returns_none_without_side_effect(self):
         module = SimpleNamespace(STATIC_DIR=self.static, _version_estaticos=lambda: {})
