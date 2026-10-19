@@ -16,6 +16,9 @@ jobs:
   regression:
     name: Portable regression / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    env:
+      SISPER_ADMIN_PIN: devconsole-ci-admin
+      SISPER_DEV_PIN: devconsole-ci-developer
     strategy:
       fail-fast: false
       matrix:
@@ -123,6 +126,9 @@ jobs:
     name: Full legacy suite (diagnostic)
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      SISPER_ADMIN_PIN: devconsole-ci-admin
+      SISPER_DEV_PIN: devconsole-ci-developer
 
     steps:
       - name: Checkout full history
