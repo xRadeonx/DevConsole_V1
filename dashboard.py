@@ -31,12 +31,14 @@ from devconsole.config import (
     get_service_repo_dir,
 )
 
-# V1.1 compatibility policy must be installed before handlers import auth/security
-# symbols by value.  This keeps Viewer/QA as the default product level while
-# preserving the complete V1 HTTP/UI surface during the incremental migration.
+# V1.1 compatibility policies are installed before handlers import auth/security
+# symbols by value.  They enrich the existing V1 contracts instead of replacing
+# them, so every current feature stays available during the migration.
 from devconsole.v11_access import install as install_v11_access
+from devconsole.v11_capabilities import install as install_v11_capabilities
 
 install_v11_access()
+install_v11_capabilities()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
 from devconsole.api.handlers import DevConsoleHandler
