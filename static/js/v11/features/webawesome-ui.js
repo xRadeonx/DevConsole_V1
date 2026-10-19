@@ -1,17 +1,7 @@
 const WA_JS = "/static/vendor/v11/webawesome.bundle.js";
-const WA_CSS = "/static/vendor/v11/webawesome.css";
 const ENV_ORDER = ["develop", "test", "main"];
 
 let bootPromise = null;
-
-function ensureStyle(href, marker) {
-  if (document.querySelector(`link[data-devconsole-v11="${marker}"]`)) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = href;
-  link.dataset.devconsoleV11 = marker;
-  document.head.appendChild(link);
-}
 
 function loadScript(src, marker) {
   const existing = document.querySelector(`script[data-devconsole-v11="${marker}"]`);
@@ -114,7 +104,10 @@ async function refreshStatus() {
 }
 
 async function loadWebAwesome() {
-  ensureStyle(WA_CSS, "webawesome-css");
+  // Do not load Web Awesome's global stylesheet into the legacy document.
+  // Its reset/tokens alter V1 buttons, selects and console filters. The web
+  // components carry their component styles in shadow DOM and DevConsole
+  // provides the small host-level styling in v11-libraries.css.
   await loadScript(WA_JS, "webawesome-core");
   await Promise.all([
     customElements.whenDefined("wa-badge"),
