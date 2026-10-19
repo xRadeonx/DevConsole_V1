@@ -79,7 +79,7 @@ KNOWN_ACTIONS = frozenset({
     *env_keys(),
     # Session/window actions.
     "single", "all", "tabs", "b1", "b2", "front",
-    "stop", "stop-close",
+    "stop", "stop-close", "stop-single",
     # Refresh actions.
     "restart", "restart-backends", "restart-frontends", "restart-single",
     # Single-service start.
@@ -189,4 +189,3 @@ class TerminalBackend(ABC):
         supporting detached viewers (e.g. TmuxBackend).
         """
         return False, "attach_viewer no está soportado por este backend"
-
