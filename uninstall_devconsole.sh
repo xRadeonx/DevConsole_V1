@@ -25,16 +25,30 @@ rm -f "${SYSTEMD_USER_DIR}/${SERVICE_NAME}"
 rm -rf "${SYSTEMD_USER_DIR}/${SERVICE_NAME}.d"
 systemctl --user daemon-reload
 
-echo "[*] Matando cualquier proceso que siga en el puerto (del propio usuario)..."
-if command -v fuser >/dev/null 2>&1; then
-    for puerto in 9099 "${SISPER_PORT:-}"; do
-        [ -n "${puerto}" ] || continue
-        ss -ltn 2>/dev/null | grep -q ":${puerto} " && fuser -k "${puerto}/tcp" 2>/dev/null || true
-    done
-fi
-pkill -u "${USER}" -f "$(printf '%s' "${INSTALL_DIR}")/dashboard.py" 2>/dev/null || true
+# Nunca se mata un proceso únicamente por ocupar un puerto. Si quedó una
+# instancia exacta de este checkout después de detener systemd, se termina sólo
+# esa instancia identificada por su ruta completa; cualquier otro listener se
+# reporta para que el operador decida.
+echo "[*] Cerrando únicamente procesos de este checkout, si quedaran activos..."
+while IFS= read -r pid; do
+    [ -n "${pid}" ] || continue
+    cmdline="$(tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null || true)"
+    case "${cmdline}" in
+        *"${INSTALL_DIR}/dashboard.py"*)
+            kill "${pid}" 2>/dev/null || true
+            ;;
+    esac
+done < <(pgrep -u "${USER}" -f "${INSTALL_DIR}/dashboard.py" 2>/dev/null || true)
+
 sleep 1
-ss -ltn 2>/dev/null | grep -q ":9099 " && echo "  [!] El 9099 sigue ocupado por OTRO usuario/proceso." || echo "  [✓] Puerto 9099 libre."
+for puerto in 9099 "${SISPER_PORT:-}"; do
+    [ -n "${puerto}" ] || continue
+    if ss -ltn 2>/dev/null | grep -q ":${puerto} "; then
+        echo "  [i] Puerto ${puerto} sigue ocupado por otro proceso; no se modifica."
+    else
+        echo "  [✓] Puerto ${puerto} libre."
+    fi
+done
 
 echo "[*] Quitando acceso directo del menú..."
 rm -f "${APPS_DIR}/${DESKTOP_NAME}"
