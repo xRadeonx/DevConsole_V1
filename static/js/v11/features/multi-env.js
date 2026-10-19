@@ -31,6 +31,19 @@ function configured(env, capability = "configured") {
   return Boolean(state && state[capability]);
 }
 
+function missingLabels(env) {
+  const missing = environmentState?.environments?.[env]?.missing;
+  if (!Array.isArray(missing)) return [];
+  const labels = {
+    keycloak_endpoint: "endpoint Keycloak",
+    keycloak_credentials: "credencial Keycloak",
+    database_endpoint: "endpoint BD",
+    map_database_credentials: "credenciales Contratos/Destinaciones",
+    activity_database_credentials: "credencial Bitácora",
+  };
+  return missing.map((item) => labels[item] || item);
+}
+
 function decorateMapSelector() {
   const select = document.getElementById("mapEnvSelect");
   if (!select) return;
@@ -39,9 +52,14 @@ function decorateMapSelector() {
   select.replaceChildren();
   for (const env of ENV_ORDER) {
     const option = document.createElement("option");
+    const inCatalog = configured(env);
+    const ready = configured(env, "map");
     option.value = env;
-    option.textContent = `${ENV_LABELS[env]}${configured(env) ? "" : " · sin configurar"}`;
-    option.disabled = !configured(env, "keycloak") || !configured(env, "database");
+    option.textContent = `${ENV_LABELS[env]}${!inCatalog ? " · sin catálogo" : !ready ? " · credenciales pendientes" : ""}`;
+    option.disabled = !ready;
+    option.title = ready
+      ? `${ENV_LABELS[env]} listo para Mapa Operativo`
+      : `Pendiente: ${missingLabels(env).join(", ") || "configuración local"}`;
     select.appendChild(option);
   }
 
@@ -52,7 +70,7 @@ function decorateMapSelector() {
     select.value = first?.value || "develop";
   }
 
-  select.title = "El entorno seleccionado se valida en backend; TEST/MAIN nunca reutilizan DEVELOP silenciosamente.";
+  select.title = "El entorno se valida en backend; TEST/MAIN nunca reutilizan DEVELOP silenciosamente.";
 }
 
 function decorateActivityButtons() {
@@ -68,8 +86,8 @@ function decorateActivityButtons() {
     button.classList.toggle("dc-v11-env-unavailable", !available);
     button.setAttribute("aria-disabled", available ? "false" : "true");
     button.title = available
-      ? `${ENV_LABELS[env]}: Bitácora configurada`
-      : `${ENV_LABELS[env]}: Bitácora no configurada. DevConsole mostrará el error real; no usará DEVELOP.`;
+      ? `${ENV_LABELS[env]}: Bitácora lista`
+      : `${ENV_LABELS[env]}: ${missingLabels(env).join(", ") || "Bitácora no configurada"}`;
   }
 }
 
@@ -117,6 +135,8 @@ function renderEnvironmentSummary() {
   }
 
   const available = ENV_ORDER.filter((env) => configured(env));
+  const mapReady = ENV_ORDER.filter((env) => configured(env, "map"));
+  const activityReady = ENV_ORDER.filter((env) => configured(env, "activity"));
   const source = environmentState?.catalog?.source || "none";
   const sourceName = environmentState?.catalog?.source_name || "";
   const sourceLabel = CATALOG_LABELS[source] || source;
@@ -124,9 +144,12 @@ function renderEnvironmentSummary() {
     ? available.map((env) => env.toUpperCase()).join(" · ")
     : "ninguno";
   summary.textContent = `${sourceLabel}: ${envText}`;
-  summary.title = sourceName
-    ? `Fuente detectada: ${sourceName}. No se exponen hosts, usuarios ni credenciales.`
-    : "No se encontró un catálogo multi-entorno local. No se exponen hosts, usuarios ni credenciales.";
+  summary.title = [
+    sourceName ? `Fuente: ${sourceName}` : "Sin fuente multi-entorno detectada",
+    `Mapa listo: ${mapReady.length ? mapReady.map((env) => env.toUpperCase()).join(" · ") : "ninguno"}`,
+    `Actividad lista: ${activityReady.length ? activityReady.map((env) => env.toUpperCase()).join(" · ") : "ninguno"}`,
+    "No se exponen hosts, usuarios ni credenciales.",
+  ].join(" | ");
   summary.dataset.catalogSource = source;
 }
 
@@ -143,13 +166,13 @@ function installRootChangeReload() {
       if (method === "POST" && url.includes("/api/root_dir/set") && response.ok) {
         const clone = response.clone();
         clone.json().then((payload) => {
-          if (payload?.success) {
-            // dashboard.js keeps infrastructure targets in lexical memory. A
-            // full same-origin reload is the safest way to rehydrate every V1
-            // cache after changing the workspace root.
-            window.setTimeout(() => window.location.reload(), 220);
-          }
+          if (payload?.success) window.setTimeout(() => window.location.reload(), 220);
         }).catch(() => {});
+      } else if (method === "POST" && url.includes("/api/secrets/guardar") && response.ok) {
+        window.setTimeout(async () => {
+          await loadEnvironmentState();
+          refreshDecorations();
+        }, 160);
       }
     } catch (_) {
       // Never interfere with the original request contract.
