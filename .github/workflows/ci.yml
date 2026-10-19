@@ -35,7 +35,8 @@ jobs:
             tests.devconsole.test_security_boundary \
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
-            tests.devconsole.test_v11_capabilities
+            tests.devconsole.test_v11_capabilities \
+            tests.devconsole.test_process_observer
 
   modernization-tooling:
     name: Modernization dependency gate
@@ -75,7 +76,8 @@ jobs:
           python -m unittest -v \
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
-            tests.devconsole.test_v11_capabilities
+            tests.devconsole.test_v11_capabilities \
+            tests.devconsole.test_process_observer
 
   legacy-characterization:
     name: Legacy characterization (debt inventory)
