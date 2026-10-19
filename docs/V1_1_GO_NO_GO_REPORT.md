@@ -1,18 +1,19 @@
-# DevConsole V1.1 — Reporte GO / NO-GO
+# DevConsole V1.1 — Reporte GO / NO-GO (segunda auditoría)
 
 ## Alcance
 
-Este reporte separa tres conceptos que no deben confundirse:
+Este reporte sustituye el veredicto optimista inicial y separa cuatro estados distintos:
 
-1. **Implementación de fases:** código y compatibilidad introducidos en `refactor/v1.1-foundation`.
-2. **Gate reproducible CI:** aquello que GitHub Actions puede demostrar en un runner limpio.
-3. **Aceptación de host:** capacidades que dependen del workstation, el workspace SISPER real, tmux/Tilix, Podman/Docker, kubectl, certificados internos y recursos on-premise.
+1. **Core V1.1 conectado:** seguridad, compatibilidad HTTP, roles, runtime y adapters efectivamente usados al arrancar.
+2. **Capacidad aditiva:** función nueva disponible y probada, pero el flujo V1 visible sigue coexistiendo.
+3. **Migración completa:** flujo histórico reemplazado/extraído sin perder contrato.
+4. **Aceptación de host:** evidencia que sólo puede producir el workstation real SISPER/Fedora.
 
-`main` permanece sin modificaciones. La integración está concentrada en la PR Draft #2.
+`main` permanece sin modificaciones. Todo continúa concentrado en la PR Draft #2.
 
-## Baseline heredado
+## Baseline y evolución del diagnóstico
 
-La primera ejecución reproducible de la suite V1, antes de introducir cambios funcionales V1.1, reveló deuda de QA preexistente:
+La primera ejecución reproducible del V1 mostró:
 
 - 524 tests aprobados;
 - 54 fallos;
@@ -20,142 +21,127 @@ La primera ejecución reproducible de la suite V1, antes de introducir cambios f
 - 1 deselected;
 - 321 subtests aprobados.
 
-Los fallos se concentraban en fixtures dependientes del workspace físico, layouts Tilix no versionados, configuración SISPER externa, integración tmux dependiente del host y algunos contratos desactualizados. Dos defectos de producto sí quedaron identificados y corregidos inmediatamente: `fuser -k` en el instalador y `stop-single` ausente del contrato del backend terminal.
+Tras las fases y la segunda auditoría, el diagnóstico limpio observado pasó a **554 tests aprobados, 50 fallos, 48 skipped, 1 deselected y 326 subtests aprobados**. Los fallos restantes se concentran principalmente en fixtures dependientes del workspace físico, expectativas legacy ya reemplazadas de forma deliberada, layouts Tilix no versionados y pruebas tmux sensibles al host.
 
-La suite heredada completa se conserva visible como job **diagnóstico**. No se maquilla mediante exclusiones masivas ni se reintroducen hardcodes eliminados sólo para satisfacer expectativas antiguas.
+El job diagnóstico sigue visible y no bloquea por sí solo el release; cualquier fallo que revele una regresión contractual real se extrae y convierte en test bloqueante V1.1.
 
-## Gate bloqueante V1.1
+## Hallazgos reales de la segunda auditoría y correcciones
 
-Para declarar GO de implementación se exige:
+La segunda revisión encontró problemas que el primer gate no detectaba:
+
+- **Contrato terminal:** el visor se concatenaba al `message` histórico de `/api/tilix/launch_selected`. Corregido mediante facade verificado: `message` conserva V1 y `viewer` es metadata aditiva.
+- **Resultado transaccional:** `/api/environment/switch` podía devolver `success=true` aunque la transacción estuviera abortada o rolled back. Ahora sólo `committed` es éxito y los demás estados responden 409.
+- **Rollback Git incompleto:** se restauraba HEAD pero una rama destino podía quedar adelantada. Ahora se restaura la ref previa o se elimina la rama local creada por la transacción.
+- **Dependencias V1.1 no garantizadas por el instalador:** ahora se intenta crear un venv aislado e instalar `requirements-v11.txt`; en modo offline se conserva fallback compatible.
+- **PIN histórico residual:** `pins.verify()` todavía contenía un fallback incorporado aunque la capa superior lo bloqueara. Fue eliminado completamente.
+- **Cancelación de build:** podía quedar esperando stdout sin newline. Ahora se monitoriza fuera del reader, se termina el grupo de procesos y se escala si no sale.
+- **Persistencia de builds:** ahora se limita también en memoria y el estado se escribe con permisos restrictivos.
+
+Todas estas correcciones tienen tests dedicados en el gate portable o Playwright.
+
+## Gate bloqueante actual
+
+Se exige:
 
 - Python 3.11 ✅
 - Python 3.12 ✅
 - `compileall` ✅
 - Ruff crítico ✅
 - regresión V1 portable ✅
-- tests V1.1 ✅
+- tests V1.1 + segunda auditoría ✅
 - shell syntax ✅
-- módulos ES syntax ✅
+- sintaxis ES Modules ✅
 - Playwright Chromium ✅
 - Viewer por defecto ✅
+- Viewer bloqueado ante mutaciones Developer ✅
 - Developer con credencial real ✅
+- Developer bloqueado ante operaciones Administrator ✅
 - logout → Viewer ✅
 - Administrator con credencial real ✅
 - aceptación read-only ✅
 
-El job diagnóstico heredado **no es el gate de release** mientras dependa de recursos externos no versionados. Su función es detectar cambios de patrón y ayudar a convertir progresivamente pruebas no herméticas en fixtures reproducibles.
+## Estado funcional por área
 
-## Capacidades conservadas
+| Área | Estado | Observación |
+|---|---|---|
+| Seguridad Viewer/Developer/Admin | **GO** | Aplicada en facade real y probada en navegador. |
+| Compatibilidad HTTP V1 | **GO** | Handler legacy permanece como rollback; facade verificado conserva contratos intervenidos. |
+| Runtime/procesos | **GO** | psutil con fallback procfs y ownership separado. |
+| Configuración tipada | **GO aditivo** | Diagnóstico/validación Pydantic, sin romper loader V1. |
+| YAML/K8s | **GO** | round-trip + preflight/diff/apply/rollback y fallback V1. |
+| ProjectDetector | **GO aditivo** | Disponible por API; la UI legacy aún usa discovery histórico. |
+| tmux/Tilix | **GO backend** | Ownership y fallback existen; Tilix no se elimina. |
+| xterm addons | **GO como capacidad** | Disponibles vía módulos V1.1; no todas las vistas V1 los consumen aún. |
+| Frontend modular | **PARCIAL** | `app-v11.js` se inyecta y funciona, pero `dashboard.js`/HTML inline siguen dominando la UI. |
+| Build seguro/worktree | **GO aditivo** | API V1.1 nueva; la ruta legacy sigue por compatibilidad. |
+| Deploy K8s resiliente | **GO aditivo** | API segura nueva; acciones V1 continúan disponibles bajo gate Admin. |
 
-V1.1 no elimina las rutas principales V1:
+## Capacidades V1 conservadas
 
-- selección de workspace;
-- descubrimiento de servicios;
-- lanzamiento de servicios y auxiliares;
-- Tilix;
-- tmux;
-- terminal integrada xterm;
-- Git fetch/pull/push/branching;
-- edición `.env`;
-- modos LOCAL/INTRANET;
-- infraestructura local;
-- build/push de imágenes;
-- manifiestos Kubernetes;
-- deploy/restart/rollout;
-- telemetría y espejo para administradores;
-- temas y utilidades SISPER existentes.
+Siguen existiendo selección de workspace, descubrimiento histórico, servicios/auxiliares, Tilix, tmux, consola integrada, Git, `.env`, LOCAL/INTRANET, infraestructura local, build/push legacy, manifiestos K8s, deploy/restart/rollout, telemetría Admin, temas y utilidades SISPER.
 
-Las rutas V1 desconocidas por el facade V1.1 delegan al handler heredado. El facade se puede desactivar con `SISPER_V11_HANDLER=0` como recuperación de emergencia.
+No se considera “pérdida de capacidad” el retiro de comportamientos inseguros implícitos como matar por puerto, borrar `index.lock`, aceptar un PIN incorporado, desactivar TLS por defecto o parchear código fuente automáticamente al cambiar ambiente.
 
-## Capacidades agregadas
+## Lo que NO está terminado todavía
 
-- backend de procesos `psutil` con fallback procfs;
-- validación Pydantic compatible;
-- YAML round-trip con `ruamel.yaml`;
-- ProjectDetector genérico por capacidades;
-- Fit/Search/Clipboard para xterm;
-- tmux preferido como owner cuando está disponible;
-- wrapper tmux que bloquea kill por puerto;
-- Developer con sesión real;
-- trust token local por defecto;
-- TLS Keycloak verificado por defecto;
-- build jobs persistibles/cancelables;
-- builds en Git worktree temporal;
-- engine Podman/Docker;
-- K8s preflight/diff/apply/rollback;
-- switching Git multi-repo transaccional;
-- perfiles LOCAL/INTRANET declarativos y sin patch implícito de source;
-- ES Modules paralelos al frontend V1;
-- smoke E2E Playwright;
-- comando de aceptación local read-only.
+La segunda auditoría obliga a dejar explícito que **V1.1 no ha completado una migración visual total**:
 
-## Seguridad: cambios que deliberadamente endurecen comportamiento
+- `static/index.html` conserva una gran cantidad de handlers inline;
+- `static/js/dashboard.js` sigue siendo el entrypoint funcional principal;
+- los ES Modules V1.1 son hoy una superficie de extensión, no una extracción completa del monolito;
+- ProjectDetector y BuildCoordinator seguro existen por rutas V1.1, pero la UI histórica no ha migrado todos sus workflows hacia ellos;
+- los addons xterm están disponibles, pero no todas las experiencias de consola V1 están construidas sobre ellos.
 
-Un comportamiento peligroso no se considera una capacidad que deba permanecer habilitada implícitamente:
-
-- un puerto ocupado ya no autoriza `fuser -k`;
-- un `index.lock` ya no se borra por antigüedad;
-- `sisper2026` ya no concede administración por fallback;
-- un cambio LOCAL/INTRANET ya no reescribe `views.py` de forma lateral;
-- TLS Keycloak ya no usa `CERT_NONE` por defecto;
-- telemetría identificable no se expone a Viewer/Developer.
-
-Cuando existe una necesidad operativa legítima se conserva una ruta explícita: Tilix sigue disponible, el parche de bitácora existe como acción dedicada, TLS inseguro puede habilitarse sólo mediante opt-in de laboratorio y el handler V1 puede restaurarse temporalmente mediante feature flag.
-
-## NO-GO deliberados
-
-No se adoptaron React, Electron, Web Awesome, Grid.js, Split.js, CodeMirror 6 ni WebGL sólo por modernizar. Cada dependencia debe demostrar una capacidad concreta, ser autoalojable y tener fallback. Las razones están documentadas en `V1_1_FRONTEND_EVALUATION.md`.
+Esto no reduce funciones actuales, pero impide afirmar que la modernización de UX/frontend está “100% terminada”.
 
 ## Riesgos que sólo puede cerrar el workstation real
 
-GitHub Actions no puede demostrar por sí solo:
+GitHub Actions no puede demostrar:
 
-- que todos los repositorios reales del workspace sean detectados como antes;
-- que los servicios Django/React/Celery concretos arranquen con sus entornos reales;
-- que una sesión tmux sobreviva a cerrar/reabrir el visor en el escritorio Fedora;
-- que Tilix adjunte correctamente a las sesiones reales;
-- que Podman/Docker pueda construir las imágenes institucionales;
-- que kubectl apunte al cluster/contexto/namespace esperado;
-- que una CA institucional configurada valide Keycloak on-premise;
-- que manifests, registries y secretos del entorno privado estén accesibles.
-
-Por ello, **hacer merge sin aceptación local sería un falso GO**.
+- inventario exacto de repositorios SISPER reales;
+- arranque Django/React/Celery con sus entornos;
+- persistencia tmux y attach Tilix en Fedora;
+- build de imágenes institucionales con Podman/Docker;
+- registry privado;
+- context/namespace K8s institucional;
+- CA interna Keycloak;
+- manifests/secretos privados.
 
 ## Procedimiento final de aceptación
-
-Primero, check read-only:
 
 ```bash
 git checkout refactor/v1.1-foundation
 ./scripts/v11_acceptance.sh
-```
-
-Para una estación completamente preparada:
-
-```bash
 ./scripts/v11_acceptance.sh --strict
 ```
 
-Luego se realiza smoke operacional en entorno no productivo:
+Después, en entorno no productivo:
 
-1. abrir DevConsole y confirmar Viewer;
-2. autenticar Developer;
-3. detectar el workspace y comparar el inventario de servicios esperado;
-4. levantar un backend Django y un frontend;
-5. cerrar/reabrir visor y comprobar que el proceso continúa vivo;
-6. abrir visor Tilix;
-7. cambiar LOCAL/INTRANET y comprobar que sólo cambió `.env`, no código fuente;
-8. ejecutar un build local V1.1 y comprobar que la rama activa/working tree no cambió;
-9. ejecutar K8s preflight + preview/diff en namespace no productivo;
-10. autenticar Administrator y confirmar que operaciones sensibles están disponibles;
-11. logout y confirmar regreso a Viewer.
+1. comparar inventario real de servicios;
+2. levantar backend, frontend y auxiliar;
+3. cerrar/reabrir visor y comprobar continuidad del proceso;
+4. abrir Tilix;
+5. probar LOCAL/INTRANET y confirmar que no cambia código fuente;
+6. ejecutar build V1.1 en worktree y verificar que no cambia la rama activa;
+7. comprobar cancelación de build;
+8. ejecutar K8s preflight + diff;
+9. validar Viewer/Developer/Admin con claves de producto reales;
+10. logout y retorno a Viewer.
 
-## Veredicto
+## Veredicto corregido
 
-### Implementación de fases 0–8
+### Core de seguridad y compatibilidad V1.1
 
-**GO**, sujeto a que el último workflow bloqueante de la rama permanezca verde.
+**GO.**
+
+### Capacidades backend nuevas
+
+**GO aditivo.** Están implementadas y probadas, pero conviven con rutas V1 por diseño de no-regresión.
+
+### Modernización integral de UI/UX y migración de todos los flujos legacy
+
+**PARCIAL / NO-GO para declararla terminada.**
 
 ### Merge a `main`
 
-**NO-GO temporal** hasta completar la aceptación de host anterior. Esto no representa una fase incompleta: representa el último control necesario para cumplir la misión de “no perder capacidades” en infraestructura que el runner de GitHub no posee.
+**NO-GO temporal.** Requiere aceptación del host real y una decisión explícita sobre cuánto de la UI legacy debe migrarse antes de considerar V1.1 una modernización completa en lugar de una base segura/evolutiva.
