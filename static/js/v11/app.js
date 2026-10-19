@@ -1,6 +1,7 @@
 import { events } from "./core/events.js";
 import { features } from "./core/features.js";
 import { bootMultiEnvironment } from "./features/multi-env.js";
+import { bootReadFeedback } from "./features/read-feedback.js";
 import { bootTerminalAddons } from "./features/terminal-addons.js";
 import { bootSplitLayouts } from "./features/split-layouts.js";
 import { bootGridEnhancements } from "./features/grid-enhancements.js";
@@ -24,6 +25,7 @@ async function bootFoundation() {
   });
 
   const environmentState = await bootMultiEnvironment();
+  bootReadFeedback();
 
   // The existing Consolas tab remains the canonical experience. Dockview is
   // kept vendored for future composition work but is no longer exposed as a
