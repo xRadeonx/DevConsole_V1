@@ -75,6 +75,71 @@ class V11MultiEnvironmentTests(unittest.TestCase):
         self.assertNotIn("10.0.0.", rendered)
         self.assertNotIn("pw1", rendered)
 
+    def test_endpoint_presence_is_not_reported_as_map_or_activity_readiness(self):
+        import devconsole.config as config
+
+        keycloak = {
+            "test": {
+                "url": "https://test.invalid",
+                "realm": "SISPER",
+                "client_id": "backend",
+            }
+        }
+        databases = {
+            "test": {
+                "host": "10.0.0.2",
+                "port": 5433,
+                "bitacora_db": "bitacora",
+                "bitacora_user": "reader",
+            }
+        }
+        with mock.patch.object(config, "KEYCLOAK_ENV_CONFIGS", keycloak), mock.patch.object(
+            config, "DATABASE_ENV_CONFIGS", databases
+        ), mock.patch("devconsole.v11_multienv._refresh_local_catalog"):
+            state = v11_multienv.environment_status()["environments"]["test"]
+
+        self.assertTrue(state["configured"])
+        self.assertFalse(state["map"])
+        self.assertFalse(state["activity"])
+        self.assertIn("keycloak_credentials", state["missing"])
+        self.assertIn("activity_database_credentials", state["missing"])
+
+    def test_full_credentials_mark_map_and_activity_ready_without_exposing_values(self):
+        import devconsole.config as config
+
+        keycloak = {
+            "main": {
+                "url": "https://main.invalid",
+                "realm": "SISPER",
+                "client_id": "backend",
+                "client_secret": "do-not-render",
+            }
+        }
+        databases = {
+            "main": {
+                "host": "10.0.0.3",
+                "port": 5432,
+                "contratos_db": "contratos",
+                "contratos_user": "contratos_user",
+                "contratos_pass": "c-secret",
+                "destinaciones_db": "dest",
+                "destinaciones_user": "dest_user",
+                "destinaciones_pass": "d-secret",
+                "bitacora_db": "bitacora",
+                "bitacora_user": "bit_user",
+                "bitacora_pass": "b-secret",
+            }
+        }
+        with mock.patch.object(config, "KEYCLOAK_ENV_CONFIGS", keycloak), mock.patch.object(
+            config, "DATABASE_ENV_CONFIGS", databases
+        ), mock.patch("devconsole.v11_multienv._refresh_local_catalog"):
+            status = v11_multienv.environment_status()
+
+        self.assertIn("main", status["telemetry_available"])
+        self.assertIn("main", status["activity_available"])
+        self.assertNotIn("do-not-render", repr(status))
+        self.assertNotIn("c-secret", repr(status))
+
     def test_map_candidates_use_workspace_then_bundled_fallback(self):
         import devconsole.config as config
 
