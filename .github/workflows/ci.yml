@@ -53,6 +53,7 @@ jobs:
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_v11_yaml_catalog \
             tests.devconsole.test_v11_nonsecret_catalog \
+            tests.devconsole.test_v11_catalog_aliases \
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
@@ -103,6 +104,7 @@ jobs:
             tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_v11_yaml_catalog \
             tests.devconsole.test_v11_nonsecret_catalog \
+            tests.devconsole.test_v11_catalog_aliases \
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
@@ -136,6 +138,7 @@ jobs:
           ruff check \
             devconsole/v11_access.py \
             devconsole/v11_capabilities.py \
+            devconsole/v11_catalog_aliases.py \
             devconsole/v11_git_safety.py \
             devconsole/v11_env_safety.py \
             devconsole/v11_environment_secrets.py \
@@ -155,6 +158,7 @@ jobs:
             devconsole/services/yaml_service.py \
             tests/devconsole/test_product_credentials.py \
             tests/devconsole/test_v11_access.py \
+            tests/devconsole/test_v11_catalog_aliases.py \
             tests/devconsole/test_v11_git_safety.py \
             tests/devconsole/test_v11_env_safety.py \
             tests/devconsole/test_v11_environment_secrets.py \
