@@ -41,8 +41,10 @@ from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
 from devconsole.v11_infra_catalog import install as install_v11_infra_catalog
+from devconsole.v11_k8s_configmaps import install as install_v11_k8s_configmaps
 from devconsole.v11_k8s_secrets import install as install_v11_k8s_secrets
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
+from devconsole.v11_local_env_catalog import install as install_v11_local_env_catalog
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
 from devconsole.v11_yaml_catalog import install as install_v11_yaml_catalog
@@ -64,6 +66,14 @@ install_v11_legacy_profile()
 # explicit 0600 secrets store. This avoids asking the operator to duplicate
 # configuration that already exists in the selected project.
 install_v11_yaml_catalog()
+# Local service .env files describe DEVELOP. Recover only non-secret connection
+# metadata (Keycloak endpoint/realm/client_id and PostgreSQL host/port/name/user)
+# so the local environment does not require duplicate panel.json entries.
+install_v11_local_env_catalog()
+# Kubernetes ConfigMaps commonly supply the same non-secret connection metadata
+# to TEST/MAIN through configMapKeyRef/envFrom. Resolve those references before
+# evaluating readiness; no ConfigMap value is persisted by this adapter.
+install_v11_k8s_configmaps()
 # Kubernetes Secret.data values are base64-encoded and workloads may reference
 # them through secretKeyRef/envFrom. Decode and resolve those references only in
 # memory before the explicit local secrets store is applied. This avoids treating
