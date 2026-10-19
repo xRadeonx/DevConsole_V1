@@ -2,21 +2,25 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from devconsole import auth_v11
+from devconsole import auth, auth_v11
 from devconsole.config_models import validate_panel_config, validate_service_catalog
 from devconsole.services.build_jobs import BuildJobStore
+from devconsole.services.environment_transaction import switch_workspace_environment_transactional
+from devconsole.services.git_safety import checkout_service_branch_safe
 from devconsole.services.git_worktree import temporary_worktree
 from devconsole.services.k8s_guard import KubectlResult, preflight
 from devconsole.services.manifest_service import preview_image_tag_update
 from devconsole.services.project_detector import detect_project, detect_workspace
 from devconsole.services.runtime.process_inspector import ProcessInspector
 from devconsole.services.runtime.psutil_inspector import create_process_inspector
+from devconsole.services.telemetry_tls_adapter import HardenedContext, install_telemetry_tls_policy
 from devconsole.services.terminal.capabilities import terminal_capabilities
 
 
@@ -102,7 +106,7 @@ class ProcessInspectorFactoryTest(unittest.TestCase):
             self.assertIs(type(inspector), ProcessInspector)
 
 
-class DeveloperSessionTest(unittest.TestCase):
+class CredentialSecurityTest(unittest.TestCase):
     def test_developer_pin_creates_real_session_credential(self):
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.dict(os.environ, {"SISPER_DEV_SESSIONS_FILE": str(Path(td) / "dev.json")}), \
@@ -111,10 +115,45 @@ class DeveloperSessionTest(unittest.TestCase):
             self.assertTrue(ok)
             self.assertTrue(token)
             self.assertTrue(auth_v11.is_valid_dev_token(token))
-            headers = {"X-Dev-Auth-Token": token}
-            self.assertEqual("dev", auth_v11.effective_role(headers))
+            self.assertEqual("dev", auth_v11.effective_role({"X-Dev-Auth-Token": token}))
             self.assertTrue(auth_v11.invalidate_dev_token(token))
             self.assertFalse(auth_v11.is_valid_dev_token(token))
+
+    def test_implicit_historical_admin_pin_cannot_authorize(self):
+        with mock.patch("devconsole.pins.estado", return_value={"admin": "PIN heredado por defecto (¡configúralo!)", "dev": "sin configurar"}), \
+             mock.patch("devconsole.pins.verify", return_value=True):
+            ok, token = auth.verify_pin("sisper2026", "admin")
+        self.assertFalse(ok)
+        self.assertEqual("", token)
+
+    def test_configured_product_hash_remains_supported(self):
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.dict(os.environ, {"SISPER_ADMIN_SESSIONS_FILE": str(Path(td) / "admin.json")}), \
+             mock.patch("devconsole.pins.estado", return_value={"admin": "scrypt en product-store", "dev": "scrypt en product-store"}), \
+             mock.patch("devconsole.pins.verify", return_value=True):
+            ok, token = auth.verify_pin("approved-product-key", "admin")
+        self.assertTrue(ok)
+        self.assertTrue(token)
+
+
+class TLSSecurityTest(unittest.TestCase):
+    def test_legacy_telemetry_cannot_downgrade_verified_context(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SISPER_ALLOW_INSECURE_KEYCLOAK_TLS", None)
+            diagnostic = install_telemetry_tls_policy()
+            from devconsole.services import telemetry_service
+            context = telemetry_service.ssl.create_default_context()
+            self.assertIsInstance(context, HardenedContext)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            self.assertTrue(context.check_hostname)
+            self.assertEqual(ssl.CERT_REQUIRED, context.verify_mode)
+            self.assertTrue(diagnostic["verify"])
+
+    def test_insecure_tls_requires_explicit_opt_in(self):
+        from devconsole.services.tls_policy import keycloak_tls_policy
+        with mock.patch.dict(os.environ, {"SISPER_ALLOW_INSECURE_KEYCLOAK_TLS": "1"}):
+            self.assertTrue(keycloak_tls_policy().insecure)
 
 
 class WorktreeSafetyTest(unittest.TestCase):
@@ -134,13 +173,43 @@ class WorktreeSafetyTest(unittest.TestCase):
             self._git(repo, "add", "tracked.txt")
             self._git(repo, "commit", "-m", "initial")
             tracked.write_text("dirty local change\n", encoding="utf-8")
-
             with temporary_worktree(repo, "HEAD") as worktree:
                 self.assertEqual("committed\n", (worktree / "tracked.txt").read_text(encoding="utf-8"))
                 (worktree / "generated.txt").write_text("build artifact", encoding="utf-8")
-
             self.assertEqual("dirty local change\n", tracked.read_text(encoding="utf-8"))
             self.assertFalse((repo / "generated.txt").exists())
+
+
+class GitSafetyTest(unittest.TestCase):
+    def test_index_lock_is_reported_and_never_deleted(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td) / "repo"
+            repo.mkdir()
+            subprocess.run(["git", "-C", str(repo), "init"], check=True, capture_output=True)
+            lock = repo / ".git" / "index.lock"
+            lock.write_text("owned-by-git", encoding="utf-8")
+            with mock.patch("devconsole.services.git_safety.get_service_repo_dir", return_value=repo):
+                ok, message = checkout_service_branch_safe("api", "main")
+            self.assertFalse(ok)
+            self.assertTrue(lock.exists())
+            self.assertIn("no elimina", message)
+
+
+class EnvironmentTransactionTest(unittest.TestCase):
+    def test_failed_second_checkout_rolls_back_first(self):
+        fake_success = subprocess.CompletedProcess(["git"], 0, "", "")
+        fake_failure = subprocess.CompletedProcess(["git"], 1, "", "boom")
+        state_a = mock.Mock(name="state-a")
+        state_b = mock.Mock(name="state-b")
+        with mock.patch("devconsole.services.environment_transaction._repo_state", side_effect=[
+            (state_a, {"name": "a", "status": "ready", "message": "ok"}),
+            (state_b, {"name": "b", "status": "ready", "message": "ok"}),
+        ]), mock.patch("devconsole.services.environment_transaction._checkout", side_effect=[fake_success, fake_failure]), \
+             mock.patch("devconsole.services.environment_transaction._rollback", return_value=(True, "Restaurado")) as rollback, \
+             mock.patch("devconsole.services.environment_transaction.dcfg.get_service_repo_dir", side_effect=lambda name: Path("/") / name):
+            result = switch_workspace_environment_transactional("test", services=[{"name": "a"}, {"name": "b"}])
+        self.assertEqual("rolled_back", result["transaction"])
+        rollback.assert_called_once_with(state_a)
 
 
 class BuildPersistenceTest(unittest.TestCase):
@@ -166,7 +235,6 @@ class KubernetesGuardTest(unittest.TestCase):
             if args[:2] == ["config", "current-context"]:
                 return KubectlResult(True, tuple(args), stdout="cluster-a")
             return KubectlResult(True, tuple(args), stdout="namespace/develop")
-
         with mock.patch("devconsole.services.k8s_guard._run", side_effect=fake_run):
             result = preflight("develop", "cluster-b")
         self.assertFalse(result["ok"])
@@ -194,6 +262,15 @@ class CompatibilityFacadeTest(unittest.TestCase):
         from devconsole.api.handlers import DevConsoleHandler as Legacy
         from devconsole.api.v11_handler import DevConsoleV11Handler
         self.assertTrue(issubclass(DevConsoleV11Handler, Legacy))
+
+    def test_role_matrix_requires_real_privilege_for_sensitive_operations(self):
+        from devconsole.api.v11_handler import required_role_for
+        self.assertEqual("viewer", required_role_for("/api/telemetry/heartbeat", {}))
+        self.assertEqual("dev", required_role_for("/api/env/save", {}))
+        self.assertEqual("admin", required_role_for("/api/environment/switch", {}))
+        self.assertEqual("admin", required_role_for("/api/secrets/guardar", {}))
+        self.assertEqual("dev", required_role_for("/api/v1.1/build/start", {"push": False}))
+        self.assertEqual("admin", required_role_for("/api/v1.1/build/start", {"push": True}))
 
 
 if __name__ == "__main__":
