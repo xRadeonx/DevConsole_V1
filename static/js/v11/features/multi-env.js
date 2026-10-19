@@ -4,6 +4,12 @@ const ENV_LABELS = {
   test: "🔵 TEST",
   main: "🟢 MAIN",
 };
+const CATALOG_LABELS = {
+  "legacy-local": "Catálogo V1 local",
+  "v1.1-local-config": "Configuración V1.1 local",
+  "workspace-discovery": "Sólo .env del workspace",
+  none: "Sin catálogo",
+};
 
 let environmentState = null;
 let fetchWrapped = false;
@@ -67,6 +73,23 @@ function decorateActivityButtons() {
   }
 }
 
+function decorateInfrastructureButtons() {
+  const mapping = {
+    develop: "infraTab_develop",
+    test: "infraTab_test",
+    main: document.getElementById("infraTab_main") ? "infraTab_main" : "infraTab_prod",
+  };
+  for (const [env, id] of Object.entries(mapping)) {
+    const button = document.getElementById(id);
+    if (!button) continue;
+    const available = configured(env);
+    button.classList.toggle("dc-v11-env-unavailable", !available);
+    button.title = available
+      ? `${ENV_LABELS[env]} detectado en el catálogo local`
+      : `${ENV_LABELS[env]} no figura en el catálogo detectado`;
+  }
+}
+
 function repairInfrastructureMainButton() {
   const button = document.getElementById("infraTab_prod");
   if (!button) return;
@@ -81,19 +104,30 @@ function repairInfrastructureMainButton() {
   });
 }
 
-function installEnvironmentSummary() {
+function renderEnvironmentSummary() {
   const select = document.getElementById("mapEnvSelect");
-  if (!select || document.getElementById("dcV11EnvSummary")) return;
+  if (!select) return;
 
-  const summary = document.createElement("span");
-  summary.id = "dcV11EnvSummary";
-  summary.className = "dc-v11-env-summary";
+  let summary = document.getElementById("dcV11EnvSummary");
+  if (!summary) {
+    summary = document.createElement("span");
+    summary.id = "dcV11EnvSummary";
+    summary.className = "dc-v11-env-summary";
+    select.insertAdjacentElement("afterend", summary);
+  }
+
   const available = ENV_ORDER.filter((env) => configured(env));
-  summary.textContent = available.length
-    ? `Disponibles: ${available.map((env) => env.toUpperCase()).join(" · ")}`
-    : "Sin catálogo multi-entorno";
-  summary.title = "Estado calculado sin exponer hosts, usuarios ni credenciales.";
-  select.insertAdjacentElement("afterend", summary);
+  const source = environmentState?.catalog?.source || "none";
+  const sourceName = environmentState?.catalog?.source_name || "";
+  const sourceLabel = CATALOG_LABELS[source] || source;
+  const envText = available.length
+    ? available.map((env) => env.toUpperCase()).join(" · ")
+    : "ninguno";
+  summary.textContent = `${sourceLabel}: ${envText}`;
+  summary.title = sourceName
+    ? `Fuente detectada: ${sourceName}. No se exponen hosts, usuarios ni credenciales.`
+    : "No se encontró un catálogo multi-entorno local. No se exponen hosts, usuarios ni credenciales.";
+  summary.dataset.catalogSource = source;
 }
 
 function installRootChangeReload() {
@@ -124,18 +158,22 @@ function installRootChangeReload() {
   };
 }
 
+function refreshDecorations() {
+  decorateMapSelector();
+  decorateActivityButtons();
+  decorateInfrastructureButtons();
+  renderEnvironmentSummary();
+}
+
 export async function bootMultiEnvironment() {
   installRootChangeReload();
   await loadEnvironmentState();
-  decorateMapSelector();
-  decorateActivityButtons();
   repairInfrastructureMainButton();
-  installEnvironmentSummary();
+  refreshDecorations();
 
   window.addEventListener("focus", async () => {
     await loadEnvironmentState();
-    decorateMapSelector();
-    decorateActivityButtons();
+    refreshDecorations();
   });
 
   return environmentState;
