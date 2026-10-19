@@ -231,8 +231,9 @@ jobs:
             echo "Grid.js 6.2.0 — MIT — https://github.com/grid-js/gridjs"
             echo "CodeMirror 6 packages — MIT — https://github.com/codemirror"
             echo
-            echo "---- split.js LICENSE ----"
-            cat "$NODE/split.js/LICENSE"
+            echo "---- split.js license metadata ----"
+            node -e 'const p=require(process.argv[1]); console.log(`SPDX: ${p.license || "MIT"}`)' "$NODE/split.js/package.json"
+            echo "Upstream license: https://github.com/nathancahill/split/blob/master/LICENSE.txt"
             echo
             echo "---- Grid.js LICENSE ----"
             cat "$NODE/gridjs/LICENSE"
@@ -254,6 +255,9 @@ jobs:
           test -s "$VENDOR/gridjs.umd.js"
           test -s "$VENDOR/gridjs-mermaid.min.css"
           test -s "$VENDOR/codemirror.bundle.js"
+          grep -q 'split.js=1.6.5' "$VENDOR/VERSIONS.txt"
+          grep -q 'gridjs=6.2.0' "$VENDOR/VERSIONS.txt"
+          grep -q 'codemirror=6.0.2' "$VENDOR/VERSIONS.txt"
 
       - name: Commit generated vendor assets if changed
         shell: bash
