@@ -37,11 +37,13 @@ from devconsole.config import (
 # the incremental migration.
 from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
+from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_git_safety import install as install_v11_git_safety
 
 install_v11_access()
 install_v11_capabilities()
 install_v11_git_safety()
+install_v11_env_safety()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
 from devconsole.api.handlers import DevConsoleHandler
