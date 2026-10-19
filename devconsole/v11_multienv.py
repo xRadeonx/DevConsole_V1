@@ -44,7 +44,17 @@ def _refresh_local_catalog() -> None:
         pass
 
 
+def _has_fields(mapping: Any, fields: tuple[str, ...]) -> bool:
+    return isinstance(mapping, dict) and all(mapping.get(field) not in (None, "", 0) for field in fields)
+
+
 def _environment_snapshot() -> dict[str, dict[str, Any]]:
+    """Return secret-free readiness, not merely endpoint presence.
+
+    The legacy telemetry code requires a Keycloak client secret and distinct DB
+    credentials.  Marking an environment ready only because ``url``/``host``
+    existed caused TEST/MAIN to look selectable and then fail at runtime.
+    """
     import devconsole.config as config
 
     _refresh_local_catalog()
@@ -54,14 +64,50 @@ def _environment_snapshot() -> dict[str, dict[str, Any]]:
     for env in ("develop", "test", "main"):
         kc = kc_map.get(env) if isinstance(kc_map, dict) else None
         db = db_map.get(env) if isinstance(db_map, dict) else None
-        kc_ok = isinstance(kc, dict) and bool(kc.get("url"))
-        db_ok = isinstance(db, dict) and bool(db.get("host"))
-        activity_ok = db_ok and bool(db.get("bitacora_db"))
+
+        kc_endpoint = isinstance(kc, dict) and bool(kc.get("url"))
+        db_endpoint = isinstance(db, dict) and bool(db.get("host"))
+        kc_ready = _has_fields(kc, ("url", "realm", "client_id", "client_secret"))
+        map_db_ready = _has_fields(
+            db,
+            (
+                "host",
+                "port",
+                "contratos_db",
+                "contratos_user",
+                "contratos_pass",
+                "destinaciones_db",
+                "destinaciones_user",
+                "destinaciones_pass",
+            ),
+        )
+        activity_ready = _has_fields(
+            db,
+            ("host", "port", "bitacora_db", "bitacora_user", "bitacora_pass"),
+        )
+
+        missing: list[str] = []
+        if not kc_endpoint:
+            missing.append("keycloak_endpoint")
+        elif not kc_ready:
+            missing.append("keycloak_credentials")
+        if not db_endpoint:
+            missing.append("database_endpoint")
+        else:
+            if not map_db_ready:
+                missing.append("map_database_credentials")
+            if not activity_ready:
+                missing.append("activity_database_credentials")
+
         result[env] = {
-            "configured": bool(kc_ok or db_ok),
-            "keycloak": kc_ok,
-            "database": db_ok,
-            "activity": activity_ok,
+            "configured": bool(kc_endpoint or db_endpoint),
+            "keycloak_endpoint": kc_endpoint,
+            "database_endpoint": db_endpoint,
+            "keycloak": kc_ready,
+            "database": map_db_ready,
+            "activity": activity_ready,
+            "map": bool(kc_ready and map_db_ready),
+            "missing": missing,
             # Deliberately no URL, host, user, password, token or secret here.
         }
     return result
@@ -91,9 +137,6 @@ def _catalog_diagnostics(available: list[str]) -> dict[str, str]:
         pass
 
     if available:
-        # Runtime compatibility can recover DEVELOP from .env files in the
-        # selected project workspace. This is intentionally distinguished from
-        # a true multi-environment catalog.
         return {"source": "workspace-discovery", "source_name": "workspace .env"}
     return {"source": "none", "source_name": ""}
 
@@ -105,19 +148,15 @@ def environment_status() -> dict[str, Any]:
         "success": True,
         "environments": envs,
         "available": available,
-        "telemetry_available": [
-            name for name, state in envs.items()
-            if state["keycloak"] and state["database"]
-        ],
-        "activity_available": [
-            name for name, state in envs.items() if state["activity"]
-        ],
+        "telemetry_available": [name for name, state in envs.items() if state["map"]],
+        "activity_available": [name for name, state in envs.items() if state["activity"]],
         "catalog": _catalog_diagnostics(available),
     }
 
 
 def _missing_payload(env: str, capability: str) -> dict[str, Any]:
     status = environment_status()
+    state = status.get("environments", {}).get(env, {})
     return {
         "success": False,
         "error": f"Configuración {capability} no disponible para {env.upper()}",
@@ -126,6 +165,7 @@ def _missing_payload(env: str, capability: str) -> dict[str, Any]:
         "env": env,
         "env_name": env.upper(),
         "available_environments": status.get("available", []),
+        "missing": list(state.get("missing", [])) if isinstance(state, dict) else [],
         "catalog": status.get("catalog", {}),
         "items": [],
         "users": [],
@@ -139,13 +179,11 @@ def _missing_payload(env: str, capability: str) -> dict[str, Any]:
 
 
 def _has_map_config(env: str) -> bool:
-    state = _environment_snapshot().get(env, {})
-    return bool(state.get("keycloak") and state.get("database"))
+    return bool(_environment_snapshot().get(env, {}).get("map"))
 
 
 def _has_activity_config(env: str) -> bool:
-    state = _environment_snapshot().get(env, {})
-    return bool(state.get("activity"))
+    return bool(_environment_snapshot().get(env, {}).get("activity"))
 
 
 def _wrap_env_function(
@@ -154,8 +192,6 @@ def _wrap_env_function(
     capability: str,
     validator: Callable[[str], bool],
 ) -> Callable[..., Any]:
-    # Some test doubles (notably unittest.mock.Mock) synthesize arbitrary
-    # attributes on access; only the literal boolean marker means "wrapped".
     if getattr(original, "_v11_strict_environment", False) is True:
         return original
 
@@ -176,8 +212,6 @@ def _wrap_env_function(
             return _missing_payload(env, capability)
         result = original(*args, **kwargs)
         if isinstance(result, dict):
-            # Make the effective environment explicit so UI/tests can detect a
-            # future regression instead of trusting a label.
             result = dict(result)
             result.setdefault("requested_env", env)
             result["effective_env"] = env
