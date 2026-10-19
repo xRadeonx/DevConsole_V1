@@ -38,6 +38,7 @@ from devconsole.config import (
 from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_catalog_aliases import install as install_v11_catalog_aliases
+from devconsole.v11_db_name_recovery import install as install_v11_db_name_recovery
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
@@ -88,6 +89,10 @@ install_v11_k8s_secrets()
 # 0600 config/secrets.json store, overlay them on the recovered catalog in
 # memory so TEST/MAIN telemetry can use their own credentials.
 install_v11_environment_secrets()
+# Some deployments omit DATABASE_NAME while still exposing a service-specific
+# PostgreSQL account or a PostgreSQL URL. Recover only the missing DB name from
+# those already-discovered values; never invent cross-environment configuration.
+install_v11_db_name_recovery()
 # A partial panel.json (for example DEVELOP only) must not hide TEST/MAIN rows
 # recovered from the local V1 catalog. Compose all non-secret infrastructure
 # sources per environment while keeping explicit local rows authoritative.
