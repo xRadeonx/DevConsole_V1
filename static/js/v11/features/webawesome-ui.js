@@ -51,19 +51,19 @@ function stateFor(state, env) {
 }
 
 function badgeVariant(envState) {
-  if (envState.map_ready && envState.activity_ready) return "success";
+  if (envState.map && envState.activity) return "success";
   if (envState.configured) return "warning";
   return "neutral";
 }
 
 function badgeTooltip(env, envState) {
-  if (envState.map_ready && envState.activity_ready) {
+  if (envState.map && envState.activity) {
     return `${env.toUpperCase()}: Mapa y Actividad listos`;
   }
   if (envState.configured) {
     const missing = [];
-    if (!envState.map_ready) missing.push("Mapa");
-    if (!envState.activity_ready) missing.push("Actividad");
+    if (!envState.map) missing.push("Mapa");
+    if (!envState.activity) missing.push("Actividad");
     return `${env.toUpperCase()}: catálogo detectado; falta completar ${missing.join(" y ")}`;
   }
   return `${env.toUpperCase()}: sin catálogo/configuración local`;
