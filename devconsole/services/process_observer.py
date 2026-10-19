@@ -20,6 +20,8 @@ try:  # Optional dependency during the migration.
 except ImportError:  # pragma: no cover - exercised through dependency injection
     _psutil = None
 
+_AUTO = object()
+
 
 @dataclass(frozen=True)
 class ObservedProcess:
@@ -67,14 +69,19 @@ class ObserverComparison:
 
 
 class PsutilObserver:
-    """Read-only process observer backed by psutil when available."""
+    """Read-only process observer backed by psutil when available.
 
-    def __init__(self, psutil_module=None) -> None:
-        self._psutil = _psutil if psutil_module is None else psutil_module
+    ``psutil_module`` is injectable for deterministic tests.  Omitting it uses
+    the installed dependency; passing ``None`` or ``False`` explicitly forces
+    the unavailable path, which is useful for proving fallback behaviour.
+    """
+
+    def __init__(self, psutil_module=_AUTO) -> None:
+        self._psutil = _psutil if psutil_module is _AUTO else psutil_module
 
     @property
     def available(self) -> bool:
-        return self._psutil is not None
+        return bool(self._psutil)
 
     def status(self) -> dict[str, Any]:
         version = getattr(self._psutil, "__version__", None) if self._psutil else None
