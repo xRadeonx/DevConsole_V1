@@ -75,13 +75,46 @@ function secretMeta(key) {
 
 function missingLabel(item) {
   const labels = {
-    keycloak_endpoint: "endpoint/realm/client_id de Keycloak",
+    keycloak_endpoint: "endpoint de Keycloak",
+    keycloak_metadata: "realm/client_id de Keycloak",
     keycloak_credentials: "client secret de Keycloak",
     database_endpoint: "host/puerto de PostgreSQL",
-    map_database_credentials: "credenciales de Contratos/Destinaciones",
-    activity_database_credentials: "credencial de Bitácora",
+    map_database_credentials: "configuración de Contratos/Destinaciones",
+    activity_database_credentials: "configuración de Bitácora",
   };
   return labels[item] || item;
+}
+
+function missingFieldLabel(field) {
+  const labels = {
+    url: "Keycloak: endpoint/URL",
+    realm: "Keycloak: realm",
+    client_id: "Keycloak: client_id",
+    client_secret: "Keycloak: client secret",
+    host: "PostgreSQL: host",
+    port: "PostgreSQL: puerto",
+    contratos_db: "Contratos: nombre de BD",
+    contratos_user: "Contratos: usuario",
+    contratos_pass: "Contratos: password",
+    destinaciones_db: "Destinaciones: nombre de BD",
+    destinaciones_user: "Destinaciones: usuario",
+    destinaciones_pass: "Destinaciones: password",
+    bitacora_db: "Bitácora: nombre de BD",
+    bitacora_user: "Bitácora: usuario",
+    bitacora_pass: "Bitácora: password",
+  };
+  return labels[field] || field;
+}
+
+function exactMissing(state = {}) {
+  const detail = state?.missing_fields;
+  if (!detail || typeof detail !== "object") return [];
+  const ordered = [
+    ...(Array.isArray(detail.keycloak) ? detail.keycloak : []),
+    ...(Array.isArray(detail.map_database) ? detail.map_database : []),
+    ...(Array.isArray(detail.activity_database) ? detail.activity_database : []),
+  ];
+  return [...new Set(ordered)].map(missingFieldLabel);
 }
 
 function createCapabilityCard(env, state = {}) {
@@ -96,7 +129,12 @@ function createCapabilityCard(env, state = {}) {
   chips.append(map, activity);
   card.append(title, chips);
 
-  if (Array.isArray(state.missing) && state.missing.length) {
+  const exact = exactMissing(state);
+  if (exact.length) {
+    const detail = element("div", "dc-v11-secret-capability-detail");
+    detail.textContent = `Falta: ${exact.join(" · ")}`;
+    card.appendChild(detail);
+  } else if (Array.isArray(state.missing) && state.missing.length) {
     const detail = element("div", "dc-v11-secret-capability-detail");
     detail.textContent = `Falta: ${state.missing.map(missingLabel).join(" · ")}`;
     card.appendChild(detail);
