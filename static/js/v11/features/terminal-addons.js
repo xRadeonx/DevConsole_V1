@@ -2,6 +2,8 @@ const XTERM_JS = "/static/js/xterm.js";
 const XTERM_CSS = "/static/css/xterm.css";
 const FIT_JS = "/static/vendor/terminal-lab/addon-fit.js";
 const SEARCH_JS = "/static/vendor/terminal-lab/addon-search.js";
+const WEB_LINKS_JS = "/static/vendor/v11/xterm-web-links.bundle.js";
+const WEBGL_JS = "/static/vendor/v11/xterm-webgl.bundle.js";
 
 let bootPromise = null;
 
@@ -103,10 +105,23 @@ function makeSearchBar(parent, terminal, searchAddon) {
   };
 }
 
+function openSafeWebLink(_event, uri) {
+  try {
+    const url = new URL(uri, window.location.href);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    const opened = window.open(url.href, "_blank", "noopener,noreferrer");
+    if (opened) opened.opener = null;
+  } catch (_) {
+    // Malformed output must never affect the terminal session.
+  }
+}
+
 function promoteTerminalConstructor() {
   const BaseTerminal = globalThis.Terminal;
   const FitCtor = globalThis.FitAddon?.FitAddon;
   const SearchCtor = globalThis.SearchAddon?.SearchAddon;
+  const WebLinksCtor = globalThis.WebLinksAddon?.WebLinksAddon;
+  const WebglCtor = globalThis.WebglAddon?.WebglAddon;
   if (!BaseTerminal || !FitCtor || !SearchCtor) return false;
   if (BaseTerminal.__dcV11Enhanced) return true;
 
@@ -115,10 +130,22 @@ function promoteTerminalConstructor() {
       super(options);
       this.__dcV11Fit = new FitCtor();
       this.__dcV11Search = new SearchCtor();
-      this.loadAddon(this.__dcV11Fit);
-      this.loadAddon(this.__dcV11Search);
+      this.__dcV11Links = null;
+      this.__dcV11Webgl = null;
       this.__dcV11SearchUi = null;
       this.__dcV11ResizeObserver = null;
+      this.loadAddon(this.__dcV11Fit);
+      this.loadAddon(this.__dcV11Search);
+
+      if (WebLinksCtor) {
+        try {
+          this.__dcV11Links = new WebLinksCtor(openSafeWebLink, undefined, true);
+          this.loadAddon(this.__dcV11Links);
+        } catch (error) {
+          console.debug("[v1.1/terminal] WebLinksAddon fallback", error);
+          this.__dcV11Links = null;
+        }
+      }
 
       this.attachCustomKeyEventHandler((event) => {
         const isFind = event.type === "keydown"
@@ -136,6 +163,27 @@ function promoteTerminalConstructor() {
     open(parent) {
       super.open(parent);
       this.__dcV11SearchUi = makeSearchBar(parent, this, this.__dcV11Search);
+
+      if (WebglCtor && !this.__dcV11Webgl) {
+        try {
+          const webgl = new WebglCtor(false);
+          this.loadAddon(webgl);
+          this.__dcV11Webgl = webgl;
+          document.documentElement.dataset.dcXtermRenderer = "webgl";
+          if (typeof webgl.onContextLoss === "function") {
+            webgl.onContextLoss(() => {
+              try { webgl.dispose(); } catch (_) {}
+              this.__dcV11Webgl = null;
+              document.documentElement.dataset.dcXtermRenderer = "canvas";
+            });
+          }
+        } catch (error) {
+          console.debug("[v1.1/terminal] WebGL no disponible; se mantiene canvas", error);
+          this.__dcV11Webgl = null;
+          document.documentElement.dataset.dcXtermRenderer = "canvas";
+        }
+      }
+
       const fit = () => {
         try { this.__dcV11Fit.fit(); } catch (_) {}
       };
@@ -148,7 +196,9 @@ function promoteTerminalConstructor() {
 
     dispose() {
       try { this.__dcV11ResizeObserver?.disconnect(); } catch (_) {}
+      try { this.__dcV11Webgl?.dispose(); } catch (_) {}
       this.__dcV11ResizeObserver = null;
+      this.__dcV11Webgl = null;
       super.dispose();
     }
   }
@@ -159,14 +209,34 @@ function promoteTerminalConstructor() {
   return true;
 }
 
+async function loadOptionalAddon(src, marker, isReady) {
+  if (isReady()) return true;
+  try {
+    await loadScript(src, marker);
+    return isReady();
+  } catch (error) {
+    console.debug(`[v1.1/terminal] optional addon unavailable: ${marker}`, error);
+    return false;
+  }
+}
+
 async function loadTerminalStack() {
   ensureStyle(XTERM_CSS, "xterm-css");
   if (!globalThis.Terminal) await loadScript(XTERM_JS, "xterm-core");
   if (!globalThis.FitAddon?.FitAddon) await loadScript(FIT_JS, "xterm-fit-addon");
   if (!globalThis.SearchAddon?.SearchAddon) await loadScript(SEARCH_JS, "xterm-search-addon");
+
+  const [linksReady, webglReady] = await Promise.all([
+    loadOptionalAddon(WEB_LINKS_JS, "xterm-web-links-addon", () => Boolean(globalThis.WebLinksAddon?.WebLinksAddon)),
+    loadOptionalAddon(WEBGL_JS, "xterm-webgl-addon", () => Boolean(globalThis.WebglAddon?.WebglAddon)),
+  ]);
+
   const promoted = promoteTerminalConstructor();
   if (promoted) {
-    document.documentElement.dataset.dcXtermAddons = "fit,search";
+    const active = ["fit", "search"];
+    if (linksReady) active.push("web-links");
+    if (webglReady) active.push("webgl");
+    document.documentElement.dataset.dcXtermAddons = active.join(",");
   }
   return promoted;
 }
