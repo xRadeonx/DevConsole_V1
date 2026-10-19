@@ -29,10 +29,14 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q dashboard.py devconsole tests
 
+      - name: Validate shell entrypoints
+        run: bash -n install_devconsole.sh
+
       - name: Run stable security baseline and V1.1 contracts
         run: |
           python -m unittest -v \
             tests.devconsole.test_security_boundary \
+            tests.devconsole.test_runtime_safety \
             tests.devconsole.test_product_credentials \
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
