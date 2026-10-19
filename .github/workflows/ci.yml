@@ -43,6 +43,7 @@ jobs:
             tests.devconsole.test_v11_access \
             tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_v11_env_safety \
+            tests.devconsole.test_v11_environment_secrets \
             tests.devconsole.test_v11_read_policy \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
@@ -88,6 +89,7 @@ jobs:
             tests.devconsole.test_v11_access \
             tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_v11_env_safety \
+            tests.devconsole.test_v11_environment_secrets \
             tests.devconsole.test_v11_read_policy \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
@@ -128,6 +130,7 @@ jobs:
             devconsole/v11_capabilities.py \
             devconsole/v11_git_safety.py \
             devconsole/v11_env_safety.py \
+            devconsole/v11_environment_secrets.py \
             devconsole/v11_legacy_profile.py \
             devconsole/v11_multienv.py \
             devconsole/v11_read_policy.py \
@@ -141,6 +144,7 @@ jobs:
             tests/devconsole/test_v11_access.py \
             tests/devconsole/test_v11_git_safety.py \
             tests/devconsole/test_v11_env_safety.py \
+            tests/devconsole/test_v11_environment_secrets.py \
             tests/devconsole/test_v11_legacy_profile.py \
             tests/devconsole/test_v11_multienv.py \
             tests/devconsole/test_v11_dock_workspace.py \
@@ -159,8 +163,12 @@ jobs:
             static/js/v11/app.js \
             static/js/v11/core/events.js \
             static/js/v11/core/features.js \
+            static/js/v11/features/code-editors.js \
             static/js/v11/features/dock-workspace.js \
+            static/js/v11/features/grid-enhancements.js \
             static/js/v11/features/multi-env.js \
+            static/js/v11/features/read-feedback.js \
+            static/js/v11/features/split-layouts.js \
             static/js/v11/features/terminal-addons.js; do
             node --input-type=module --check < "$file"
           done
