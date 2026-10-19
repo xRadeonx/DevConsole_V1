@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import types
 import unittest
 
 from devconsole.services.process_observer import PsutilObserver, compare_with_procfs
