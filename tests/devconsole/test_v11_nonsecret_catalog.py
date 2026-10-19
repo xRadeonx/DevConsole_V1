@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from devconsole import v11_db_name_recovery as db_name_recovery
 from devconsole import v11_k8s_configmaps as configmaps
 from devconsole import v11_local_env_catalog as local_catalog
 from devconsole import v11_yaml_catalog as yaml_catalog
@@ -218,6 +219,54 @@ spec:
         self.assertEqual(5432, db["port"])
         self.assertEqual("contratos_main", db["contratos_db"])
         self.assertEqual("contratos_reader", db["contratos_user"])
+
+
+class V11DatabaseNameRecoveryTests(unittest.TestCase):
+    def test_postgresql_url_extracts_database_name_only(self):
+        self.assertEqual(
+            "contracts_test",
+            db_name_recovery._database_from_url(
+                "postgresql://app:secret@db.example.invalid:5432/contracts_test?sslmode=require"
+            ),
+        )
+        self.assertEqual("", db_name_recovery._database_from_url("https://example.invalid/db"))
+
+    def test_service_account_inference_is_deliberately_narrow(self):
+        self.assertEqual(
+            "db_ms_example_contratos",
+            db_name_recovery._infer_from_service_user("contratos", "ms_example_contratos"),
+        )
+        self.assertEqual(
+            "db_ms_example_destinaciones",
+            db_name_recovery._infer_from_service_user("destinaciones", "ms_example_destinaciones"),
+        )
+        self.assertEqual("", db_name_recovery._infer_from_service_user("contratos", "reader"))
+        self.assertEqual("", db_name_recovery._infer_from_service_user("contratos", "ms_example_otro"))
+
+    def test_recovery_fills_only_missing_names_and_never_crosses_logical_service(self):
+        target = {
+            "host": "db.example.invalid",
+            "port": 5432,
+            "contratos_user": "ms_example_contratos",
+            "contratos_pass": "secret-a",
+            "destinaciones_user": "ms_example_destinaciones",
+            "destinaciones_pass": "secret-b",
+        }
+
+        changed = db_name_recovery._merge_names(target, {})
+
+        self.assertTrue(changed)
+        self.assertEqual("db_ms_example_contratos", target["contratos_db"])
+        self.assertEqual("db_ms_example_destinaciones", target["destinaciones_db"])
+
+        explicit = {"contratos": "explicit_contracts"}
+        target2 = {
+            "contratos_user": "ms_example_contratos",
+            "destinaciones_user": "reader",
+        }
+        db_name_recovery._merge_names(target2, explicit)
+        self.assertEqual("explicit_contracts", target2["contratos_db"])
+        self.assertNotIn("destinaciones_db", target2)
 
 
 if __name__ == "__main__":
