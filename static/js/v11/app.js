@@ -7,6 +7,11 @@ import { bootSplitLayouts } from "./features/split-layouts.js";
 import { bootGridEnhancements } from "./features/grid-enhancements.js";
 import { bootCodeEditors } from "./features/code-editors.js";
 
+// Install the fetch observer while the module is evaluated, before the legacy
+// DOMContentLoaded handlers issue their first Map/Activity/Infrastructure reads.
+// It never changes a response; it only explains 403/missing-config states.
+if (features.enabled("foundation")) bootReadFeedback();
+
 async function bootFoundation() {
   document.documentElement.dataset.devconsoleUi = "v1.1";
   document.documentElement.classList.add("dc-v11-foundation");
@@ -25,7 +30,6 @@ async function bootFoundation() {
   });
 
   const environmentState = await bootMultiEnvironment();
-  bootReadFeedback();
 
   // The existing Consolas tab remains the canonical experience. Dockview is
   // kept vendored for future composition work but is no longer exposed as a
