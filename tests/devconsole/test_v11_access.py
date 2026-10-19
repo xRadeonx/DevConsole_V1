@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import dataclasses
 import unittest
 from unittest import mock
 
-from devconsole import security
-from devconsole import v11_access
+from devconsole import security, v11_access
 
 
 class V11AccessPolicyTests(unittest.TestCase):
