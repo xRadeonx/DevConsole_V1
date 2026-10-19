@@ -99,10 +99,22 @@ async function enhanceTable(table, { pagination = false } = {}) {
   }
 }
 
-function discoverTables() {
+function restoreWorkspaceLegacyTable() {
   const workspace = document.getElementById("workspaceTableBody")?.closest("table");
-  if (workspace) enhanceTable(workspace, { pagination: false });
+  if (!workspace) return;
+  workspace.classList.remove("dc-v11-grid-source");
+  workspace.removeAttribute("data-dc-grid");
+  const next = workspace.nextElementSibling;
+  if (next?.classList?.contains("dc-v11-grid-host")) next.remove();
+}
 
+function discoverTables() {
+  // Workspace already has purpose-built controls/actions whose layout is more
+  // useful than a generic data-grid. Preserve it exactly as V1 renders it.
+  restoreWorkspaceLegacyTable();
+
+  // Grid.js is valuable in Activity because that view is genuinely tabular and
+  // benefits from search/sort/pagination without replacing its data source.
   const activity = document.getElementById("activityTable");
   if (activity) enhanceTable(activity, { pagination: true });
 }
@@ -111,10 +123,7 @@ export function bootGridEnhancements() {
   discoverTables();
   const observer = new MutationObserver(() => {
     discoverTables();
-    if (
-      document.getElementById("workspaceTableBody")?.closest("table")?.dataset.dcGrid === "true"
-      && document.getElementById("activityTable")?.dataset.dcGrid === "true"
-    ) {
+    if (document.getElementById("activityTable")?.dataset.dcGrid === "true") {
       observer.disconnect();
     }
   });
