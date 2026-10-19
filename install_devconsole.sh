@@ -52,6 +52,52 @@ for cmd in python3 git tilix; do
     fi
 done
 
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "[!] Python 3 es obligatorio para ejecutar DevConsole."
+    exit 1
+fi
+
+# 1.b Runtime V1.1. Las librerías mejoradas son opcionales para conservar el
+# arranque offline, pero el instalador intenta dejarlas activas en un venv
+# aislado. Si no hay red/mirror o venv no está disponible, mantiene Python del
+# sistema y las rutas fallback V1; nunca deja una instalación inutilizable.
+PYTHON_BIN="$(command -v python3)"
+V11_VENV="${XDG_DATA_HOME:-${HOME}/.local/share}/sisper-devconsole/venv"
+V11_REQUIREMENTS="${SCRIPT_DIR}/requirements-v11.txt"
+
+v11_imports_ok() {
+    "$1" -c 'import psutil, pydantic; import ruamel.yaml' >/dev/null 2>&1
+}
+
+if v11_imports_ok "${PYTHON_BIN}"; then
+    echo "  [✓] Runtime V1.1 disponible en Python del sistema."
+elif [ "${SISPER_SKIP_V11_DEP_INSTALL:-0}" = "1" ]; then
+    echo "  [i] Instalación de dependencias V1.1 omitida por SISPER_SKIP_V11_DEP_INSTALL=1."
+elif [ -f "${V11_REQUIREMENTS}" ]; then
+    echo "[*] Preparando runtime Python aislado para capacidades V1.1..."
+    if [ ! -x "${V11_VENV}/bin/python" ]; then
+        rm -rf "${V11_VENV}" 2>/dev/null || true
+        if ! "${PYTHON_BIN}" -m venv "${V11_VENV}" 2>/dev/null; then
+            echo "  [!] No se pudo crear venv; se conservará el runtime V1 compatible."
+        fi
+    fi
+    if [ -x "${V11_VENV}/bin/python" ]; then
+        if ! v11_imports_ok "${V11_VENV}/bin/python"; then
+            if ! "${V11_VENV}/bin/python" -m pip install --disable-pip-version-check -r "${V11_REQUIREMENTS}"; then
+                echo "  [!] No se pudieron instalar todas las dependencias V1.1 (posible entorno offline)."
+            fi
+        fi
+        if v11_imports_ok "${V11_VENV}/bin/python"; then
+            PYTHON_BIN="${V11_VENV}/bin/python"
+            echo "  [✓] Runtime V1.1 activo: ${PYTHON_BIN}"
+        else
+            echo "  [!] V1.1 funcionará con fallbacks donde falten psutil/Pydantic/ruamel.yaml."
+        fi
+    fi
+else
+    echo "  [!] No existe requirements-v11.txt; se conserva runtime V1 compatible."
+fi
+
 # 2. Configurar Servicio de Usuario Systemd
 SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 mkdir -p "${SYSTEMD_USER_DIR}"
@@ -74,7 +120,7 @@ StartLimitBurst=4
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 "${SCRIPT_DIR}/dashboard.py"
+ExecStart="${PYTHON_BIN}" "${SCRIPT_DIR}/dashboard.py"
 Restart=on-failure
 RestartSec=5
 KillMode=process
