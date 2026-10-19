@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import base64
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from devconsole import v11_k8s_secrets as k8s_secrets
 from devconsole import v11_yaml_catalog as yaml_catalog
 
 
@@ -161,6 +163,116 @@ stringData:
         )
         with mock.patch.object(yaml_catalog, "_config_roots", return_value=[self.config]):
             self.assertEqual("test", yaml_catalog._detect_environment(path, path.read_text(), self.root))
+
+    def test_kubernetes_secret_data_is_base64_decoded_before_becoming_credential(self):
+        encoded = base64.b64encode(b"test-db-password").decode("ascii")
+        self._write(
+            "test/ms_sisper_contratos-secret.yaml",
+            f"""
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ms-sisper-contratos-secret
+data:
+  DATABASE_PASSWORD: {encoded}
+""",
+        )
+
+        with mock.patch.object(yaml_catalog, "_config_roots", return_value=[self.config]):
+            result = k8s_secrets._augment_scan(
+                {"keycloak": {}, "databases": {}, "secret_candidates": []},
+                self.root,
+            )
+
+        self.assertEqual("test-db-password", result["databases"]["test"]["contratos_pass"])
+        candidate = next(
+            item
+            for item in result["secret_candidates"]
+            if item["clave"] == "databases.test.contratos_pass"
+        )
+        self.assertEqual("test-db-password", candidate["valor"])
+        self.assertEqual("k8s-secret-data-b64", candidate["fuente"])
+        self.assertNotEqual(encoded, candidate["valor"])
+
+    def test_secretkeyref_resolves_generic_base64_key_for_main(self):
+        encoded = base64.b64encode(b"main-contratos-password").decode("ascii")
+        self._write(
+            "prod/contratos-db-secret.yaml",
+            f"""
+apiVersion: v1
+kind: Secret
+metadata:
+  name: contratos-db
+data:
+  password: {encoded}
+""",
+        )
+        self._write(
+            "prod/ms_sisper_contratos.yaml",
+            """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-sisper-contratos
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: contratos-db
+                  key: password
+""",
+        )
+
+        with mock.patch.object(yaml_catalog, "_config_roots", return_value=[self.config]):
+            result = k8s_secrets._augment_scan(
+                {"keycloak": {}, "databases": {}, "secret_candidates": []},
+                self.root,
+            )
+
+        self.assertEqual(
+            "main-contratos-password",
+            result["databases"]["main"]["contratos_pass"],
+        )
+        candidate = next(
+            item
+            for item in result["secret_candidates"]
+            if item["clave"] == "databases.main.contratos_pass"
+        )
+        self.assertEqual("k8s-secretKeyRef", candidate["fuente"])
+        self.assertIn("contratos-db-secret.yaml", candidate["origen"])
+        self.assertIn("ms_sisper_contratos.yaml", candidate["origen"])
+
+    def test_kubernetes_secret_stringdata_stays_plain_text(self):
+        self._write(
+            "test/ms_sisper_bitacora-secret.yaml",
+            """
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ms-sisper-bitacora-secret
+stringData:
+  DATABASE_PASSWORD: already-plain
+""",
+        )
+
+        with mock.patch.object(yaml_catalog, "_config_roots", return_value=[self.config]):
+            result = k8s_secrets._augment_scan(
+                {"keycloak": {}, "databases": {}, "secret_candidates": []},
+                self.root,
+            )
+
+        self.assertEqual("already-plain", result["databases"]["test"]["bitacora_pass"])
+        candidate = next(
+            item
+            for item in result["secret_candidates"]
+            if item["clave"] == "databases.test.bitacora_pass"
+        )
+        self.assertEqual("k8s-secret-stringData", candidate["fuente"])
 
     def test_hydration_preserves_explicit_values_and_fills_missing_fields(self):
         fake_scan = {
