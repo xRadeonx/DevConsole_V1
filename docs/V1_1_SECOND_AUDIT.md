@@ -29,7 +29,7 @@ La primera evaluación llamó “GO” a todas las fases 0–8. Esta auditoría 
 
 ## Evidencia reproducible
 
-El gate bloqueante contiene ahora tests específicos para:
+El gate bloqueante contiene tests específicos para:
 
 - contrato V1 del launcher terminal;
 - estado HTTP de transacciones de entorno;
@@ -38,7 +38,9 @@ El gate bloqueante contiene ahora tests específicos para:
 - cancelación de procesos silenciosos de build;
 - fronteras de roles en Chromium real.
 
-La suite heredada completa continúa como diagnóstico. Un fallo heredado no se oculta; si revela una regresión real se convierte en test bloqueante V1.1.
+La ejecución de CI correspondiente al código re-auditado aprobó los jobs bloqueantes de Python 3.11, Python 3.12, `compileall`, Ruff crítico, regresión portable, aceptación read-only, ES Modules, shell syntax y Playwright. La suite heredada completa permanece como diagnóstico no bloqueante.
+
+La suite heredada no se oculta: si un fallo revela una regresión contractual real, ese caso se extrae y se convierte en test bloqueante V1.1.
 
 ## Veredicto
 
