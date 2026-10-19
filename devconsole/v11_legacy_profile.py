@@ -39,7 +39,10 @@ def _safe_eval(node: ast.AST) -> Any:
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Dict):
-        return {_safe_eval(k): _safe_eval(v) for k, v in zip(node.keys, node.values)}
+        return {
+            _safe_eval(k): _safe_eval(v)
+            for k, v in zip(node.keys, node.values, strict=False)
+        }
     if isinstance(node, ast.List):
         return [_safe_eval(v) for v in node.elts]
     if isinstance(node, ast.Tuple):
@@ -179,7 +182,13 @@ def _read_legacy_infra_targets(root: Path | None = None) -> dict[str, list[dict[
         return {}
 
     result: dict[str, list[dict[str, Any]]] = {}
-    for source_name, target_name in (("local", "local"), ("develop", "develop"), ("test", "test"), ("main", "main"), ("prod", "main")):
+    for source_name, target_name in (
+        ("local", "local"),
+        ("develop", "develop"),
+        ("test", "test"),
+        ("main", "main"),
+        ("prod", "main"),
+    ):
         match = re.search(rf"\b{re.escape(source_name)}\s*:\s*\[", object_block)
         if not match:
             continue
@@ -242,7 +251,7 @@ def _install_infra_targets_bridge() -> None:
     from devconsole import settings
 
     original = settings.infra_targets
-    if getattr(original, "_v11_legacy_profile", False):
+    if getattr(original, "_v11_legacy_profile", False) is True:
         return
 
     def infra_targets_with_legacy() -> dict:
@@ -259,7 +268,7 @@ def _install_base_dir_refresh() -> None:
     from devconsole import config
 
     original = config.set_base_dir
-    if getattr(original, "_v11_legacy_profile", False):
+    if getattr(original, "_v11_legacy_profile", False) is True:
         return
 
     def set_base_dir_with_legacy(new_path):
@@ -292,6 +301,13 @@ def status() -> dict[str, Any]:
     return {
         "installed": _INSTALLED,
         "legacy_profile_available": bool(targets or catalog),
-        "environments": sorted({"main" if k == "prod" else k for mapping in catalog.values() for k in mapping if k in {"develop", "test", "main", "prod"}}),
+        "environments": sorted(
+            {
+                "main" if key == "prod" else key
+                for mapping in catalog.values()
+                for key in mapping
+                if key in {"develop", "test", "main", "prod"}
+            }
+        ),
         "infra_environments": sorted(targets),
     }
