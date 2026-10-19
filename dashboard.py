@@ -40,6 +40,7 @@ from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
+from devconsole.v11_infra_catalog import install as install_v11_infra_catalog
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
@@ -59,6 +60,10 @@ install_v11_legacy_profile()
 # 0600 config/secrets.json store, overlay them on the recovered catalog in
 # memory so TEST/MAIN telemetry can use their own credentials.
 install_v11_environment_secrets()
+# A partial panel.json (for example DEVELOP only) must not hide TEST/MAIN rows
+# recovered from the local V1 catalog. Compose all non-secret infrastructure
+# sources per environment while keeping explicit local rows authoritative.
+install_v11_infra_catalog()
 # Fresh ZIP checkouts do not contain panel.json/services.json. Install the
 # compatibility guards before handlers import infra/telemetry functions by
 # value so filesystem discovery and the read-only dashboard still work.
