@@ -1,14 +1,14 @@
-"""V1.1 compatibility handler.
+"""V1.1 compatibility facade over the complete V1 HTTP surface.
 
-This class wraps the large V1 handler instead of replacing it.  Existing routes
-still execute the exact legacy code, while V1.1 adds a stricter outer
-authorization boundary and additive endpoints.  This keeps rollback trivial:
-server.py can switch back to the legacy handler in one line.
+The facade is deliberately additive: unknown/existing routes delegate to the
+legacy handler, while security-sensitive operations can be intercepted with a
+safer implementation.  ``SISPER_V11_HANDLER=0`` remains the emergency rollback.
 """
 from __future__ import annotations
 
 import io
 import json
+import time
 import urllib.parse
 from pathlib import Path
 
@@ -24,19 +24,44 @@ from devconsole.security import (
     is_origin_allowed,
 )
 from devconsole.services.build_jobs import get_build_coordinator
-from devconsole.services.k8s_guard import current_context, diff_manifest, preflight, rollout_undo
+from devconsole.services.environment_transaction import switch_workspace_environment_transactional
+from devconsole.services.k8s_guard import (
+    apply_manifest,
+    current_context,
+    diff_manifest,
+    preflight,
+    rollout_undo,
+)
 from devconsole.services.manifest_service import (
     ManifestDependencyMissing,
     apply_image_tag_update,
     preview_image_tag_update,
 )
 from devconsole.services.project_detector import detect_workspace
+from devconsole.services.telemetry_service import (
+    ACTIVE_MIRROR_SUBSCRIPTIONS,
+    LIVE_FRONTEND_TELEMETRY,
+    LIVE_SCREEN_MIRROR,
+    get_operational_map_data,
+)
+from devconsole.services.telemetry_tls_adapter import install_telemetry_tls_policy
 from devconsole.services.terminal.capabilities import terminal_capabilities
 from devconsole.startup import configuration_diagnostics
 
-_ROLE_RANK = {"viewer": 1, "dev": 2, "admin": 3}
+# The adapter changes only telemetry_service's module-local ssl reference.  No
+# process-wide TLS monkeypatch is performed.
+_TLS_DIAGNOSTIC = install_telemetry_tls_policy()
 
-# These V1 GET routes expose user/session/IP/audit or raw environment material.
+_ROLE_RANK = {"viewer": 1, "dev": 2, "admin": 3}
+_TELEMETRY_INGEST_POSTS = {
+    "/api/telemetry/heartbeat",
+    "/api/telemetry/mirror_stream",
+}
+_PUBLIC_POSTS = {
+    "/api/auth/verify_pin",
+    "/api/auth/logout",
+    *_TELEMETRY_INGEST_POSTS,
+}
 _ADMIN_GETS = {
     "/api/analytics/connections",
     "/api/activity/feed",
@@ -48,22 +73,38 @@ _DEV_GETS = {
     "/api/env/get",
     "/api/deployments/inspect",
 }
-
-# Frontend telemetry ingestion must continue working without a developer login;
-# reads of that telemetry are admin-only above.
-_PUBLIC_POSTS = {
-    "/api/auth/verify_pin",
-    "/api/auth/logout",
-    "/api/telemetry/heartbeat",
-    "/api/telemetry/mirror_stream",
-}
-
 _EXTRA_ADMIN_POSTS = {
+    "/api/secrets/buscar",
+    "/api/secrets/guardar",
     "/api/telemetry/mirror_control",
     "/api/k8s/theme",
     "/api/v1.1/k8s/update_image",
+    "/api/v1.1/k8s/apply",
     "/api/v1.1/k8s/rollback",
 }
+
+
+def required_role_for(path: str, payload: dict | None = None) -> str:
+    """Return the V1.1 minimum role for a POST route.
+
+    This is intentionally pure/testable.  Legacy authorization still runs as a
+    second layer for routes delegated to V1.
+    """
+    data = payload or {}
+    if path in _PUBLIC_POSTS:
+        return "viewer"
+    if path in ADMIN_PATHS or path in _EXTRA_ADMIN_POSTS:
+        return "admin"
+    if path == "/api/action":
+        action = str(data.get("action") or "")
+        container = data.get("container")
+        if action in ADMIN_ACTIONS and not (
+            action == "podman-container" and container in INFRA_EXEMPT_CONTAINERS
+        ):
+            return "admin"
+    if path == "/api/v1.1/build/start" and bool(data.get("push")):
+        return "admin"
+    return "dev"
 
 
 def _manifest_for(service: str, env_key: str) -> tuple[Path | None, str, str]:
@@ -86,13 +127,25 @@ def _manifest_for(service: str, env_key: str) -> tuple[Path | None, str, str]:
     return path, namespace, ""
 
 
+def _kubectl_diff_candidate(change, namespace: str):
+    """Diff the generated candidate, never the unchanged source manifest."""
+    preview_dir = local_trust.runtime_dir() / "manifest-preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    candidate = preview_dir / f"candidate-{time.time_ns()}.yaml"
+    try:
+        candidate.write_text(change.after, encoding="utf-8")
+        return diff_manifest(candidate, namespace)
+    finally:
+        candidate.unlink(missing_ok=True)
+
+
 class DevConsoleV11Handler(LegacyHandler):
     """Strict/additive facade over the V1 HTTP handler."""
 
     def _effective_role(self) -> str:
         return auth_v11.effective_role(self.headers)
 
-    def _trusted_request(self) -> tuple[bool, str]:
+    def _trusted_request(self, *, require_token: bool = True) -> tuple[bool, str]:
         try:
             host = self.headers.get("Host")
             origin = self.headers.get("Origin")
@@ -102,9 +155,10 @@ class DevConsoleV11Handler(LegacyHandler):
             return False, "Solicitud rechazada: Host no permitido."
         if not is_origin_allowed(origin):
             return False, "Solicitud rechazada: origen no autorizado."
-        ok, _reason = local_trust.enforce_request_token(self.headers.get)
-        if not ok:
-            return False, "Solicitud rechazada: token de confianza local ausente o inválido."
+        if require_token:
+            ok, _reason = local_trust.enforce_request_token(self.headers.get)
+            if not ok:
+                return False, "Solicitud rechazada: token de confianza local ausente o inválido."
         return True, ""
 
     def _require_role(self, minimum: str) -> bool:
@@ -150,6 +204,9 @@ class DevConsoleV11Handler(LegacyHandler):
         versions = _version_estaticos()
         for name, version in versions.items():
             html = html.replace(f'"/static/{name}"', f'"/static/{name}?v={version}"')
+        css_tag = '<link rel="stylesheet" href="/static/css/v11.css">'
+        if css_tag not in html:
+            html = html.replace("</head>", f"  {css_tag}\n</head>")
         module_tag = '<script type="module" src="/static/js/app-v11.js"></script>'
         if module_tag not in html:
             html = html.replace("</body>", f"  {module_tag}\n</body>")
@@ -181,12 +238,28 @@ class DevConsoleV11Handler(LegacyHandler):
             return
 
         params = urllib.parse.parse_qs(parsed.query)
+        if path == "/api/analytics/connections":
+            env_key = params.get("env", ["develop"])[0]
+            refresh = params.get("refresh", ["false"])[0].lower() in {"true", "1"}
+            data = get_operational_map_data(env_key=env_key, force_refresh=refresh)
+            # The V1 payload includes full names, usernames, e-mail/IP/session
+            # details for admins.  Do not claim that this is aggregate-only.
+            data["privacy_compliance"] = {
+                "policy": "administrator-operational-data",
+                "pii_exposed": True,
+                "level": "ADMIN_AUTHORIZED_PII",
+                "description": "Datos operacionales identificables disponibles sólo para sesión Administrador.",
+            }
+            data["tls_policy"] = dict(_TLS_DIAGNOSTIC)
+            self.send_json(data)
+            return
         if path == "/api/v1.1/capabilities":
             self.send_json({
                 "version": "1.1",
                 "role": self._effective_role(),
                 "terminal": terminal_capabilities(dcfg.STATIC_DIR),
                 "dependencies": configuration_diagnostics(dcfg.DASHBOARD_DIR)["dependencies"],
+                "tls": dict(_TLS_DIAGNOSTIC),
             })
             return
         if path == "/api/v1.1/config/diagnostics":
@@ -229,7 +302,7 @@ class DevConsoleV11Handler(LegacyHandler):
             except ManifestDependencyMissing as exc:
                 self.send_json({"success": False, "message": str(exc)}, status=503)
                 return
-            kdiff = diff_manifest(manifest, namespace)
+            kdiff = _kubectl_diff_candidate(change, namespace)
             self.send_json({
                 "success": True,
                 "changed": change.changed,
@@ -244,6 +317,49 @@ class DevConsoleV11Handler(LegacyHandler):
 
         super()._do_GET()
 
+    def _ingest_telemetry(self, path: str, payload: dict) -> bool:
+        """Handle cross-port telemetry without weakening command endpoints.
+
+        The tracker runs inside configured frontends, so it cannot possess the
+        panel's HttpOnly local-trust cookie. Host+Origin remain strict and these
+        two routes only update bounded in-memory observation state.
+        """
+        if path == "/api/telemetry/heartbeat":
+            user_key = payload.get("user_key", "anonimo")
+            if user_key and user_key != "anonimo":
+                payload["received_at"] = time.time()
+                payload["ip"] = self.client_address[0] if hasattr(self, "client_address") else "127.0.0.1"
+                LIVE_FRONTEND_TELEMETRY[user_key] = payload
+            now = time.time()
+            for key in list(LIVE_FRONTEND_TELEMETRY):
+                if now - LIVE_FRONTEND_TELEMETRY[key].get("received_at", 0) > 30:
+                    LIVE_FRONTEND_TELEMETRY.pop(key, None)
+            self.send_json({"status": "ok", "mirror_requested": bool(user_key in ACTIVE_MIRROR_SUBSCRIPTIONS)})
+            return True
+
+        if path == "/api/telemetry/mirror_stream":
+            user_key = payload.get("user_key", "anonimo")
+            if user_key and user_key != "anonimo":
+                payload["received_at"] = time.time()
+                previous = LIVE_SCREEN_MIRROR.get(user_key, {})
+                dom_html = payload.get("dom_html")
+                if dom_html and len(dom_html) > 512_000:
+                    dom_html = None
+                if dom_html:
+                    payload["dom_ver"] = previous.get("dom_ver", 0) + 1
+                else:
+                    if "dom_html" in previous:
+                        payload["dom_html"] = previous["dom_html"]
+                    payload["dom_ver"] = previous.get("dom_ver", 0)
+                LIVE_SCREEN_MIRROR[user_key] = payload
+                now = time.time()
+                for key in list(LIVE_SCREEN_MIRROR):
+                    if now - LIVE_SCREEN_MIRROR[key].get("received_at", 0) > 120:
+                        LIVE_SCREEN_MIRROR.pop(key, None)
+            self.send_json({"status": "ok"})
+            return True
+        return False
+
     def _do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -252,9 +368,13 @@ class DevConsoleV11Handler(LegacyHandler):
             self.send_json({"success": False, "message": "JSON inválido."}, status=400)
             return
 
-        trusted, message = self._trusted_request()
+        trusted, message = self._trusted_request(require_token=path not in _TELEMETRY_INGEST_POSTS)
         if not trusted:
             self.send_json({"success": False, "message": message}, status=403)
+            return
+
+        if path in _TELEMETRY_INGEST_POSTS:
+            self._ingest_telemetry(path, payload)
             return
 
         if path == "/api/auth/verify_pin":
@@ -282,10 +402,8 @@ class DevConsoleV11Handler(LegacyHandler):
             return
 
         if path == "/api/auth/logout":
-            admin_token = auth.admin_token_from(self.headers)
-            dev_token = auth_v11.dev_token_from(self.headers)
-            auth.invalidate_admin_token(admin_token)
-            auth_v11.invalidate_dev_token(dev_token)
+            auth.invalidate_admin_token(auth.admin_token_from(self.headers))
+            auth_v11.invalidate_dev_token(auth_v11.dev_token_from(self.headers))
             self.send_json(
                 {"success": True, "message": "Sesión cerrada correctamente."},
                 extra_headers=[
@@ -295,21 +413,18 @@ class DevConsoleV11Handler(LegacyHandler):
             )
             return
 
-        required = "viewer"
-        if path not in _PUBLIC_POSTS:
-            required = "dev"
-        if path in ADMIN_PATHS or path in _EXTRA_ADMIN_POSTS:
-            required = "admin"
-        if path == "/api/action":
-            action = str(payload.get("action") or "")
-            container = payload.get("container")
-            if action in ADMIN_ACTIONS and not (
-                action == "podman-container" and container in INFRA_EXEMPT_CONTAINERS
-            ):
-                required = "admin"
-        if path == "/api/v1.1/build/start" and bool(payload.get("push")):
-            required = "admin"
-        if required != "viewer" and not self._require_role(required):
+        minimum = required_role_for(path, payload)
+        if minimum != "viewer" and not self._require_role(minimum):
+            return
+
+        if path == "/api/environment/switch":
+            result = switch_workspace_environment_transactional(
+                str(payload.get("target_env") or "develop"),
+                bool(payload.get("force_pull", False)),
+            )
+            # Preserve the V1 response envelope; richer transactional state is
+            # additive inside data.
+            self.send_json({"success": True, "data": result})
             return
 
         if path == "/api/v1.1/build/start":
@@ -347,8 +462,7 @@ class DevConsoleV11Handler(LegacyHandler):
             service = str(payload.get("service") or "")
             env_key = str(payload.get("env") or "develop")
             version = str(payload.get("version") or "")
-            confirmed = bool(payload.get("confirmed", False))
-            if not confirmed:
+            if not bool(payload.get("confirmed", False)):
                 self.send_json({"success": False, "message": "Se requiere confirmed=true después de revisar el preview."}, status=409)
                 return
             manifest, namespace, error = _manifest_for(service, env_key)
@@ -367,18 +481,40 @@ class DevConsoleV11Handler(LegacyHandler):
             self.send_json({"success": change.changed, "diff": change.diff, "preflight": guard}, status=200 if change.changed else 409)
             return
 
+        if path == "/api/v1.1/k8s/apply":
+            service = str(payload.get("service") or "")
+            env_key = str(payload.get("env") or "develop")
+            if not bool(payload.get("confirmed", False)):
+                self.send_json({"success": False, "message": "Se requiere confirmed=true antes de aplicar."}, status=409)
+                return
+            manifest, namespace, error = _manifest_for(service, env_key)
+            if error or manifest is None:
+                self.send_json({"success": False, "message": error}, status=400)
+                return
+            guard = preflight(namespace, payload.get("expected_context"))
+            if not guard.get("ok"):
+                self.send_json({"success": False, "message": "Preflight K8s falló.", "preflight": guard}, status=409)
+                return
+            result = apply_manifest(manifest, namespace)
+            self.send_json({"success": result.ok, "stdout": result.stdout, "stderr": result.stderr, "preflight": guard}, status=200 if result.ok else 400)
+            return
+
         if path == "/api/v1.1/k8s/rollback":
             deployment = str(payload.get("deployment") or "")
             namespace = str(payload.get("namespace") or "develop")
             if not deployment:
                 self.send_json({"success": False, "message": "deployment es obligatorio."}, status=400)
                 return
+            guard = preflight(namespace, payload.get("expected_context"))
+            if not guard.get("ok"):
+                self.send_json({"success": False, "message": "Preflight K8s falló.", "preflight": guard}, status=409)
+                return
             result = rollout_undo(deployment, namespace)
-            self.send_json({"success": result.ok, "stdout": result.stdout, "stderr": result.stderr}, status=200 if result.ok else 400)
+            self.send_json({"success": result.ok, "stdout": result.stdout, "stderr": result.stderr, "preflight": guard}, status=200 if result.ok else 400)
             return
 
-        # Rewind the body for the V1 handler.  It performs its own legacy
-        # authorization as a second layer, then executes the unchanged route.
+        # Rewind the body and preserve the complete V1 surface.  Legacy
+        # authorization remains a second layer for every delegated route.
         original = self.rfile
         try:
             self.rfile = io.BytesIO(body)
@@ -387,5 +523,4 @@ class DevConsoleV11Handler(LegacyHandler):
             self.rfile = original
 
 
-# Stable import name for server.py.
 DevConsoleHandler = DevConsoleV11Handler
