@@ -1,0 +1,68 @@
+name: DevConsole V1.1 CI
+
+on:
+  push:
+    branches:
+      - main
+      - refactor/v1.1-foundation
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: Regression / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install QA dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest ruff
+
+      - name: Prepare non-secret test configuration
+        run: |
+          if [ ! -f config/secrets.json ]; then
+            cp config/secrets.example.json config/secrets.json
+          fi
+
+      - name: Compile Python sources
+        run: python -m compileall -q dashboard.py devconsole tests
+
+      - name: Ruff baseline
+        run: ruff check dashboard.py devconsole tests
+
+      - name: Regression suite
+        run: >-
+          pytest -q
+          --deselect=tests/devconsole/test_config_discovery.py::GoldenDiscoveryTest::test_discovery_matches_golden_snapshot
+
+  shell-syntax:
+    name: Shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+          done < <(find . -path './.git' -prune -o -name '*.sh' -type f -print0)
