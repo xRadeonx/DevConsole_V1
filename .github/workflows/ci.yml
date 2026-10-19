@@ -48,6 +48,7 @@ jobs:
             tests.devconsole.test_v11_capabilities \
             tests.devconsole.test_process_observer \
             tests.devconsole.test_yaml_service \
+            tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_config_schema
 
   modernization-tooling:
@@ -88,6 +89,7 @@ jobs:
             tests.devconsole.test_v11_capabilities \
             tests.devconsole.test_process_observer \
             tests.devconsole.test_yaml_service \
+            tests.devconsole.test_v11_yaml_promotion \
             tests.devconsole.test_config_schema
 
   v11-quality:
@@ -114,6 +116,7 @@ jobs:
             devconsole/v11_git_safety.py \
             devconsole/v11_env_safety.py \
             devconsole/v11_read_policy.py \
+            devconsole/v11_yaml_promotion.py \
             devconsole/config_schema.py \
             devconsole/services/project_detector.py \
             devconsole/services/process_observer.py \
@@ -127,6 +130,7 @@ jobs:
             tests/devconsole/test_v11_capabilities.py \
             tests/devconsole/test_process_observer.py \
             tests/devconsole/test_yaml_service.py \
+            tests/devconsole/test_v11_yaml_promotion.py \
             tests/devconsole/test_config_schema.py
 
   legacy-characterization:
