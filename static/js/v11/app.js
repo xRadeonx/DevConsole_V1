@@ -1,8 +1,10 @@
 import { events } from "./core/events.js";
 import { features } from "./core/features.js";
-import { bootDockWorkspace } from "./features/dock-workspace.js";
 import { bootMultiEnvironment } from "./features/multi-env.js";
 import { bootTerminalAddons } from "./features/terminal-addons.js";
+import { bootSplitLayouts } from "./features/split-layouts.js";
+import { bootGridEnhancements } from "./features/grid-enhancements.js";
+import { bootCodeEditors } from "./features/code-editors.js";
 
 async function bootFoundation() {
   document.documentElement.dataset.devconsoleUi = "v1.1";
@@ -22,14 +24,14 @@ async function bootFoundation() {
   });
 
   const environmentState = await bootMultiEnvironment();
-  // Optional production UI upgrades stay additive. Dockview injects only its
-  // launcher; the ~1 MB bundle is loaded on first use and the classic console
-  // wall remains the default/fallback.
-  bootDockWorkspace();
-  // xterm core + Fit/Search are self-hosted. Loading is deferred to an idle
-  // slot so the dashboard remains fast while the real terminal gains resize
-  // and search capabilities automatically.
+
+  // The existing Consolas tab remains the canonical experience. Dockview is
+  // kept vendored for future composition work but is no longer exposed as a
+  // second/duplicate workspace. Improvements are applied in-place instead.
   bootTerminalAddons();
+  bootSplitLayouts();
+  bootGridEnhancements();
+  bootCodeEditors();
 
   events.emit("v11-ready", {
     version: api.version,
