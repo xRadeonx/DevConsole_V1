@@ -8,17 +8,9 @@ import sys
 import threading
 import time
 
-# V1.1: the real server enables local-trust enforcement by default.  Unit tests
-# and embedded callers that instantiate handlers directly keep full control of
-# the environment, and an operator can explicitly set 0 for emergency rollback.
-os.environ.setdefault("SISPER_LOCAL_TOKEN_REQUIRED", "1")
-
 from devconsole import local_trust
 from devconsole.config import HOST, HOST_IS_LOOPBACK, PORT, BASE_DIR
 
-# One-line rollback seam: all existing V1 routes remain implemented by the
-# legacy handler and the V1.1 facade subclasses it.  Setting
-# SISPER_V11_HANDLER=0 restores the original HTTP surface without a code revert.
 if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0":
     from devconsole.api.handlers import DevConsoleHandler
 else:
@@ -28,12 +20,6 @@ from devconsole.services.env_service import env_file_watcher_loop
 
 
 def _make_server_class(host: str):
-    """Return an ``HTTPServer`` subclass with the address family the host needs.
-
-    ``HTTPServer.address_family`` is ``AF_INET``, so binding an IPv6 literal
-    such as ``::1`` would raise.  Selecting the family here keeps
-    ``SISPER_HOST=::1`` usable instead of crashing at startup.
-    """
     bare = host[1:-1] if host.startswith("[") and host.endswith("]") else host
     try:
         version = ipaddress.ip_address(bare).version
@@ -81,8 +67,6 @@ PROBE_REFRESH_SECONDS = 8.0
 
 
 def _start_probe_refresher() -> None:
-    """Mantiene tibia, en un hilo demonio, la caché de sondeos de ``/api/status``."""
-
     def _run() -> None:
         from devconsole.config import SERVICES_BACKEND, SERVICES_FRONTEND, get_service_repo_dir
         from devconsole.services.git_service import get_git_info
@@ -103,18 +87,20 @@ def _start_probe_refresher() -> None:
 
 
 def main():
+    # Enable the trust token only for the actual server lifecycle.  Merely
+    # importing devconsole.server must not mutate the environment of tests or
+    # embedding tools.  Explicit operator configuration always wins.
+    os.environ.setdefault("SISPER_LOCAL_TOKEN_REQUIRED", "1")
     _log_bind_notice()
     try:
         from devconsole.startup import print_startup_diagnostics
         print_startup_diagnostics(BASE_DIR)
     except Exception as exc:
-        # Diagnostics are never allowed to prevent the compatible V1 runtime.
         print(f"[!] Diagnóstico V1.1 omitido: {exc}")
     _publish_local_token_if_required()
 
     t_env_watcher = threading.Thread(target=env_file_watcher_loop, daemon=True)
     t_env_watcher.start()
-
     _start_probe_refresher()
 
     server_class = _make_server_class(HOST)
