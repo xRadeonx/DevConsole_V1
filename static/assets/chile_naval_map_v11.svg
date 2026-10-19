@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 900" role="img" aria-labelledby="mapTitle mapDesc">
+  <title id="mapTitle">Mapa operacional naval de Chile</title>
+  <desc id="mapDesc">Representación esquemática offline de las cinco zonas navales para DevConsole.</desc>
+  <defs>
+    <filter id="zoneGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="ocean" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071326"/>
+      <stop offset="1" stop-color="#0b1f33"/>
+    </linearGradient>
+    <style>
+      .zone { cursor:pointer; transition:opacity .18s ease, filter .18s ease; }
+      .zone:hover { opacity:.92; filter:url(#zoneGlow); }
+      .callout { cursor:pointer; }
+      .callout text { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      .coast { stroke-linejoin:round; stroke-linecap:round; }
+    </style>
+  </defs>
+  <rect width="520" height="900" rx="18" fill="url(#ocean)"/>
+  <g opacity=".23" stroke="#38bdf8" stroke-width=".7">
+    <path d="M28 120H492M28 260H492M28 400H492M28 540H492M28 680H492M28 820H492"/>
+    <path d="M90 34V866M210 34V866M330 34V866M450 34V866"/>
+  </g>
+  <g fill="#38bdf8" opacity=".38" font-family="monospace" font-size="10">
+    <text x="31" y="111">18°S</text><text x="31" y="251">25°S</text><text x="31" y="391">32°S</text>
+    <text x="31" y="531">39°S</text><text x="31" y="671">46°S</text><text x="31" y="811">53°S</text>
+  </g>
+
+  <!-- Silueta estilizada y segmentada. Las clases son el contrato usado por dashboard.js. -->
+  <g class="coast" stroke-width="1.1">
+    <path class="zone zone-path-4" onclick="selectOperationalZone(4)" fill="#06b6d455" stroke="#06b6d4"
+          d="M229 50 L266 62 259 91 271 118 258 148 265 178 250 209 258 239 244 270 207 266 213 232 202 201 214 169 207 137 220 105 214 77 Z"/>
+    <path class="zone zone-path-1" onclick="selectOperationalZone(1)" fill="#3b82f655" stroke="#3b82f6"
+          d="M207 266 L244 270 252 303 240 337 248 373 232 406 240 440 226 470 191 463 200 432 190 401 203 368 194 335 205 304 Z"/>
+    <path class="zone zone-path-2" onclick="selectOperationalZone(2)" fill="#f59e0b55" stroke="#f59e0b"
+          d="M191 463 L226 470 236 502 222 535 232 570 215 603 221 632 184 626 192 596 180 566 193 535 182 503 Z"/>
+    <path class="zone zone-path-5" onclick="selectOperationalZone(5)" fill="#10b98155" stroke="#10b981"
+          d="M184 626 L221 632 227 659 214 686 224 711 208 738 217 760 199 782 180 771 184 746 172 724 184 697 172 672 Z"/>
+    <path class="zone zone-path-3" onclick="selectOperationalZone(3)" fill="#a855f755" stroke="#a855f7"
+          d="M180 771 L199 782 214 799 205 821 225 839 209 858 178 848 157 859 140 842 151 821 137 802 156 786 Z"/>
+    <path fill="#a855f72c" stroke="#a855f7" d="M254 805l14 9-8 14-14-8zM278 835l12 8-7 12-12-7z"/>
+  </g>
+
+  <!-- Conectores -->
+  <g fill="none" stroke-width="1.1" stroke-dasharray="4 4" opacity=".8">
+    <path stroke="#06b6d4" d="M253 153H329"/><path stroke="#3b82f6" d="M238 350H329"/>
+    <path stroke="#f59e0b" d="M221 535H329"/><path stroke="#10b981" d="M211 692H329"/>
+    <path stroke="#a855f7" d="M205 822H329"/>
+  </g>
+
+  <!-- Callouts. El onclick forma parte del contrato legacy para resaltado. -->
+  <g class="callout" onclick="selectOperationalZone(4)">
+    <rect x="329" y="119" width="166" height="67" rx="9" fill="#0f172add" stroke="#06b6d4"/>
+    <text x="344" y="141" fill="#67e8f9" font-size="12" font-weight="800">IV ZONA NAVAL</text>
+    <text x="344" y="158" fill="#cbd5e1" font-size="10">Iquique · Arica</text>
+    <text id="svg-conn-label-4" x="344" y="176" fill="#94a3b8" font-size="10">0 Personas (0 Ses.)</text>
+  </g>
+  <g class="callout" onclick="selectOperationalZone(1)">
+    <rect x="329" y="315" width="166" height="67" rx="9" fill="#0f172add" stroke="#3b82f6"/>
+    <text x="344" y="337" fill="#93c5fd" font-size="12" font-weight="800">I ZONA NAVAL</text>
+    <text x="344" y="354" fill="#cbd5e1" font-size="10">Valparaíso · Viña del Mar</text>
+    <text id="svg-conn-label-1" x="344" y="372" fill="#94a3b8" font-size="10">0 Personas (0 Ses.)</text>
+  </g>
+  <g class="callout" onclick="selectOperationalZone(2)">
+    <rect x="329" y="500" width="166" height="67" rx="9" fill="#0f172add" stroke="#f59e0b"/>
+    <text x="344" y="522" fill="#fbbf24" font-size="12" font-weight="800">II ZONA NAVAL</text>
+    <text x="344" y="539" fill="#cbd5e1" font-size="10">Talcahuano</text>
+    <text id="svg-conn-label-2" x="344" y="557" fill="#94a3b8" font-size="10">0 Personas (0 Ses.)</text>
+  </g>
+  <g class="callout" onclick="selectOperationalZone(5)">
+    <rect x="329" y="657" width="166" height="67" rx="9" fill="#0f172add" stroke="#10b981"/>
+    <text x="344" y="679" fill="#6ee7b7" font-size="12" font-weight="800">V ZONA NAVAL</text>
+    <text x="344" y="696" fill="#cbd5e1" font-size="10">Puerto Montt · Aysén</text>
+    <text id="svg-conn-label-5" x="344" y="714" fill="#94a3b8" font-size="10">0 Personas (0 Ses.)</text>
+  </g>
+  <g class="callout" onclick="selectOperationalZone(3)">
+    <rect x="329" y="787" width="166" height="67" rx="9" fill="#0f172add" stroke="#a855f7"/>
+    <text x="344" y="809" fill="#d8b4fe" font-size="12" font-weight="800">III ZONA NAVAL</text>
+    <text x="344" y="826" fill="#cbd5e1" font-size="10">Punta Arenas · Antártica</text>
+    <text id="svg-conn-label-3" x="344" y="844" fill="#94a3b8" font-size="10">0 Personas (0 Ses.)</text>
+  </g>
+
+  <g font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="24" y="28" fill="#e2e8f0" font-size="12" font-weight="800">CHILE · JURISDICCIONES NAVALES</text>
+    <text x="24" y="44" fill="#64748b" font-size="9">Fallback vectorial local · sin dependencia de red</text>
+  </g>
+</svg>
