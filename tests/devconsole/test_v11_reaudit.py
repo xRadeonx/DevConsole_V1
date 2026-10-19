@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from devconsole import pins
 from devconsole.api.v11_verified_handler import DevConsoleVerifiedV11Handler
+from devconsole.services.container_engine import ContainerEngine
 from devconsole.services.environment_transaction import RepoState, _rollback
 
 
@@ -56,6 +61,23 @@ class VerifiedFacadeRegressionTest(unittest.TestCase):
         self.assertEqual("viewer unavailable", payload["viewer"]["message"])
 
 
+class ProductCredentialRegressionTest(unittest.TestCase):
+    def test_historical_builtin_admin_pin_is_not_a_verifier_fallback(self):
+        with tempfile.TemporaryDirectory() as td, mock.patch.dict(
+            os.environ,
+            {
+                "SISPER_SECRETS_FILE": str(Path(td) / "missing-secrets.json"),
+                "SISPER_ADMIN_PIN": "",
+                "SISPER_DEV_PIN": "",
+                "CREDENTIALS_DIRECTORY": "",
+            },
+            clear=False,
+        ):
+            pins._FALLOS.clear()
+            self.assertFalse(pins.verify("admin", "sisper2026"))
+            self.assertEqual("sin configurar", pins.estado()["admin"])
+
+
 class EnvironmentRollbackRefTest(unittest.TestCase):
     @staticmethod
     def git(repo: Path, *args: str) -> str:
@@ -92,7 +114,6 @@ class EnvironmentRollbackRefTest(unittest.TestCase):
                 "api", repo, "main", main_commit, "test", True, False, target_before
             )
 
-            # Simulate a transaction that checked out and advanced the target.
             self.git(repo, "checkout", "test")
             (repo / "file.txt").write_text("test-after\n", encoding="utf-8")
             self.git(repo, "commit", "-am", "test after")
@@ -122,6 +143,21 @@ class EnvironmentRollbackRefTest(unittest.TestCase):
                 capture_output=True,
             )
             self.assertNotEqual(0, result.returncode)
+
+
+class ContainerCancellationRegressionTest(unittest.TestCase):
+    def test_cancel_does_not_wait_for_stdout_newline(self):
+        with tempfile.TemporaryDirectory() as td:
+            engine = ContainerEngine(sys.executable)
+            cancelled = threading.Event()
+            cancelled.set()
+            result = engine._stream(
+                ["-c", "import time; time.sleep(30)"],
+                cwd=Path(td),
+                cancel_event=cancelled,
+            )
+            self.assertTrue(result.cancelled)
+            self.assertFalse(result.ok)
 
 
 if __name__ == "__main__":
