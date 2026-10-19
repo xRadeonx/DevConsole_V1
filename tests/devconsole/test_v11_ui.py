@@ -63,8 +63,12 @@ class V11UiTests(unittest.TestCase):
             "gridjs.umd.js": 10_000,
             "gridjs-mermaid.min.css": 1000,
             "codemirror.bundle.js": 100_000,
+            "webawesome.bundle.js": 25_000,
+            "webawesome.css": 25_000,
+            "xterm-web-links.bundle.js": 2000,
+            "xterm-webgl.bundle.js": 25_000,
             "THIRD_PARTY_LICENSES.txt": 500,
-            "VERSIONS.txt": 50,
+            "VERSIONS.txt": 100,
         }
         for filename, min_size in required.items():
             path = vendor / filename
@@ -75,6 +79,30 @@ class V11UiTests(unittest.TestCase):
         self.assertIn("split.js=1.6.5", versions)
         self.assertIn("gridjs=6.2.0", versions)
         self.assertIn("codemirror=6.0.2", versions)
+        self.assertIn("@awesome.me/webawesome=3.14.0", versions)
+        self.assertIn("xterm-addon-web-links=0.5.1", versions)
+        self.assertIn("xterm-addon-webgl=0.11.4", versions)
+
+    def test_terminal_links_are_protocol_limited_and_webgl_has_canvas_fallback(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        source = (repo_root / "static" / "js" / "v11" / "features" / "terminal-addons.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('url.protocol !== "http:"', source)
+        self.assertIn('url.protocol !== "https:"', source)
+        self.assertIn('dataset.dcXtermRenderer = "canvas"', source)
+        self.assertIn("xterm-web-links.bundle.js", source)
+        self.assertIn("xterm-webgl.bundle.js", source)
+
+    def test_webawesome_is_applied_in_place_not_as_parallel_workspace(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        source = (repo_root / "static" / "js" / "v11" / "features" / "webawesome-ui.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('document.createElement("wa-badge")', source)
+        self.assertIn('document.createElement("wa-tooltip")', source)
+        self.assertIn('document.getElementById("mapEnvSelect")', source)
+        self.assertNotIn("dockview", source.lower())
 
 
 if __name__ == "__main__":
