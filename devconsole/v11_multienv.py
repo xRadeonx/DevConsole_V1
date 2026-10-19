@@ -120,7 +120,9 @@ def _wrap_env_function(
     capability: str,
     validator: Callable[[str], bool],
 ) -> Callable[..., Any]:
-    if getattr(original, "_v11_strict_environment", False):
+    # Some test doubles (notably unittest.mock.Mock) synthesize arbitrary
+    # attributes on access; only the literal boolean marker means "wrapped".
+    if getattr(original, "_v11_strict_environment", False) is True:
         return original
 
     @functools.wraps(original)
@@ -209,7 +211,7 @@ def install_handler(handler_cls, handlers_module) -> None:
         return
 
     original = handler_cls._do_GET
-    if getattr(original, "_v11_multienv", False):
+    if getattr(original, "_v11_multienv", False) is True:
         _INSTALLED_HANDLER = True
         return
 
