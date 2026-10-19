@@ -24,6 +24,7 @@ class RepoState:
     target_branch: str
     target_local: bool
     target_remote: bool
+    target_commit_before: str | None = None
 
 
 def _git(repo: Path, *args: str, timeout: int = 10) -> subprocess.CompletedProcess:
@@ -37,6 +38,14 @@ def _git(repo: Path, *args: str, timeout: int = 10) -> subprocess.CompletedProce
 
 def _output(result: subprocess.CompletedProcess) -> str:
     return (result.stderr or result.stdout or "").strip()
+
+
+def _ref_commit(repo: Path, ref: str) -> str | None:
+    result = _git(repo, "rev-parse", "--verify", ref, timeout=5)
+    if result.returncode != 0:
+        return None
+    value = result.stdout.strip()
+    return value or None
 
 
 def _repo_state(name: str, repo: Path, target_branch: str, *, force_pull: bool) -> tuple[RepoState | None, dict]:
@@ -77,12 +86,15 @@ def _repo_state(name: str, repo: Path, target_branch: str, *, force_pull: bool) 
         return None, {"name": name, "status": "error", "message": "No se pudo resolver HEAD"}
     commit = commit_result.stdout.strip()
 
-    local = _git(repo, "show-ref", "--verify", "--quiet", f"refs/heads/{target_branch}").returncode == 0
-    remote = _git(repo, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{target_branch}").returncode == 0
+    local_ref = f"refs/heads/{target_branch}"
+    remote_ref = f"refs/remotes/origin/{target_branch}"
+    local = _git(repo, "show-ref", "--verify", "--quiet", local_ref).returncode == 0
+    remote = _git(repo, "show-ref", "--verify", "--quiet", remote_ref).returncode == 0
+    target_commit_before = _ref_commit(repo, local_ref) if local else None
     if not local and not remote and force_pull:
         fetch = _git(repo, "fetch", "origin", target_branch, timeout=30)
         if fetch.returncode == 0:
-            remote = _git(repo, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{target_branch}").returncode == 0
+            remote = _git(repo, "show-ref", "--verify", "--quiet", remote_ref).returncode == 0
     if not local and not remote:
         return None, {
             "name": name,
@@ -90,7 +102,16 @@ def _repo_state(name: str, repo: Path, target_branch: str, *, force_pull: bool) 
             "message": f"Rama '{target_branch}' no existe localmente ni en origin.",
         }
 
-    return RepoState(name, repo, branch, commit, target_branch, local, remote), {
+    return RepoState(
+        name,
+        repo,
+        branch,
+        commit,
+        target_branch,
+        local,
+        remote,
+        target_commit_before,
+    ), {
         "name": name,
         "status": "ready",
         "message": f"Listo para '{target_branch}'",
@@ -111,14 +132,49 @@ def _checkout(state: RepoState) -> subprocess.CompletedProcess:
     )
 
 
+def _restore_target_ref(state: RepoState) -> tuple[bool, str]:
+    """Restore/delete the target local branch created or moved by the transaction."""
+    # If the target was the original checked-out branch, restoring HEAD below
+    # already restores the same ref to ``state.commit``.
+    if state.target_branch == state.branch:
+        return True, "Target coincide con rama original"
+
+    if state.target_local:
+        if not state.target_commit_before:
+            return False, "No se registró el commit original de la rama destino"
+        result = _git(
+            state.path,
+            "branch",
+            "-f",
+            state.target_branch,
+            state.target_commit_before,
+            timeout=15,
+        )
+        return (result.returncode == 0, "Rama destino restaurada" if result.returncode == 0 else _output(result))
+
+    # The transaction created this local tracking branch. Once the original
+    # branch/commit is active again, remove the branch so rollback leaves no
+    # local ref that did not exist before the operation.
+    exists = _git(
+        state.path,
+        "show-ref",
+        "--verify",
+        "--quiet",
+        f"refs/heads/{state.target_branch}",
+        timeout=5,
+    ).returncode == 0
+    if not exists:
+        return True, "Rama destino temporal ya no existe"
+    result = _git(state.path, "branch", "-D", state.target_branch, timeout=15)
+    return (result.returncode == 0, "Rama destino temporal eliminada" if result.returncode == 0 else _output(result))
+
+
 def _rollback(state: RepoState) -> tuple[bool, str]:
     try:
         if state.branch != "HEAD":
             result = _git(state.path, "checkout", state.branch, timeout=15)
             if result.returncode != 0:
                 return False, _output(result)
-            # A force_pull may have fast-forwarded the original branch. Restore
-            # its exact starting commit; preflight guaranteed a clean workspace.
             if _git(state.path, "rev-parse", "HEAD").stdout.strip() != state.commit:
                 reset = _git(state.path, "reset", "--hard", state.commit, timeout=15)
                 if reset.returncode != 0:
@@ -127,7 +183,11 @@ def _rollback(state: RepoState) -> tuple[bool, str]:
             result = _git(state.path, "checkout", "--detach", state.commit, timeout=15)
             if result.returncode != 0:
                 return False, _output(result)
-        return True, "Restaurado"
+
+        ref_ok, ref_message = _restore_target_ref(state)
+        if not ref_ok:
+            return False, ref_message
+        return True, "Restaurado (HEAD y refs locales)"
     except Exception as exc:
         return False, str(exc)
 
@@ -177,7 +237,7 @@ def switch_workspace_environment_transactional(
             "transaction": "aborted",
             "preflight": preflight_results,
             "results": preflight_results,
-            "message": "Preflight falló; ningún repositorio fue modificado.",
+            "message": "Preflight falló; ningún checkout ni rama local fue modificado.",
         }
 
     changed: list[RepoState] = []
@@ -212,6 +272,7 @@ def switch_workspace_environment_transactional(
             "preflight": preflight_results,
             "results": results,
             "rollback": rollback,
+            "rollback_ok": all(item["success"] for item in rollback),
             "message": str(exc),
         }
 
