@@ -1,8 +1,8 @@
 """Additive UI bootstrap for the V1.1 migration.
 
-The legacy ``index.html`` and ``dashboard.js`` remain untouched.  This adapter
-serves the same page and injects a namespaced stylesheet plus one ES-module
-bootstrap.  If either V1.1 asset fails, the V1 dashboard still loads because all
+The legacy ``index.html`` and ``dashboard.js`` remain untouched. This adapter
+serves the same page and injects namespaced stylesheets plus one ES-module
+bootstrap. If any V1.1 asset fails, the V1 dashboard still loads because all
 existing script/style tags are preserved.
 """
 
@@ -27,21 +27,26 @@ def inject_assets(html: str, static_dir: Path) -> str:
     if 'data-devconsole-v11="ui-foundation"' in html:
         return html
 
-    css = static_dir / "css" / "v11-foundation.css"
+    foundation_css = static_dir / "css" / "v11-foundation.css"
+    libraries_css = static_dir / "css" / "v11-libraries.css"
     js = static_dir / "js" / "v11" / "app.js"
-    style_tag = (
+
+    style_tags = [
         '<link data-devconsole-v11="ui-foundation" rel="stylesheet" '
-        f'href="/static/css/v11-foundation.css?v={_asset_version(css)}">'
-    )
+        f'href="/static/css/v11-foundation.css?v={_asset_version(foundation_css)}">',
+        '<link data-devconsole-v11="ui-libraries" rel="stylesheet" '
+        f'href="/static/css/v11-libraries.css?v={_asset_version(libraries_css)}">',
+    ]
     script_tag = (
         '<script data-devconsole-v11="ui-foundation" type="module" '
         f'src="/static/js/v11/app.js?v={_asset_version(js)}"></script>'
     )
 
+    styles = "\n  ".join(style_tags)
     if "</head>" in html:
-        html = html.replace("</head>", f"  {style_tag}\n</head>", 1)
+        html = html.replace("</head>", f"  {styles}\n</head>", 1)
     else:
-        html = style_tag + "\n" + html
+        html = styles + "\n" + html
     if "</body>" in html:
         html = html.replace("</body>", f"  {script_tag}\n</body>", 1)
     else:
