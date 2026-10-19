@@ -59,7 +59,11 @@ jobs:
             tests/devconsole/test_frontend_identity.py \
             tests/devconsole/test_security_boundary.py \
             tests/devconsole/test_tilix_service.py \
-            tests/devconsole/test_v11_foundations.py
+            tests/devconsole/test_v11_foundations.py \
+            tests/devconsole/test_v11_env_profiles.py
+
+      - name: Read-only V1.1 acceptance
+        run: python -m devconsole.acceptance --json
 
       - name: Validate V1.1 ES modules syntax
         run: |
