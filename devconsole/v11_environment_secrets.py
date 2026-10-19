@@ -24,8 +24,25 @@ def _secret_keys() -> list[str]:
     return keys
 
 
+def _has_keycloak_target(entry: Any) -> bool:
+    """A secret may enrich an endpoint, but must never create one by itself."""
+    return isinstance(entry, dict) and bool(entry.get("url"))
+
+
+def _has_database_target(entry: Any, logical: str) -> bool:
+    """Require a concrete DB target before attaching its local password."""
+    if not isinstance(entry, dict) or not entry.get("host"):
+        return False
+    return bool(entry.get(f"{logical}_db") or entry.get(f"{logical}_user"))
+
+
 def apply_secret_overlay() -> bool:
-    """Merge only values the operator explicitly saved in secrets.json."""
+    """Merge only values the operator explicitly saved in secrets.json.
+
+    Credentials augment catalog entries that already identify a real endpoint.
+    Empty placeholder dictionaries are intentionally ignored; otherwise a lone
+    secret could make TEST/MAIN appear configured even when no target exists.
+    """
     from devconsole import config, settings
 
     changed = False
@@ -49,7 +66,7 @@ def apply_secret_overlay() -> bool:
     for kc_map, db_map in maps:
         for env in _ENVIRONMENTS:
             kc_entry = kc_map.get(env)
-            if isinstance(kc_entry, dict) and not kc_entry.get("client_secret"):
+            if _has_keycloak_target(kc_entry) and not kc_entry.get("client_secret"):
                 value = settings.secret(f"keycloak.{env}.client_secret")
                 if value:
                     kc_entry["client_secret"] = value
@@ -59,6 +76,8 @@ def apply_secret_overlay() -> bool:
             if not isinstance(db_entry, dict):
                 continue
             for logical in _DB_LOGICAL:
+                if not _has_database_target(db_entry, logical):
+                    continue
                 field = f"{logical}_pass"
                 if db_entry.get(field):
                     continue
