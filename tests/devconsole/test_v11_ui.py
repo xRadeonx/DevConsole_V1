@@ -55,6 +55,27 @@ class V11UiTests(unittest.TestCase):
         self.assertIsNone(html)
         self.assertEqual({}, versions)
 
+    def test_self_hosted_ui_bundles_are_committed_and_nonempty(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        vendor = repo_root / "static" / "vendor" / "v11"
+        required = {
+            "split.min.js": 1024,
+            "gridjs.umd.js": 10_000,
+            "gridjs-mermaid.min.css": 1000,
+            "codemirror.bundle.js": 100_000,
+            "THIRD_PARTY_LICENSES.txt": 500,
+            "VERSIONS.txt": 50,
+        }
+        for filename, min_size in required.items():
+            path = vendor / filename
+            self.assertTrue(path.is_file(), f"Falta bundle self-hosted: {filename}")
+            self.assertGreater(path.stat().st_size, min_size, f"Bundle incompleto: {filename}")
+
+        versions = (vendor / "VERSIONS.txt").read_text(encoding="utf-8")
+        self.assertIn("split.js=1.6.5", versions)
+        self.assertIn("gridjs=6.2.0", versions)
+        self.assertIn("codemirror=6.0.2", versions)
+
 
 if __name__ == "__main__":
     unittest.main()
