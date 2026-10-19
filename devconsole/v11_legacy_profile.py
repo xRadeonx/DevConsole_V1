@@ -1,13 +1,15 @@
-"""Local compatibility importer for an existing SISPER DevConsole workspace.
+"""Local compatibility importer for an existing SISPER DevConsole installation.
 
-The clean V1 repository intentionally removed installation-specific endpoints and
-credentials from version control.  Existing SISPER workstations, however, can
-already have the historical DevConsole checkout as the selected workspace.  It
-contains the operator's DEVELOP / TEST / MAIN catalog.
+V1.1 deliberately keeps installation-specific endpoints and credentials out of
+version control.  Existing SISPER workstations can still have the historical
+DevConsole checkout locally; that checkout contains the DEVELOP / TEST / MAIN
+catalog used by the original dashboard.
 
-This module recovers that *local* catalog in memory without importing or
-executing the legacy Python file and without copying credentials into this
-repository.  Explicit V1.1 ``panel.json`` configuration always wins.
+The selected *project workspace* is not necessarily the DevConsole source tree.
+For that reason this module searches a small, deterministic set of local sibling
+locations for the historical checkout instead of assuming ``BASE_DIR`` points to
+it.  The legacy Python/JavaScript is parsed as data only: it is never imported or
+executed, credentials stay in memory, and explicit V1.1 panel/secrets values win.
 """
 
 from __future__ import annotations
@@ -15,18 +17,91 @@ from __future__ import annotations
 import ast
 import base64
 import json
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
 _INSTALLED = False
+_LEGACY_DIR_ENV = "SISPER_LEGACY_DEVCONSOLE_DIR"
+_DASHBOARD_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _workspace_root() -> Path:
     from devconsole import config
 
     return Path(config.BASE_DIR)
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    seen: set[str] = set()
+    for candidate in paths:
+        try:
+            key = str(candidate.expanduser().resolve())
+        except OSError:
+            key = str(candidate.expanduser())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(Path(key))
+    return out
+
+
+def _candidate_roots(root: Path | None = None) -> list[Path]:
+    """Return local roots that may contain the historical DevConsole checkout.
+
+    An explicit ``root`` is authoritative and is never broadened.  Automatic
+    discovery is intentionally shallow: workspace/current repo, a configured
+    override, sibling directories and the conventional Downloads/Descargas
+    locations.  No recursive home-directory crawl is performed.
+    """
+    if root is not None:
+        return _dedupe_paths([Path(root)])
+
+    workspace = _workspace_root()
+    home = Path.home()
+    candidates: list[Path] = []
+
+    override = os.environ.get(_LEGACY_DIR_ENV, "").strip()
+    if override:
+        candidates.append(Path(override))
+
+    candidates.extend([workspace, _DASHBOARD_ROOT])
+
+    bases = _dedupe_paths(
+        [
+            _DASHBOARD_ROOT.parent,
+            workspace.parent,
+            home,
+            home / "Descargas",
+            home / "Downloads",
+        ]
+    )
+    conventional_names = (
+        "devconsole",
+        "DevConsole",
+        "DEVCONSOLE",
+        "devconsole-v1",
+        "DevConsole_V1_old",
+        "DevConsole-old",
+    )
+    for base in bases:
+        for name in conventional_names:
+            candidates.append(base / name)
+
+        # Also inspect only immediate children.  This catches a checkout with a
+        # custom folder name without turning startup into a filesystem crawl.
+        try:
+            children = list(base.iterdir())[:96] if base.is_dir() else []
+        except OSError:
+            children = []
+        for child in children:
+            if child.is_dir() and (child / "devconsole" / "config.py").is_file():
+                candidates.append(child)
+
+    return _dedupe_paths(candidates)
 
 
 def _safe_eval(node: ast.AST) -> Any:
@@ -53,7 +128,6 @@ def _safe_eval(node: ast.AST) -> Any:
             raise ValueError("unsupported unary value")
         return -value if isinstance(node.op, ast.USub) else value
 
-    # Exact historical shape: base64.b64decode("...").decode("utf-8")
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "decode":
         inner = node.func.value
         if (
@@ -73,9 +147,7 @@ def _safe_eval(node: ast.AST) -> Any:
     raise ValueError(f"unsupported legacy expression: {type(node).__name__}")
 
 
-def _read_legacy_python_catalog(root: Path | None = None) -> dict[str, dict[str, Any]]:
-    """Extract selected top-level dictionaries from legacy ``config.py`` safely."""
-    root = Path(root) if root is not None else _workspace_root()
+def _read_python_catalog_at(root: Path) -> dict[str, dict[str, Any]]:
     path = root / "devconsole" / "config.py"
     if not path.is_file():
         return {}
@@ -100,6 +172,15 @@ def _read_legacy_python_catalog(root: Path | None = None) -> dict[str, dict[str,
                 if isinstance(value, dict):
                     out[target.id] = value
     return out
+
+
+def _read_legacy_python_catalog(root: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Extract the first usable historical environment catalog safely."""
+    for candidate in _candidate_roots(root):
+        catalog = _read_python_catalog_at(candidate)
+        if catalog:
+            return catalog
+    return {}
 
 
 def _balanced_block(text: str, start: int, open_char: str, close_char: str) -> str | None:
@@ -160,13 +241,7 @@ def _parse_js_entries(block: str) -> list[dict[str, Any]]:
     return entries
 
 
-def _read_legacy_infra_targets(root: Path | None = None) -> dict[str, list[dict[str, Any]]]:
-    """Extract the historical infrastructure matrix from local dashboard.js.
-
-    The parser understands only the simple literal object used by V1.  It does
-    not evaluate JavaScript.
-    """
-    root = Path(root) if root is not None else _workspace_root()
+def _read_infra_targets_at(root: Path) -> dict[str, list[dict[str, Any]]]:
     path = root / "static" / "js" / "dashboard.js"
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -202,6 +277,23 @@ def _read_legacy_infra_targets(root: Path | None = None) -> dict[str, list[dict[
     return result
 
 
+def _read_legacy_infra_targets(root: Path | None = None) -> dict[str, list[dict[str, Any]]]:
+    """Extract the first usable historical infrastructure matrix safely."""
+    for candidate in _candidate_roots(root):
+        targets = _read_infra_targets_at(candidate)
+        if targets:
+            return targets
+    return {}
+
+
+def _detected_source_root() -> Path | None:
+    """Return the local legacy source used for diagnostics, never its secrets."""
+    for candidate in _candidate_roots():
+        if _read_python_catalog_at(candidate) or _read_infra_targets_at(candidate):
+            return candidate
+    return None
+
+
 def _merge_missing(target: dict[str, Any], source: dict[str, Any]) -> None:
     for key, value in source.items():
         if key not in target or target.get(key) in (None, "", 0):
@@ -211,8 +303,8 @@ def _merge_missing(target: dict[str, Any], source: dict[str, Any]) -> None:
 def hydrate_environment_catalog(root: Path | None = None) -> bool:
     """Merge legacy TEST/MAIN/DEVELOP config into current in-memory maps.
 
-    Explicit V1.1 configuration wins field-by-field.  The legacy values are
-    never persisted and never printed.
+    Explicit V1.1 configuration wins field-by-field.  Legacy values are never
+    persisted or printed.
     """
     from devconsole import config
 
@@ -278,6 +370,9 @@ def _install_base_dir_refresh() -> None:
         except Exception:
             ok = False
         if ok:
+            # The new BASE_DIR is the project workspace.  Re-run automatic
+            # sibling discovery as the legacy DevConsole checkout may live next
+            # to it rather than inside it.
             hydrate_environment_catalog()
         return result
 
@@ -298,9 +393,13 @@ def install() -> None:
 def status() -> dict[str, Any]:
     targets = _read_legacy_infra_targets()
     catalog = _read_legacy_python_catalog()
+    source = _detected_source_root()
     return {
         "installed": _INSTALLED,
         "legacy_profile_available": bool(targets or catalog),
+        "source": "legacy-local" if source else "none",
+        # Basename only: diagnostics do not expose a user's home/workspace path.
+        "source_name": source.name if source else "",
         "environments": sorted(
             {
                 "main" if key == "prod" else key
