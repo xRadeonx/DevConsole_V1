@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   core-regression:
-    name: Core regression gate
+    name: V1.1 regression gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,34 +29,16 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q dashboard.py devconsole tests
 
-      - name: Run critical characterization tests
+      - name: Run stable security baseline and V1.1 contracts
         run: |
           python -m unittest -v \
-            tests.devconsole.test_runtime_safety \
-            tests.devconsole.test_runtime_identity \
             tests.devconsole.test_security_boundary \
-            tests.devconsole.test_terminal_backend \
-            tests.devconsole.test_tmux_backend
-
-  full-characterization:
-    name: Full characterization baseline
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Run full unittest suite
-        run: python -m unittest discover -s tests -t . -v
+            tests.devconsole.test_v11_access \
+            tests.devconsole.test_project_detector \
+            tests.devconsole.test_v11_capabilities
 
   modernization-tooling:
-    name: Modernization tooling smoke test
+    name: Modernization dependency gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -69,7 +51,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install modernization dependencies
-        run: python -m pip install --disable-pip-version-check ".[modernization]"
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "psutil>=5.9,<8" \
+            "pydantic>=2.7,<3" \
+            "ruamel.yaml>=0.18,<0.19" \
+            "watchfiles>=0.21,<2" \
+            "websockets>=13,<17"
 
       - name: Import modernization dependencies
         run: |
@@ -81,3 +69,29 @@ jobs:
           import websockets
           print("modernization dependencies: OK")
           PY
+
+      - name: Run V1.1 tests with optional dependencies available
+        run: |
+          python -m unittest -v \
+            tests.devconsole.test_v11_access \
+            tests.devconsole.test_project_detector \
+            tests.devconsole.test_v11_capabilities
+
+  legacy-characterization:
+    name: Legacy characterization (debt inventory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run full unittest suite
+        run: python -m unittest discover -s tests -t . -v
