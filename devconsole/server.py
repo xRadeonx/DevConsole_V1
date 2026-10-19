@@ -2,14 +2,28 @@ import http
 # devconsole/server.py
 import http.server
 import ipaddress
+import os
 import socket
 import sys
 import threading
 import time
 
+# V1.1: the real server enables local-trust enforcement by default.  Unit tests
+# and embedded callers that instantiate handlers directly keep full control of
+# the environment, and an operator can explicitly set 0 for emergency rollback.
+os.environ.setdefault("SISPER_LOCAL_TOKEN_REQUIRED", "1")
+
 from devconsole import local_trust
 from devconsole.config import HOST, HOST_IS_LOOPBACK, PORT, BASE_DIR
-from devconsole.api.handlers import DevConsoleHandler
+
+# One-line rollback seam: all existing V1 routes remain implemented by the
+# legacy handler and the V1.1 facade subclasses it.  Setting
+# SISPER_V11_HANDLER=0 restores the original HTTP surface without a code revert.
+if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0":
+    from devconsole.api.handlers import DevConsoleHandler
+else:
+    from devconsole.api.v11_handler import DevConsoleHandler
+
 from devconsole.services.env_service import env_file_watcher_loop
 
 
@@ -24,7 +38,7 @@ def _make_server_class(host: str):
     try:
         version = ipaddress.ip_address(bare).version
     except ValueError:
-        version = 4  # a host name such as "localhost"
+        version = 4
 
     class _Server(http.server.ThreadingHTTPServer):
         daemon_threads = True
@@ -37,6 +51,10 @@ def _make_server_class(host: str):
 def _log_bind_notice() -> None:
     print(f"[*] SISPER DevConsole activo en: http://{HOST}:{PORT}")
     print(f"[*] Directorio raíz: {BASE_DIR}")
+    print(
+        "[*] HTTP handler: "
+        + ("V1 legacy (rollback)" if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0" else "V1.1 compatibility facade")
+    )
     if HOST_IS_LOOPBACK:
         print("[*] Modo de escucha: LOOPBACK (solo esta máquina).")
     else:
@@ -47,8 +65,8 @@ def _log_bind_notice() -> None:
 
 
 def _publish_local_token_if_required() -> None:
-    """Publish the ephemeral local-trust token before serving, when enabled."""
     if not local_trust.token_required():
+        print("[!] Confianza local deshabilitada explícitamente (SISPER_LOCAL_TOKEN_REQUIRED=0).")
         return
     path = local_trust.publish_token()
     local_trust.register_cleanup()
@@ -56,51 +74,28 @@ def _publish_local_token_if_required() -> None:
         print("[!] SISPER_LOCAL_TOKEN_REQUIRED=1 pero no se pudo publicar el token "
               "de confianza local; las peticiones mutadoras serán rechazadas.")
     else:
-        # The path is safe to log; the token value never is.
         print(f"[*] Token de confianza local publicado en: {path} (modo 0600)")
 
 
-#: Cada cuánto se refrescan en segundo plano los sondeos cacheados.  Debe ser
-#: menor que el TTL más corto de las funciones envueltas, para que una petición
-#: de la interfaz casi nunca encuentre la caché vencida.
 PROBE_REFRESH_SECONDS = 8.0
 
 
 def _start_probe_refresher() -> None:
-    """Mantiene tibia, en un hilo demonio, la caché de sondeos de ``/api/status``.
-
-    ``/api/status`` agrega git, infraestructura y estado por entorno; en frío
-    eso cuesta del orden de un segundo, y con sólo un TTL ese coste recaería
-    periódicamente sobre la petición de algún usuario.  Refrescarlo en segundo
-    plano mueve ese trabajo fuera del camino de la petición: la interfaz lee
-    siempre de caché tibia.
-    """
+    """Mantiene tibia, en un hilo demonio, la caché de sondeos de ``/api/status``."""
 
     def _run() -> None:
-        from devconsole.config import (
-            SERVICES_BACKEND,
-            SERVICES_FRONTEND,
-            get_service_repo_dir,
-        )
+        from devconsole.config import SERVICES_BACKEND, SERVICES_FRONTEND, get_service_repo_dir
         from devconsole.services.git_service import get_git_info
         from devconsole.services.infra_service import get_infra_info
         from devconsole.services.env_service import get_all_environments_status
 
         while True:
             try:
-                # Se republica con refresh() antes de que expire la ventana, de
-                # modo que ninguna petición de la interfaz encuentre la caché
-                # vencida.  get_all_environments_status() recorre los servicios
-                # y de paso refresca get_git_info() para cada repositorio.
                 get_all_environments_status.refresh()
                 get_infra_info.refresh()
-                # /api/status consulta get_git_info() directamente por servicio,
-                # además de a través del estado de entornos.  Sin republicarlo
-                # aquí, sus entradas expiran entre dos pasadas del refrescador y
-                # la petición acaba pagando el recálculo completo.
                 for s in SERVICES_BACKEND + SERVICES_FRONTEND:
                     get_git_info.refresh(get_service_repo_dir(s["name"]))
-            except Exception as exc:  # defensivo: nunca debe tumbar el daemon
+            except Exception as exc:
                 print(f"[!] Refresco de sondeos omitido: {exc}")
             time.sleep(PROBE_REFRESH_SECONDS)
 
@@ -109,9 +104,14 @@ def _start_probe_refresher() -> None:
 
 def main():
     _log_bind_notice()
+    try:
+        from devconsole.startup import print_startup_diagnostics
+        print_startup_diagnostics(BASE_DIR)
+    except Exception as exc:
+        # Diagnostics are never allowed to prevent the compatible V1 runtime.
+        print(f"[!] Diagnóstico V1.1 omitido: {exc}")
     _publish_local_token_if_required()
 
-    # Iniciar monitor de archivos .env en segundo plano
     t_env_watcher = threading.Thread(target=env_file_watcher_loop, daemon=True)
     t_env_watcher.start()
 
