@@ -2,161 +2,99 @@
 
 ## Misión
 
-Evolucionar DevConsole V1 sin perder ninguna capacidad funcional existente. La versión V1.1 mantiene el enfoque actual —Python local + HTML/CSS/JavaScript + herramientas nativas del sistema— y sustituye progresivamente implementaciones artesanales por componentes maduros cuando exista una ganancia demostrable en seguridad, rendimiento, mantenibilidad o UX.
+Evolucionar DevConsole V1 sin perder capacidades funcionales existentes. V1.1 mantiene el enfoque **Python local + HTML/CSS/JavaScript + herramientas nativas del sistema** y moderniza por capas, con compatibilidad y rollback explícitos.
 
-La versión es específica para el ecosistema SISPER/PROTEO. No se busca eliminar conocimiento del dominio cuando éste aporta valor; sí se busca separar ese conocimiento de los mecanismos genéricos (procesos, terminales, Git, YAML, configuración, UI) para que el código sea mantenible.
+El producto conserva conocimiento SISPER/PROTEO donde aporta valor, pero separa esos datos de mecanismos genéricos: procesos, terminales, Git, YAML, configuración, UI, build y Kubernetes.
 
-## Invariantes de compatibilidad
+## Invariantes
 
-1. Ninguna fase puede eliminar una capacidad disponible en `main`.
-2. Viewer/QA es el nivel de acceso por defecto.
-3. Developer y Administrator se desbloquean mediante credencial de producto/sesión; nunca deben concederse implícitamente.
-4. Tilix continúa disponible aunque tmux/xterm se conviertan en la experiencia preferida.
-5. Git CLI, kubectl y Podman/Docker siguen siendo las fuentes de verdad de sus respectivos dominios.
-6. Los formatos de configuración existentes se mantienen compatibles mientras se introduzcan modelos tipados.
-7. Las APIs existentes no cambian de contrato sin una capa de compatibilidad y tests de caracterización.
-8. Las mejoras de UI se introducen por zonas; no se reescribe todo el frontend de una vez.
+1. Ninguna fase puede quitar una capacidad V1 sin ruta equivalente/fallback.
+2. Viewer/QA es el acceso por defecto.
+3. Developer y Administrator requieren credencial/sesión real.
+4. Tilix continúa disponible; tmux puede ser owner de sesión y xterm visor integrado.
+5. Git CLI, kubectl y Podman/Docker siguen siendo fuentes de verdad.
+6. Los formatos de configuración V1 continúan aceptados.
+7. Una API V1 se conserva o se envuelve mediante compatibilidad; no se rompe silenciosamente.
+8. El frontend se modulariza por adición, no por reescritura masiva.
+9. Una dependencia nueva no puede convertir una instalación offline existente en inutilizable.
+10. `main` no se modifica hasta superar la aceptación final.
 
 ## Regla GO / NO-GO
 
-Una fase obtiene **GO** únicamente cuando:
+Una fase obtiene **GO** sólo si los tests nuevos aprueban, los gates V1 portables siguen aprobando, los caminos destructivos quedan igual o mejor protegidos y existe fallback cuando se sustituye una pieza crítica.
 
-- la suite de regresión anterior sigue aprobando;
-- los tests nuevos de la capacidad añadida aprueban;
-- no disminuye el número de capacidades expuestas al usuario;
-- los caminos destructivos conservan o elevan sus controles de autorización/ownership;
-- existe fallback cuando se sustituye una implementación crítica;
-- el cambio puede revertirse por commit/fase sin invalidar las fases anteriores.
+Es **NO-GO** si rompe contrato/API, fuerza Internet, obliga React/Electron/Node como runtime del panel, elimina Tilix, reduce controles de ownership/autorización o modifica silenciosamente el workspace activo.
 
-Una fase es **NO-GO** si ocurre cualquiera de estos casos:
+## Estado de implementación
 
-- se rompe un contrato API existente;
-- un servicio que antes podía ejecutarse deja de poder hacerlo;
-- se requiere Internet para usar DevConsole;
-- se fuerza React/Electron/Node como runtime del panel;
-- una dependencia nueva se vuelve obligatoria sin instalación/verificación explícita;
-- una operación destructiva queda menos protegida;
-- el nuevo UI oculta una capacidad sin ofrecer ruta equivalente.
+| Fase | Estado de implementación | Evidencia / decisión |
+|---|---|---|
+| 0. Baseline QA y trazabilidad | **GO** | GitHub Actions Python 3.11/3.12, `compileall`, Ruff crítico, shell syntax, suite portable, suite heredada diagnóstica y PR Draft. |
+| 1. Runtime y procesos | **GO** | `psutil` detrás de `ProcessInspector`, fallback procfs, fixtures sintéticos preservados, tmux safe runner bloquea `fuser -k`. |
+| 2. Configuración tipada | **GO** | Pydantic `extra=allow`, validación de panel/servicios y diagnóstico; JSON V1 no se reescribe. |
+| 3. YAML/Kubernetes seguro | **GO** | `ruamel.yaml` round-trip, preview/diff, preflight contexto/namespace, apply confirmado y rollback; V1 `update_yaml_version` usa adapter con fallback. |
+| 4. ProjectDetector | **GO** | Detección genérica Django/DRF/Celery/Node/React/package managers/Docker/K8s sin exigir prefijos SISPER. |
+| 5. Terminal profesional | **GO** | xterm existente + Fit/Search/Clipboard, tmux preferido cuando existe, Tilix sigue como visor/fallback, wrapper seguro sin kill por puerto. |
+| 6. Frontend modular | **GO** | ES Modules paralelos a `dashboard.js`, features de proyectos/operaciones y Playwright real. Dependencias UI sin beneficio concreto quedaron en NO-GO explícito. |
+| 7. Roles de producto | **GO** | Viewer default, sesiones Developer/Admin reales, cookies HttpOnly/SameSite, PIN heredado implícito rechazado, matriz de roles backend + Playwright. |
+| 8. Build/Deploy resiliente | **GO** | build jobs persistibles/cancelables, Git worktree temporal, Podman/Docker, K8s preflight/diff/apply/rollback. |
 
-## Fases
+## Cambios de seguridad adicionales cerrados
 
-### Fase 0 — Baseline QA y trazabilidad
+- `SISPER_LOCAL_TOKEN_REQUIRED` se habilita por defecto al arrancar el servidor real; existe opt-out explícito para recuperación.
+- Telemetría identificable/actividad/espejo queda detrás de Administrator; la metadata ya no afirma falsamente que no expone PII.
+- Keycloak verifica TLS por defecto. CA interna configurable; TLS inseguro sólo con opt-in explícito de laboratorio.
+- Un `index.lock` de Git nunca se borra automáticamente.
+- Installer/uninstaller no matan procesos arbitrarios por ocupar un puerto.
+- `/api/environment/switch` es transaccional: preflight global y rollback si falla un repositorio.
+- `switch_env.sh` conserva su interfaz histórica, pero LOCAL/INTRANET ahora modifican **sólo `.env`** mediante perfiles declarativos. El parche de bitácora se conserva únicamente como acción explícita `bitacora-local/intranet`.
 
-- CI en GitHub Actions para Python 3.11/3.12.
-- Ejecutar suite de caracterización existente con historial Git completo.
-- `compileall` como gate de sintaxis.
-- Introducir configuración de Ruff y pytest sin cambiar runtime.
-- Mantener documentado el único golden dependiente de workspace físico hasta convertirlo a fixture portable.
+## Decisiones NO-GO deliberadas
 
-**GO:** CI verde sobre el código V1 antes de refactors funcionales.
+No todo candidato debía instalarse. V1.1 rechazó componentes cuando aumentaban complejidad sin una capacidad concreta:
 
-### Fase 1 — Runtime y procesos
+- **React / Electron:** NO-GO; implicarían una reescritura innecesaria.
+- **Web Awesome:** NO-GO en V1.1; segundo sistema de componentes sin beneficio proporcional.
+- **Grid.js:** NO-GO en V1.1; las tablas actuales no justifican otra dependencia.
+- **Split.js:** NO-GO; solapa layout/Dockview existente.
+- **CodeMirror 6:** NO-GO mientras el editor siga siendo texto simple.
+- **WebGL addon:** NO-GO hasta disponer de artefacto autoalojado/versionado; renderer actual queda como fallback.
+- **watchfiles / websockets:** NO-GO como dependencias obligatorias; el watcher actual y SSE cubren los casos actuales. WebSocket se incorporará sólo si una terminal bidireccional real lo requiere.
 
-- Integrar `psutil` detrás de `ProcessInspector`/`ProcessIdentity`, nunca directamente desde handlers.
-- Mantener implementación actual como fallback durante la transición.
-- Reemplazar progresivamente `pkill`, `fuser` y parsing `/proc` en operaciones administradas.
-- Mover sentinels temporales al runtime directory de usuario.
+La evaluación detallada está en `docs/V1_1_FRONTEND_EVALUATION.md`.
 
-**GO:** mismo o mejor reconocimiento de procesos y cero reducción de protecciones de ownership.
+## Estrategia de compatibilidad y recuperación
 
-### Fase 2 — Configuración tipada
+- `SISPER_V11_HANDLER=0` vuelve al handler HTTP V1 sin revertir commits.
+- Dependencias Python V1.1 tienen fallback para mantener el arranque offline.
+- El adapter YAML cae a la implementación V1 si `ruamel.yaml` no está disponible.
+- tmux es preferido sólo cuando está instalado; Tilix sigue disponible y puede seleccionarse explícitamente.
+- Los builds V1.1 se hacen en worktree temporal: la rama activa y cambios locales del desarrollador no se mueven.
+- Jobs que estaban ejecutándose al caer DevConsole se recuperan como `interrupted`, no como éxito ficticio.
 
-- Introducir Pydantic para validar `panel`, servicios y configuración de runtime.
-- Los JSON existentes siguen siendo aceptados.
-- Los errores se convierten en diagnósticos accionables y no en fallos tardíos.
+## QA y aceptación
 
-**GO:** fixtures actuales producen la misma configuración efectiva.
+El gate bloqueante incluye:
 
-### Fase 3 — YAML/Kubernetes seguro
+- Python 3.11 y 3.12;
+- `compileall`;
+- Ruff de errores semánticos críticos;
+- regresión V1 portable + tests V1.1;
+- validación de shell;
+- sintaxis de módulos ES;
+- Playwright con navegador real: carga V1 + V1.1, Viewer, Developer, logout y Administrator;
+- `python -m devconsole.acceptance --json` en modo read-only.
 
-- Introducir `ruamel.yaml` para round-trip de manifiestos.
-- Eliminar regex de mutación YAML cuando exista parser estructurado.
-- Añadir preview/diff antes de cambios de imagen/deploy.
+La suite heredada completa sigue ejecutándose como **diagnóstico no bloqueante** porque contiene pruebas no herméticas ligadas al workspace SISPER físico, layouts Tilix no versionados y fixtures tmux dependientes del host. No se reintroducen hardcodes ni archivos externos ficticios sólo para volverla verde.
 
-**GO:** modificar un campo no altera comentarios/estructura no relacionada del manifiesto.
+## Gate final de merge
 
-### Fase 4 — Detección de capacidades de proyecto
+La implementación de fases 0–8 puede obtener GO en CI, pero la PR permanece Draft hasta ejecutar en el workstation real:
 
-Crear `ProjectDetector` con detectores independientes para Django, DRF, Celery, React, Node, package managers, Docker y Kubernetes.
-
-Salida objetivo:
-
-```json
-{
-  "name": "ms_contratos",
-  "kind": "backend",
-  "frameworks": ["django", "drf"],
-  "package_manager": "pipenv",
-  "capabilities": ["run", "test", "migrate", "shell", "worker", "git", "build", "deploy"]
-}
+```bash
+./scripts/v11_acceptance.sh
+# opcional, para exigir cero advertencias:
+./scripts/v11_acceptance.sh --strict
 ```
 
-Las heurísticas SISPER actuales permanecen como fallback.
-
-**GO:** todo servicio actualmente descubierto continúa apareciendo y obtiene al menos las capacidades actuales.
-
-### Fase 5 — Terminal profesional
-
-- Mantener xterm.js.
-- Incorporar addons Fit/Search/WebLinks/Clipboard y WebGL con fallback al renderer normal.
-- Mantener tmux como dueño de sesión y Tilix como visor/terminal externo.
-- Introducir WebSocket sólo donde la bidireccionalidad de terminal lo justifique; SSE continúa para streams unidireccionales.
-
-**GO:** abrir/cerrar/reconectar terminal no mata el proceso administrado y Tilix continúa operativo.
-
-### Fase 6 — Frontend modular
-
-- Mantener HTML/CSS/JavaScript.
-- Migrar `dashboard.js` progresivamente a ES Modules.
-- Introducir componentes Web Awesome de forma local/self-hosted en componentes de bajo riesgo primero.
-- Evaluar Grid.js para tablas, Split.js para paneles y CodeMirror 6 para editores.
-- Cada migración conserva markup/API anterior hasta superar pruebas visuales y E2E.
-
-**GO:** Playwright valida navegación, roles, acciones principales y ausencia de regresiones funcionales.
-
-### Fase 7 — Roles de producto
-
-- Viewer/QA: default, lectura.
-- Developer: desbloqueo mediante clave/credencial de producto; acciones de desarrollo.
-- Administrator: clave/credencial superior; infraestructura/despliegue/secretos.
-- Hashes/verificadores pueden distribuirse con el producto; nunca claves en claro.
-- Sesión autenticada y expiración explícita.
-
-**GO:** matriz de permisos completa en tests backend + Playwright.
-
-### Fase 8 — Build/Deploy resiliente
-
-- Jobs persistibles/cancelables.
-- build en worktree temporal para no mover la rama activa del desarrollador.
-- abstracción de engine Podman/Docker.
-- Kubernetes: contexto/namespace visible, diff previo, confirmación reforzada para producción y estrategia de rollback.
-
-**GO:** build/deploy no modifica silenciosamente el workspace activo y conserva las capacidades actuales.
-
-## Dependencias candidatas
-
-Runtime, introducidas sólo en la fase correspondiente:
-
-- `psutil`
-- `pydantic`
-- `ruamel.yaml`
-- `watchfiles`
-- `websockets`
-
-Frontend self-hosted y versionado en el repositorio cuando se adopte:
-
-- Web Awesome
-- xterm.js + addons oficiales
-- Split.js
-- Grid.js
-- CodeMirror 6
-
-QA/desarrollo:
-
-- pytest
-- Ruff
-- Playwright
-
-## Política de implementación
-
-Cada fase se entrega en commits pequeños. No se mezclan una reestructuración masiva de frontend y cambios de runtime en el mismo commit. Antes de avanzar de fase se inspecciona CI y se documenta GO/NO-GO. `main` no se modifica durante la evolución; la integración se realizará mediante PR una vez cumplidos los gates.
+Ese comando es sólo lectura. Después se realiza smoke operacional sobre el workspace real: lanzar/detener/reconectar servicios, visor Tilix, build local en worktree y `kubectl diff` en un namespace no productivo. **No se hace merge automático a `main` sin esa evidencia de host**, porque GitHub Actions no puede demostrar la disponibilidad ni el comportamiento de la infraestructura local del operador.
