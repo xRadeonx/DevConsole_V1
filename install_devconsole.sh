@@ -150,4 +150,4 @@ echo "  Nivel predeterminado: Viewer/QA (sin clave, sólo lectura)."
 echo "  Developer: requiere clave de producto Developer."
 echo "  Admin: requiere clave de producto Admin."
 echo "  El instalador no solicita ni fabrica claves nuevas."
-echo "================================================================="n
+echo "================================================================="
