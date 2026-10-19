@@ -49,6 +49,7 @@ from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_local_env_catalog import install as install_v11_local_env_catalog
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
+from devconsole.v11_telemetry_compat import install as install_v11_telemetry_compat
 from devconsole.v11_yaml_catalog import install as install_v11_yaml_catalog
 from devconsole.v11_yaml_promotion import install as install_v11_yaml_promotion
 
@@ -93,6 +94,10 @@ install_v11_environment_secrets()
 # PostgreSQL account or a PostgreSQL URL. Recover only the missing DB name from
 # those already-discovered values; never invent cross-environment configuration.
 install_v11_db_name_recovery()
+# Legacy map telemetry formats ``cfg["name"]`` directly. YAML-recovered TEST or
+# MAIN targets may be fully usable without that decorative field, so supply a
+# safe non-secret label while leaving endpoints and credentials untouched.
+install_v11_telemetry_compat()
 # A partial panel.json (for example DEVELOP only) must not hide TEST/MAIN rows
 # recovered from the local V1 catalog. Compose all non-secret infrastructure
 # sources per environment while keeping explicit local rows authoritative.
