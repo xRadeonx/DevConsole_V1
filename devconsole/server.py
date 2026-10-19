@@ -91,6 +91,16 @@ def main():
     # importing devconsole.server must not mutate the environment of tests or
     # embedding tools.  Explicit operator configuration always wins.
     os.environ.setdefault("SISPER_LOCAL_TOKEN_REQUIRED", "1")
+
+    # Never infer that a Git lock is stale and delete it.  Patch the historical
+    # handler call site after all compatibility modules are loaded; this applies
+    # to both V1.1 and the emergency V1 HTTP facade without removing a feature.
+    try:
+        from devconsole.services.git_safety import install_checkout_guard
+        install_checkout_guard()
+    except Exception as exc:
+        print(f"[!] No se pudo instalar el guard de Git: {exc}", file=sys.stderr)
+
     _log_bind_notice()
     try:
         from devconsole.startup import print_startup_diagnostics
