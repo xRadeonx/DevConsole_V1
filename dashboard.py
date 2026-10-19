@@ -41,6 +41,7 @@ from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
 from devconsole.v11_infra_catalog import install as install_v11_infra_catalog
+from devconsole.v11_k8s_secrets import install as install_v11_k8s_secrets
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
@@ -63,6 +64,11 @@ install_v11_legacy_profile()
 # explicit 0600 secrets store. This avoids asking the operator to duplicate
 # configuration that already exists in the selected project.
 install_v11_yaml_catalog()
+# Kubernetes Secret.data values are base64-encoded and workloads may reference
+# them through secretKeyRef/envFrom. Decode and resolve those references only in
+# memory before the explicit local secrets store is applied. This avoids treating
+# the base64 transport representation itself as the credential.
+install_v11_k8s_secrets()
 # Credentials are never committed. If the operator saved them in the existing
 # 0600 config/secrets.json store, overlay them on the recovered catalog in
 # memory so TEST/MAIN telemetry can use their own credentials.
