@@ -173,7 +173,8 @@ jobs:
             static/js/v11/features/multi-env.js \
             static/js/v11/features/read-feedback.js \
             static/js/v11/features/split-layouts.js \
-            static/js/v11/features/terminal-addons.js; do
+            static/js/v11/features/terminal-addons.js \
+            static/js/v11/features/webawesome-ui.js; do
             node --input-type=module --check < "$file"
           done
 
@@ -214,14 +215,28 @@ jobs:
           cp "$NODE/gridjs/dist/theme/mermaid.min.css" "$VENDOR/gridjs-mermaid.min.css"
 
           "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/codemirror-entry.js" \
-            --bundle \
-            --format=iife \
-            --global-name=DevConsoleCodeMirror \
-            --platform=browser \
-            --target=es2020 \
-            --minify \
-            --legal-comments=none \
+            --bundle --format=iife --global-name=DevConsoleCodeMirror \
+            --platform=browser --target=es2020 --minify --legal-comments=none \
             --outfile="$VENDOR/codemirror.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-web-links-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-web-links.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-webgl-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-webgl.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/webawesome-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2020 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/webawesome.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/webawesome-style-entry.css" \
+            --bundle --minify --legal-comments=none \
+            --outfile="$VENDOR/webawesome.css"
 
           {
             echo "DevConsole V1.1 self-hosted UI dependencies"
@@ -230,16 +245,27 @@ jobs:
             echo "split.js 1.6.5 — MIT — https://github.com/nathancahill/split"
             echo "Grid.js 6.2.0 — MIT — https://github.com/grid-js/gridjs"
             echo "CodeMirror 6 packages — MIT — https://github.com/codemirror"
+            echo "Web Awesome 3.14.0 — MIT — https://github.com/shoelace-style/webawesome"
+            echo "xterm-addon-web-links 0.5.1 — MIT — https://github.com/xtermjs/xterm.js"
+            echo "xterm-addon-webgl 0.11.4 — MIT — https://github.com/xtermjs/xterm.js"
             echo
-            echo "---- split.js license metadata ----"
-            node -e 'const p=require(process.argv[1]); console.log(`SPDX: ${p.license || "MIT"}`)' "$NODE/split.js/package.json"
-            echo "Upstream license: https://github.com/nathancahill/split/blob/master/LICENSE.txt"
-            echo
-            echo "---- Grid.js LICENSE ----"
-            cat "$NODE/gridjs/LICENSE"
-            echo
-            echo "---- CodeMirror state LICENSE ----"
-            cat "$NODE/@codemirror/state/LICENSE"
+            echo "---- package license metadata ----"
+            node - <<'NODE'
+          const path = require('path');
+          const root = process.argv[1];
+          const packages = [
+            'split.js',
+            'gridjs',
+            'codemirror',
+            '@awesome.me/webawesome',
+            'xterm-addon-web-links',
+            'xterm-addon-webgl'
+          ];
+          for (const name of packages) {
+            const p = require(path.join(root, name, 'package.json'));
+            console.log(`${name}: ${p.license || 'MIT'}`);
+          }
+          NODE
           } > "$VENDOR/THIRD_PARTY_LICENSES.txt"
 
           printf '%s\n' \
@@ -249,15 +275,26 @@ jobs:
             '@codemirror/lang-json=6.0.2' \
             '@codemirror/lang-yaml=6.1.2' \
             '@codemirror/theme-one-dark=6.1.2' \
+            '@awesome.me/webawesome=3.14.0' \
+            'xterm=4.18.0' \
+            'xterm-addon-web-links=0.5.1' \
+            'xterm-addon-webgl=0.11.4' \
             > "$VENDOR/VERSIONS.txt"
 
-          test -s "$VENDOR/split.min.js"
-          test -s "$VENDOR/gridjs.umd.js"
-          test -s "$VENDOR/gridjs-mermaid.min.css"
-          test -s "$VENDOR/codemirror.bundle.js"
-          grep -q 'split.js=1.6.5' "$VENDOR/VERSIONS.txt"
-          grep -q 'gridjs=6.2.0' "$VENDOR/VERSIONS.txt"
-          grep -q 'codemirror=6.0.2' "$VENDOR/VERSIONS.txt"
+          for file in \
+            split.min.js \
+            gridjs.umd.js \
+            gridjs-mermaid.min.css \
+            codemirror.bundle.js \
+            xterm-web-links.bundle.js \
+            xterm-webgl.bundle.js \
+            webawesome.bundle.js \
+            webawesome.css; do
+            test -s "$VENDOR/$file"
+          done
+          grep -q '@awesome.me/webawesome=3.14.0' "$VENDOR/VERSIONS.txt"
+          grep -q 'xterm-addon-web-links=0.5.1' "$VENDOR/VERSIONS.txt"
+          grep -q 'xterm-addon-webgl=0.11.4' "$VENDOR/VERSIONS.txt"
 
       - name: Commit generated vendor assets if changed
         shell: bash
@@ -270,7 +307,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "build(ui): vendor Split Grid.js and CodeMirror bundles"
+          git commit -m "build(ui): vendor Web Awesome and xterm addons"
           git push origin "HEAD:feature/v1.1-modernization"
 
   legacy-characterization:
