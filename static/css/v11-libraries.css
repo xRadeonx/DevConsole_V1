@@ -159,6 +159,31 @@
   box-shadow: inset 0 0 0 1px var(--accent, #38bdf8);
 }
 
+/* Web Awesome · estado multi-entorno, sin reemplazar selectores legacy. */
+.dc-v11-wa-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-inline-start: 7px;
+  vertical-align: middle;
+  color-scheme: dark;
+  --wa-font-family-body: inherit;
+  --wa-font-size-s: 10px;
+  --wa-tooltip-font-size: 11px;
+}
+
+.dc-v11-wa-status wa-badge {
+  font-size: 9.5px;
+  letter-spacing: 0.025em;
+}
+
+.dc-v11-wa-status wa-badge::part(badge) {
+  min-height: 20px;
+  padding-inline: 7px;
+  font-weight: 800;
+}
+
 /* Diagnóstico de permisos/configuración: evita pantallas aparentemente vacías. */
 .dc-v11-read-notice {
   display: flex;
@@ -202,5 +227,10 @@
 @media (max-width: 1099px) {
   .dc-v11-map-split {
     display: grid !important;
+  }
+
+  .dc-v11-wa-status {
+    width: 100%;
+    margin: 6px 0 0;
   }
 }
