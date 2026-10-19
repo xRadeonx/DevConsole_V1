@@ -1,0 +1,5 @@
+# Optional V1.1 capability dependencies.
+# DevConsole keeps V1 fallbacks when these wheels are unavailable/offline.
+psutil>=6.0
+pydantic>=2.7,<3
+ruamel.yaml>=0.18

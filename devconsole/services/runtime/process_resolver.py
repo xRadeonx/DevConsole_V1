@@ -29,6 +29,7 @@ from devconsole.services.runtime.process_identity import (
     identity_from,
 )
 from devconsole.services.runtime.process_inspector import ProcessInspector
+from devconsole.services.runtime.psutil_inspector import create_process_inspector
 from devconsole.services.runtime.process_ownership import (
     OwnershipVerifier,
     RejectionReason,
@@ -42,11 +43,6 @@ def build_descriptor(
     base_dir: Path | None = None,
     services: Sequence[dict] | None = None,
 ) -> ServiceDescriptor:
-    """Build the expectation for ``service_name`` from the live configuration.
-
-    ``base_dir`` and ``services`` default to :mod:`devconsole.config`; tests
-    override them to stay hermetic.
-    """
     root = Path(base_dir) if base_dir is not None else Path(dcfg.BASE_DIR)
     entries: list[dict] = list(services) if services is not None else (
         list(dcfg.SERVICES_BACKEND) + list(dcfg.SERVICES_FRONTEND))
@@ -66,7 +62,6 @@ def build_descriptor(
         expected = None
 
     if expected is not None and not expected.exists():
-        # Fall back to the sibling layout before declaring the dir missing.
         other = root / ("frontend" if service_type is ServiceType.BACKEND else "backend") / service_name
         if other.exists():
             expected = other
@@ -82,8 +77,6 @@ def build_descriptor(
 
 @dataclass(frozen=True)
 class Resolution:
-    """Full outcome of resolving one service, including rejected candidates."""
-
     descriptor: ServiceDescriptor
     identity: ProcessIdentity | None
     candidate_pids: tuple[int, ...]
@@ -127,24 +120,23 @@ class ProcessIdentityResolver:
         protected_pids: Iterable[int] = (),
     ) -> None:
         self.base_dir = Path(base_dir) if base_dir is not None else Path(dcfg.BASE_DIR)
-        self.inspector = inspector or ProcessInspector()
+        # V1.1 selects psutil only when available on the real host.  Injected
+        # inspectors and synthetic /proc fixtures keep the exact V1 behavior.
+        self.inspector = inspector or create_process_inspector()
         self.verifier = verifier or OwnershipVerifier(
             self.base_dir,
             require_ancestry_for_high=require_ancestry_for_high,
             protected_pids=protected_pids,
         )
 
-    # ------------------------------------------------------------------ #
-
     def list_configured_services(self) -> list[str]:
         return [s["name"] for s in (list(dcfg.SERVICES_BACKEND) + list(dcfg.SERVICES_FRONTEND))
                 if s.get("name")]
 
     def ancestry_context(self, pid: int) -> list[tuple[tuple[str, ...], str | None]]:
-        """Collect ``(argv, cwd)`` for each strict ancestor of ``pid``."""
         context: list[tuple[tuple[str, ...], str | None]] = []
         chain = self.inspector.read_ancestry(pid)
-        for ancestor_pid in chain[1:]:  # skip the process itself
+        for ancestor_pid in chain[1:]:
             argv, _ = self.inspector.read_cmdline(ancestor_pid)
             cwd, _ = self.inspector.read_cwd(ancestor_pid)
             context.append((argv, cwd))
@@ -152,7 +144,6 @@ class ProcessIdentityResolver:
 
     def resolve_pid(self, descriptor: ServiceDescriptor, pid: int,
                     *, expected_start_ticks: int | None = None) -> ProcessIdentity:
-        """Build a :class:`ProcessIdentity` for a known ``pid``."""
         if not self.inspector.is_alive(pid):
             return ProcessIdentity.unresolved(
                 descriptor,
@@ -162,7 +153,6 @@ class ProcessIdentityResolver:
 
         facts: ProcessFacts = self.inspector.read_facts(pid)
 
-        # PID-reuse detection: a recycled PID would carry a different start time.
         if expected_start_ticks is not None and facts.start_time_ticks is not None:
             if facts.start_time_ticks != expected_start_ticks:
                 return ProcessIdentity.unresolved(
@@ -192,11 +182,6 @@ class ProcessIdentityResolver:
     def resolve_service(self, service_name: str,
                         *, descriptor: ServiceDescriptor | None = None,
                         pids: Sequence[int] | None = None) -> Resolution:
-        """Resolve ``service_name`` by nominating candidates through its port.
-
-        ``pids`` lets a caller supply an already-known candidate set (used by
-        the shadow comparator, which must not re-probe independently).
-        """
         desc = descriptor or build_descriptor(service_name, base_dir=self.base_dir)
 
         if pids is None:
@@ -217,7 +202,6 @@ class ProcessIdentityResolver:
 
         identities = [self.resolve_pid(desc, pid) for pid in candidates]
 
-        # Several PIDs on one port is ambiguous → refuse to choose.
         if len(identities) > 1:
             return Resolution(
                 descriptor=desc,
@@ -237,5 +221,4 @@ class ProcessIdentityResolver:
         )
 
     def resolve_all(self) -> list[Resolution]:
-        """Resolve every configured service (read-only)."""
         return [self.resolve_service(name) for name in self.list_configured_services()]

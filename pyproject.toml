@@ -1,0 +1,47 @@
+[project]
+name = "sisper-devconsole"
+version = "1.1.0a1"
+description = "Local development and DevOps console for SISPER/PROTEO workspaces"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+v11 = [
+  "psutil>=6.0",
+  "pydantic>=2.7,<3",
+  "ruamel.yaml>=0.18",
+]
+qa = [
+  "pytest>=8",
+  "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "node_modules",
+]
+
+[tool.ruff.lint]
+# Legacy V1 contains many harmless unused-import/unused-variable findings.
+# The blocking gate starts with Python-semantic errors; broader cleanup is
+# enabled incrementally after each compatibility phase is characterised.
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

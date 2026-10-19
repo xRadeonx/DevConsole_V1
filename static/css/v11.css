@@ -1,0 +1,6 @@
+/* V1.1 additive UI hooks. Existing V1 selectors remain untouched. */
+:root[data-devconsole-v11="ready"] { --devconsole-v11-ready: 1; }
+:root[data-devconsole-v11="degraded"] { --devconsole-v11-ready: 0; }
+
+.v11-progressive-details[hidden] { display: none !important; }
+.v11-terminal-search { display: flex; gap: .4rem; align-items: center; }

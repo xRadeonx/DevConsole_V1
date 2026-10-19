@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "description": "Perfil de compatibilidad V1.1. Los mecanismos son genéricos; los valores SISPER permanecen como datos configurables.",
+  "keep_value": "__KEEP__",
+  "profiles": {
+    "local": {
+      "backend_common": {
+        "DATABASE_USER": "postgres",
+        "DATABASE_PASSWORD": "__KEEP__",
+        "DATABASE_HOST": "127.0.0.1",
+        "KEYCLOAK_SERVER_URL": "\"http://localhost:8080/\""
+      },
+      "frontend_common": {
+        "MS_KEYCLOAK": "\"http://localhost:8080/\""
+      }
+    },
+    "intranet": {
+      "backend": {
+        "ms_sisper_sesion": {
+          "DATABASE_USER": "ms_sisper_sesion",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_adm_usuario": {
+          "DATABASE_USER": "ms_sisper_adm_usuario",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.armada.cl/"
+        },
+        "ms_sisper_asistente": {
+          "DATABASE_USER": "ms_sisper_contratos",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_beneficios": {
+          "DATABASE_USER": "ms_sisper_beneficios",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_bitacora": {
+          "DATABASE_USER": "ms_sisper_bitacora",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_contratos": {
+          "DATABASE_USER": "ms_sisper_contratos",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_destinaciones": {
+          "DATABASE_USER": "ms_sisper_destinaciones",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_documentos": {
+          "DATABASE_USER": "ms_sisper_documentos",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_form_acad": {
+          "DATABASE_USER": "ms_sisper_form_acad",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_identificacion": {
+          "DATABASE_USER": "ms_sisper_identificacion",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://lbkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_perfiles_riesgo": {
+          "DATABASE_USER": "ms_sisper_perfiles_riesgo",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_promocion": {
+          "DATABASE_USER": "ms_sisper_promocion",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_promocion_desempeno": {
+          "DATABASE_USER": "ms_sisper_promocion_desemp",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.armada.cl/"
+        },
+        "ms_sisper_promocion_otros": {
+          "DATABASE_USER": "ms_sisper_promocion_otros",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.armada.cl/"
+        },
+        "ms_sisper_promocion_proyec": {
+          "DATABASE_USER": "ms_sisper_promocion_proyec",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.armada.cl/"
+        },
+        "ms_sisper_retiros": {
+          "DATABASE_USER": "ms_sisper_retiros",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        },
+        "ms_sisper_solicitudes": {
+          "DATABASE_USER": "ms_sisper_solicitudes",
+          "DATABASE_PASSWORD": "__KEEP__",
+          "DATABASE_HOST": "172.30.23.71",
+          "KEYCLOAK_SERVER_URL": "https://sisperkeydes.direcpers.armada.cl/"
+        }
+      },
+      "frontend": {
+        "mf_sisper_sesion": {
+          "MS_KEYCLOAK": "\"http://sisperkeydes.direcpers.armada.cl/\""
+        },
+        "mf_sisper_perfiles_de_riesgo": {
+          "MS_KEYCLOAK": "\"http://sisperkeydes.direcpers.armada.cl/\""
+        }
+      }
+    }
+  }
+}
