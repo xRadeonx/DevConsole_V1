@@ -67,12 +67,44 @@ def _environment_snapshot() -> dict[str, dict[str, Any]]:
     return result
 
 
+def _catalog_diagnostics(available: list[str]) -> dict[str, str]:
+    """Describe where configuration came from without exposing local paths."""
+    try:
+        from devconsole.v11_legacy_profile import status as legacy_status
+
+        legacy = legacy_status()
+        if legacy.get("legacy_profile_available"):
+            return {
+                "source": "legacy-local",
+                "source_name": str(legacy.get("source_name") or "DevConsole V1"),
+            }
+    except Exception:
+        pass
+
+    try:
+        from devconsole import settings
+
+        panel_file = getattr(settings, "PANEL_FILE", None)
+        if panel_file and Path(panel_file).is_file():
+            return {"source": "v1.1-local-config", "source_name": "panel.json"}
+    except Exception:
+        pass
+
+    if available:
+        # Runtime compatibility can recover DEVELOP from .env files in the
+        # selected project workspace. This is intentionally distinguished from
+        # a true multi-environment catalog.
+        return {"source": "workspace-discovery", "source_name": "workspace .env"}
+    return {"source": "none", "source_name": ""}
+
+
 def environment_status() -> dict[str, Any]:
     envs = _environment_snapshot()
+    available = [name for name, state in envs.items() if state["configured"]]
     return {
         "success": True,
         "environments": envs,
-        "available": [name for name, state in envs.items() if state["configured"]],
+        "available": available,
         "telemetry_available": [
             name for name, state in envs.items()
             if state["keycloak"] and state["database"]
@@ -80,6 +112,7 @@ def environment_status() -> dict[str, Any]:
         "activity_available": [
             name for name, state in envs.items() if state["activity"]
         ],
+        "catalog": _catalog_diagnostics(available),
     }
 
 
@@ -93,6 +126,7 @@ def _missing_payload(env: str, capability: str) -> dict[str, Any]:
         "env": env,
         "env_name": env.upper(),
         "available_environments": status.get("available", []),
+        "catalog": status.get("catalog", {}),
         "items": [],
         "users": [],
         "zones": [],
