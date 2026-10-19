@@ -39,6 +39,7 @@ from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_git_safety import install as install_v11_git_safety
+from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
 from devconsole.v11_yaml_promotion import install as install_v11_yaml_promotion
 
@@ -47,6 +48,11 @@ install_v11_capabilities()
 install_v11_git_safety()
 install_v11_env_safety()
 install_v11_yaml_promotion()
+# Recover the workstation's existing SISPER DEVELOP/TEST/MAIN catalog, when the
+# selected workspace is an older DevConsole checkout. The importer parses only
+# known literal structures; it never executes the legacy Python/JavaScript and
+# never persists recovered credentials into this repository.
+install_v11_legacy_profile()
 # Fresh ZIP checkouts do not contain panel.json/services.json. Install the
 # compatibility guards before handlers import infra/telemetry functions by
 # value so filesystem discovery and the read-only dashboard still work.
