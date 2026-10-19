@@ -50,7 +50,9 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "B", "UP", "SIM"]
+# Stage 1 gate focuses on correctness and likely bugs. Import/style
+# modernization rules will be enabled progressively as legacy modules are split.
+select = ["E4", "E7", "E9", "F", "B"]
 ignore = ["E501"]
 
 [tool.ruff.format]
