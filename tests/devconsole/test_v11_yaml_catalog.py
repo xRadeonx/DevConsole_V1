@@ -105,6 +105,63 @@ stringData:
         self.assertEqual("pg.main.local", scanned["databases"]["main"]["host"])
         self.assertEqual("main-secret", scanned["databases"]["main"]["bitacora_pass"])
 
+    def test_absolute_parent_named_develop_does_not_contaminate_test_or_main(self):
+        workspace = self.root / "Develop" / "PROTEO"
+        config = workspace / "config"
+        test_file = config / "test" / "ms_sisper_bitacora.yaml"
+        main_file = config / "prod" / "ms_sisper_bitacora.yaml"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        main_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_text(
+            """
+metadata:
+  name: ms-sisper-bitacora
+stringData:
+  DATABASE_HOST: pg.test.local
+  DATABASE_PASSWORD: test-secret
+""",
+            encoding="utf-8",
+        )
+        main_file.write_text(
+            """
+metadata:
+  name: ms-sisper-bitacora
+stringData:
+  DATABASE_HOST: pg.main.local
+  DATABASE_PASSWORD: main-secret
+""",
+            encoding="utf-8",
+        )
+
+        with mock.patch.object(yaml_catalog, "_config_roots", return_value=[config]):
+            scanned = yaml_catalog.scan_workspace_yaml(workspace)
+
+        self.assertNotIn("develop", scanned["databases"])
+        self.assertEqual("test-secret", scanned["databases"]["test"]["bitacora_pass"])
+        self.assertEqual("main-secret", scanned["databases"]["main"]["bitacora_pass"])
+        self.assertEqual(1, scanned["classified_files"]["test"])
+        self.assertEqual(1, scanned["classified_files"]["main"])
+
+    def test_embedded_namespace_environment_names_are_normalized(self):
+        self.assertEqual("test", yaml_catalog._normalise_env("sisper-test"))
+        self.assertEqual("main", yaml_catalog._normalise_env("proteo-production"))
+        self.assertEqual("develop", yaml_catalog._normalise_env("dgpa-development"))
+        self.assertIsNone(yaml_catalog._normalise_env("sisper"))
+
+        path = self._write(
+            "generic/keycloak.yaml",
+            """
+metadata:
+  namespace: sisper-test
+  name: keycloak-config
+stringData:
+  KEYCLOAK_HOST: keycloak.test.local
+  KEYCLOAK_CLIENT_SECRET: namespace-secret
+""",
+        )
+        with mock.patch.object(yaml_catalog, "_config_roots", return_value=[self.config]):
+            self.assertEqual("test", yaml_catalog._detect_environment(path, path.read_text(), self.root))
+
     def test_hydration_preserves_explicit_values_and_fills_missing_fields(self):
         fake_scan = {
             "keycloak": {
@@ -123,6 +180,7 @@ stringData:
             },
             "secret_candidates": [],
             "files_scanned": 1,
+            "classified_files": {"develop": 0, "test": 1, "main": 0, "unknown": 0},
         }
         kc = {"test": {"url": "https://explicit.test.local"}}
         db = {"test": {"host": "explicit-db.local"}}
@@ -142,10 +200,10 @@ stringData:
         self.assertEqual(5432, db["test"]["port"])
         self.assertEqual("ctto", db["test"]["contratos_db"])
 
-    def test_secret_merge_prefers_running_env_candidate_over_yaml_duplicate(self):
+    def test_secret_merge_keeps_one_value_per_environment_key(self):
         original = [
             {
-                "clave": "keycloak.test.client_secret",
+                "clave": "keycloak.develop.client_secret",
                 "valor": "env-secret",
                 "pista": "en…et",
                 "origen": "ms_sisper_sesion/.env",
@@ -153,10 +211,10 @@ stringData:
         ]
         yaml = [
             {
-                "clave": "keycloak.test.client_secret",
+                "clave": "keycloak.develop.client_secret",
                 "valor": "yaml-secret",
                 "pista": "ya…et",
-                "origen": "config/test/deployment.yaml",
+                "origen": "config/develop/deployment.yaml",
             },
             {
                 "clave": "databases.test.bitacora_pass",
@@ -165,7 +223,7 @@ stringData:
                 "origen": "config/test/bitacora.yaml",
             },
         ]
-        required = {"keycloak.test.client_secret", "databases.test.bitacora_pass"}
+        required = {"keycloak.develop.client_secret", "databases.test.bitacora_pass"}
 
         merged = yaml_catalog._merge_secret_candidates(original, yaml, required)
 
