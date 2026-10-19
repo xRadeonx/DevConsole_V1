@@ -39,6 +39,7 @@ jobs:
             tests.devconsole.test_runtime_safety \
             tests.devconsole.test_product_credentials \
             tests.devconsole.test_v11_access \
+            tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
             tests.devconsole.test_process_observer \
@@ -83,6 +84,7 @@ jobs:
           python -m unittest -v \
             tests.devconsole.test_product_credentials \
             tests.devconsole.test_v11_access \
+            tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
             tests.devconsole.test_process_observer \
