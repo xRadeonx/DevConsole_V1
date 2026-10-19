@@ -95,6 +95,12 @@ def main():
     except Exception as exc:
         print(f"[!] No se pudo instalar el guard de Git: {exc}", file=sys.stderr)
 
+    try:
+        from devconsole.services.k8s_compat import install_k8s_compatibility_adapters
+        install_k8s_compatibility_adapters()
+    except Exception as exc:
+        print(f"[!] Adapter YAML estructurado omitido; se conserva fallback V1: {exc}", file=sys.stderr)
+
     # Prefer safe tmux process ownership when the host provides it, but never
     # remove Tilix: it remains the external viewer and the fallback when tmux is
     # unavailable or explicitly selected by the operator.
