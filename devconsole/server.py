@@ -14,7 +14,7 @@ from devconsole.config import HOST, HOST_IS_LOOPBACK, PORT, BASE_DIR
 if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0":
     from devconsole.api.handlers import DevConsoleHandler
 else:
-    from devconsole.api.v11_handler import DevConsoleHandler
+    from devconsole.api.v11_verified_handler import DevConsoleHandler
 
 from devconsole.services.env_service import env_file_watcher_loop
 
@@ -39,7 +39,7 @@ def _log_bind_notice() -> None:
     print(f"[*] Directorio raíz: {BASE_DIR}")
     print(
         "[*] HTTP handler: "
-        + ("V1 legacy (rollback)" if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0" else "V1.1 compatibility facade")
+        + ("V1 legacy (rollback)" if os.environ.get("SISPER_V11_HANDLER", "1").strip() == "0" else "V1.1 verified compatibility facade")
     )
     if HOST_IS_LOOPBACK:
         print("[*] Modo de escucha: LOOPBACK (solo esta máquina).")
