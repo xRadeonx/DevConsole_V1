@@ -44,16 +44,23 @@ def _refresh_local_catalog() -> None:
         pass
 
 
+def _missing_fields(mapping: Any, fields: tuple[str, ...]) -> list[str]:
+    if not isinstance(mapping, dict):
+        return list(fields)
+    return [field for field in fields if mapping.get(field) in (None, "", 0)]
+
+
 def _has_fields(mapping: Any, fields: tuple[str, ...]) -> bool:
-    return isinstance(mapping, dict) and all(mapping.get(field) not in (None, "", 0) for field in fields)
+    return not _missing_fields(mapping, fields)
 
 
 def _environment_snapshot() -> dict[str, dict[str, Any]]:
-    """Return secret-free readiness, not merely endpoint presence.
+    """Return secret-free readiness and exact missing field names.
 
-    The legacy telemetry code requires a Keycloak client secret and distinct DB
-    credentials.  Marking an environment ready only because ``url``/``host``
-    existed caused TEST/MAIN to look selectable and then fail at runtime.
+    Mapa Operativo requires separate Contratos and Destinaciones DB metadata and
+    credentials.  Exposing only a generic "database credentials" flag made it
+    impossible to tell whether the missing piece was DB name, user or password.
+    This endpoint returns only field *names*, never their values.
     """
     import devconsole.config as config
 
@@ -61,46 +68,74 @@ def _environment_snapshot() -> dict[str, dict[str, Any]]:
     kc_map = getattr(config, "KEYCLOAK_ENV_CONFIGS", {}) or {}
     db_map = getattr(config, "DATABASE_ENV_CONFIGS", {}) or {}
     result: dict[str, dict[str, Any]] = {}
+
+    kc_required = ("url", "realm", "client_id", "client_secret")
+    map_required = (
+        "host",
+        "port",
+        "contratos_db",
+        "contratos_user",
+        "contratos_pass",
+        "destinaciones_db",
+        "destinaciones_user",
+        "destinaciones_pass",
+    )
+    activity_required = (
+        "host",
+        "port",
+        "bitacora_db",
+        "bitacora_user",
+        "bitacora_pass",
+    )
+
     for env in ("develop", "test", "main"):
         kc = kc_map.get(env) if isinstance(kc_map, dict) else None
         db = db_map.get(env) if isinstance(db_map, dict) else None
 
-        kc_endpoint = isinstance(kc, dict) and bool(kc.get("url"))
-        db_endpoint = isinstance(db, dict) and bool(db.get("host"))
-        kc_ready = _has_fields(kc, ("url", "realm", "client_id", "client_secret"))
-        map_db_ready = _has_fields(
-            db,
-            (
-                "host",
-                "port",
+        kc_missing = _missing_fields(kc, kc_required)
+        map_missing = _missing_fields(db, map_required)
+        activity_missing = _missing_fields(db, activity_required)
+
+        kc_endpoint = "url" not in kc_missing
+        db_endpoint = "host" not in map_missing and "port" not in map_missing
+        kc_ready = not kc_missing
+        map_db_ready = not map_missing
+        activity_ready = not activity_missing
+
+        missing: list[str] = []
+        if "url" in kc_missing:
+            missing.append("keycloak_endpoint")
+        if any(field in kc_missing for field in ("realm", "client_id")):
+            missing.append("keycloak_metadata")
+        if "client_secret" in kc_missing:
+            missing.append("keycloak_credentials")
+        if any(field in map_missing for field in ("host", "port")):
+            missing.append("database_endpoint")
+        if any(
+            field in map_missing
+            for field in (
                 "contratos_db",
                 "contratos_user",
                 "contratos_pass",
                 "destinaciones_db",
                 "destinaciones_user",
                 "destinaciones_pass",
-            ),
-        )
-        activity_ready = _has_fields(
-            db,
-            ("host", "port", "bitacora_db", "bitacora_user", "bitacora_pass"),
-        )
-
-        missing: list[str] = []
-        if not kc_endpoint:
-            missing.append("keycloak_endpoint")
-        elif not kc_ready:
-            missing.append("keycloak_credentials")
-        if not db_endpoint:
-            missing.append("database_endpoint")
-        else:
-            if not map_db_ready:
-                missing.append("map_database_credentials")
-            if not activity_ready:
-                missing.append("activity_database_credentials")
+            )
+        ):
+            missing.append("map_database_credentials")
+        if any(
+            field in activity_missing
+            for field in ("bitacora_db", "bitacora_user", "bitacora_pass")
+        ):
+            missing.append("activity_database_credentials")
 
         result[env] = {
-            "configured": bool(kc_endpoint or db_endpoint),
+            "configured": bool(
+                isinstance(kc, dict)
+                and any(value not in (None, "", 0) for value in kc.values())
+                or isinstance(db, dict)
+                and any(value not in (None, "", 0) for value in db.values())
+            ),
             "keycloak_endpoint": kc_endpoint,
             "database_endpoint": db_endpoint,
             "keycloak": kc_ready,
@@ -108,6 +143,11 @@ def _environment_snapshot() -> dict[str, dict[str, Any]]:
             "activity": activity_ready,
             "map": bool(kc_ready and map_db_ready),
             "missing": missing,
+            "missing_fields": {
+                "keycloak": kc_missing,
+                "map_database": map_missing,
+                "activity_database": activity_missing,
+            },
             # Deliberately no URL, host, user, password, token or secret here.
         }
     return result
@@ -166,6 +206,7 @@ def _missing_payload(env: str, capability: str) -> dict[str, Any]:
         "env_name": env.upper(),
         "available_environments": status.get("available", []),
         "missing": list(state.get("missing", [])) if isinstance(state, dict) else [],
+        "missing_fields": dict(state.get("missing_fields", {})) if isinstance(state, dict) else {},
         "catalog": status.get("catalog", {}),
         "items": [],
         "users": [],
