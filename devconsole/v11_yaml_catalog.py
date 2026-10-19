@@ -1,17 +1,18 @@
 """Recover SISPER environment metadata from the workspace config YAML tree.
 
 The selected project already carries Kubernetes/manifests under ``config/`` in
-many workstations.  V1.1 should reuse that information instead of asking the
-operator to duplicate hosts, users and credentials by hand.
+many workstations. V1.1 reuses that information instead of asking the operator
+to duplicate hosts, users and credentials by hand.
 
-This module is intentionally conservative:
+Important safety/correctness rules:
 
-* it scans only known config roots below the selected workspace;
-* it only understands a small allow-list of environment variable names;
-* it never executes YAML, templates or shell substitutions;
-* explicit V1.1 / recovered V1 values always win;
-* discovered secrets stay in memory until the operator explicitly chooses to
-  save them through the existing Admin-only secrets workflow.
+* scan only known config roots below the selected workspace;
+* inspect only an allow-list of environment variable names;
+* never execute YAML, templates or shell substitutions;
+* explicit V1.1 / recovered V1 values win over discovered values;
+* a local service ``.env`` belongs to DEVELOP only unless an environment-
+  specific source proves otherwise;
+* discovered secrets stay in memory until the operator explicitly saves them.
 """
 
 from __future__ import annotations
@@ -66,15 +67,12 @@ def _clean_scalar(value: str) -> str:
     value = str(value or "").strip()
     if not value:
         return ""
-    # Strip an inline YAML comment only when it is separated by whitespace.
     value = re.split(r"\s+#", value, maxsplit=1)[0].strip()
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         value = value[1:-1]
     lowered = value.strip().lower()
     if lowered in {"", "null", "none", "~"}:
         return ""
-    # Template/secret references are not concrete values and must not be treated
-    # as usable credentials/endpoints.
     if "${" in value or "{{" in value or value.startswith("__SECRET__"):
         return ""
     return value.strip()
@@ -85,13 +83,16 @@ def _extract_named_values(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
     lines = text.splitlines()
 
-    # Form 1: env:\n  - name: DATABASE_HOST\n    value: host
+    # env:\n  - name: DATABASE_HOST\n    value: host
     pending_name = ""
     pending_indent = -1
     for raw in lines:
         stripped = raw.strip()
         indent = len(raw) - len(raw.lstrip())
-        name_match = re.match(r"^-?\s*name\s*:\s*['\"]?([A-Z][A-Z0-9_]*)['\"]?\s*$", stripped)
+        name_match = re.match(
+            r"^-?\s*name\s*:\s*['\"]?([A-Z][A-Z0-9_]*)['\"]?\s*$",
+            stripped,
+        )
         if name_match:
             candidate = name_match.group(1)
             pending_name = candidate if candidate in _KNOWN_VARS else ""
@@ -108,7 +109,7 @@ def _extract_named_values(text: str) -> dict[str, str]:
             if stripped and indent <= pending_indent and not stripped.startswith("#"):
                 pending_name = ""
 
-    # Form 2: ConfigMap/stringData/plain mapping: DATABASE_HOST: host
+    # ConfigMap/stringData/plain mapping: DATABASE_HOST: host
     direct = re.compile(r"^\s*([A-Z][A-Z0-9_]*)\s*:\s*(.+?)\s*$")
     for raw in lines:
         match = direct.match(raw)
@@ -125,32 +126,64 @@ def _tokens(value: str) -> set[str]:
 
 
 def _normalise_env(value: str) -> str | None:
-    token = str(value or "").strip().lower()
-    for env, aliases in _ENV_ALIASES.items():
-        if token in aliases:
+    """Normalise exact or embedded environment names such as ``sisper-test``."""
+    raw = str(value or "").strip().lower()
+    tokens = _tokens(raw)
+    if raw:
+        tokens.add(raw)
+    matches = [env for env, aliases in _ENV_ALIASES.items() if tokens & aliases]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _relative_config_path(path: Path, base_dir: Path | None = None) -> Path:
+    """Return a path relative to the closest config root.
+
+    Never classify an environment from the absolute workstation path. A common
+    parent such as ``~/Develop`` must not make every YAML look like DEVELOP.
+    """
+    try:
+        resolved = path.resolve()
+    except Exception:
+        resolved = path
+    best: Path | None = None
+    for root in _config_roots(base_dir):
+        try:
+            relative = resolved.relative_to(root.resolve())
+        except (OSError, ValueError):
+            continue
+        if best is None or len(relative.parts) < len(best.parts):
+            best = relative
+    return best if best is not None else Path(path.name)
+
+
+def _environment_from_path(path: Path, base_dir: Path | None = None) -> str | None:
+    relative = _relative_config_path(path, base_dir)
+    # Prefer the deepest path component: config/k8s/test/deployment.yaml should
+    # resolve to TEST even if a higher directory contains another generic word.
+    for part in reversed(relative.parts):
+        env = _normalise_env(part)
+        if env:
             return env
     return None
 
 
-def _detect_environment(path: Path, text: str) -> str | None:
-    path_tokens = _tokens(str(path))
-    matches = [env for env, aliases in _ENV_ALIASES.items() if path_tokens & aliases]
-    if len(matches) == 1:
-        return matches[0]
-
-    # Some repositories keep environment folders generic but declare namespace
-    # or environment inside the manifest.
-    match = re.search(
-        r"(?im)^\s*(?:environment|env|namespace)\s*:\s*['\"]?([a-zA-Z0-9_-]+)",
+def _environment_from_text(text: str) -> str | None:
+    """Read environment/namespace labels, including values like sisper-prod."""
+    matches = re.findall(
+        r"(?im)^\s*(?:environment|env|namespace)\s*:\s*['\"]?([a-zA-Z0-9_.-]+)",
         text,
     )
-    return _normalise_env(match.group(1)) if match else None
+    detected = {env for raw in matches if (env := _normalise_env(raw))}
+    return next(iter(detected)) if len(detected) == 1 else None
+
+
+def _detect_environment(path: Path, text: str, base_dir: Path | None = None) -> str | None:
+    # Explicit metadata is strongest; then the relative config-tree location.
+    return _environment_from_text(text) or _environment_from_path(path, base_dir)
 
 
 def _logical_database(path: Path, text: str = "") -> str | None:
     tokens = _tokens(str(path))
-    # Metadata/name near the beginning is enough to identify a deployment even
-    # when the filename itself is generic (deployment.yaml).
     head_tokens = _tokens(text[:5000])
     all_tokens = tokens | head_tokens
     for logical in _DB_LOGICAL:
@@ -178,8 +211,6 @@ def _config_roots(base_dir: Path | None = None) -> list[Path]:
             continue
         if resolved in seen or not resolved.is_dir():
             continue
-        # Never wander outside the selected workspace except when the configured
-        # config_repo_dir itself explicitly points there.
         seen.add(resolved)
         roots.append(resolved)
     return roots
@@ -197,7 +228,11 @@ def _yaml_files(base_dir: Path | None = None) -> list[Path]:
             for path in iterator:
                 try:
                     resolved = path.resolve()
-                    if resolved in seen or not path.is_file() or path.stat().st_size > _MAX_FILE_BYTES:
+                    if (
+                        resolved in seen
+                        or not path.is_file()
+                        or path.stat().st_size > _MAX_FILE_BYTES
+                    ):
                         continue
                 except OSError:
                     continue
@@ -271,11 +306,16 @@ def _mask(value: str) -> str:
     return value[:2] + "…" + value[-2:] if len(value) > 6 else "…"
 
 
+def _display_origin(path: Path, base_dir: Path | None = None) -> str:
+    return str(_relative_config_path(path, base_dir))
+
+
 def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
     keycloak: dict[str, dict[str, Any]] = {}
     databases: dict[str, dict[str, Any]] = {}
     secret_candidates: list[dict[str, str]] = []
     files_scanned = 0
+    classified = {"develop": 0, "test": 0, "main": 0, "unknown": 0}
 
     for path in _yaml_files(base_dir):
         try:
@@ -283,7 +323,8 @@ def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
         except OSError:
             continue
         files_scanned += 1
-        env = _detect_environment(path, text)
+        env = _detect_environment(path, text, base_dir)
+        classified[env or "unknown"] += 1
         values = _extract_named_values(text)
         if not values:
             continue
@@ -301,7 +342,9 @@ def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
                             "clave": f"keycloak.{env}.client_secret",
                             "valor": str(secret),
                             "pista": _mask(str(secret)),
-                            "origen": str(path),
+                            "origen": _display_origin(path, base_dir),
+                            "entorno": env,
+                            "fuente": "config-yaml",
                         }
                     )
 
@@ -319,12 +362,13 @@ def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
                                 "clave": f"databases.{env}.{logical}_pass",
                                 "valor": str(password),
                                 "pista": _mask(str(password)),
-                                "origen": str(path),
+                                "origen": _display_origin(path, base_dir),
+                                "entorno": env,
+                                "fuente": "config-yaml",
                             }
                         )
 
-        # OnlyOffice JWT is installation-local and does not require an env path.
-        path_tokens = _tokens(str(path)) | _tokens(text[:5000])
+        path_tokens = _tokens(str(_relative_config_path(path, base_dir))) | _tokens(text[:5000])
         jwt = _first(values, "ONLYOFFICE_JWT_SECRET")
         if not jwt and "onlyoffice" in path_tokens:
             jwt = _first(values, "JWT_SECRET")
@@ -334,7 +378,9 @@ def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
                     "clave": "infra.onlyoffice_jwt_secret",
                     "valor": jwt,
                     "pista": _mask(jwt),
-                    "origen": str(path),
+                    "origen": _display_origin(path, base_dir),
+                    "entorno": env or "global",
+                    "fuente": "config-yaml",
                 }
             )
 
@@ -343,6 +389,7 @@ def scan_workspace_yaml(base_dir: Path | None = None) -> dict[str, Any]:
         "databases": databases,
         "secret_candidates": secret_candidates,
         "files_scanned": files_scanned,
+        "classified_files": classified,
     }
 
 
@@ -390,14 +437,23 @@ def hydrate_environment_catalog(base_dir: Path | None = None) -> bool:
     return changed
 
 
-def _merge_secret_candidates(original_items: list[dict], yaml_items: list[dict], required: set[str]) -> list[dict]:
+def _merge_secret_candidates(
+    original_items: list[dict],
+    yaml_items: list[dict],
+    required: set[str],
+) -> list[dict]:
     result: list[dict] = []
     seen: set[str] = set()
     for item in [*original_items, *yaml_items]:
         if not isinstance(item, dict):
             continue
         key = str(item.get("clave") or "")
-        if not key or key not in required or key in seen or not str(item.get("valor") or "").strip():
+        if (
+            not key
+            or key not in required
+            or key in seen
+            or not str(item.get("valor") or "").strip()
+        ):
             continue
         result.append(dict(item))
         seen.add(key)
@@ -413,7 +469,14 @@ def _install_secret_discovery() -> None:
 
     def buscar_con_yaml(env_key: str = "develop") -> list[dict]:
         env = _normalise_env(env_key) or "develop"
-        original_items = original(env)
+        # The service .env files describe the currently running local workspace,
+        # which is DEVELOP in the existing V1 workflow. Re-labelling those same
+        # values as TEST/MAIN was a correctness bug.
+        original_items = original(env) if env == "develop" else []
+        for item in original_items:
+            if isinstance(item, dict):
+                item.setdefault("entorno", env)
+                item.setdefault("fuente", "service-env")
         required = set(settings.referenced_secret_keys())
         scanned = scan_workspace_yaml()
         yaml_items = [
@@ -440,8 +503,6 @@ def _install_catalog_refresh() -> None:
 
     def hydrate_with_yaml(*args, **kwargs):
         changed = original(*args, **kwargs)
-        # root is meaningful only when explicitly supplied; otherwise use the
-        # current selected workspace from devconsole.config.
         root = kwargs.get("root")
         if root is None and args:
             root = args[0]
@@ -466,6 +527,7 @@ def status() -> dict[str, Any]:
     return {
         "installed": _INSTALLED,
         "files_scanned": int(scanned.get("files_scanned") or 0),
+        "classified_files": dict(scanned.get("classified_files") or {}),
         "keycloak_environments": sorted(scanned.get("keycloak", {})),
         "database_environments": sorted(scanned.get("databases", {})),
         "secret_candidates": len(scanned.get("secret_candidates", [])),
