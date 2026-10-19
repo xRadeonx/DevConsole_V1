@@ -33,6 +33,7 @@ jobs:
         run: |
           python -m unittest -v \
             tests.devconsole.test_security_boundary \
+            tests.devconsole.test_product_credentials \
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
@@ -76,6 +77,7 @@ jobs:
       - name: Run V1.1 tests with optional dependencies available
         run: |
           python -m unittest -v \
+            tests.devconsole.test_product_credentials \
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
