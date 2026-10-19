@@ -52,6 +52,7 @@ jobs:
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
+            tests.devconsole.test_v11_dock_workspace \
             tests.devconsole.test_v11_ui
 
   modernization-tooling:
@@ -96,6 +97,7 @@ jobs:
             tests.devconsole.test_config_schema \
             tests.devconsole.test_v11_legacy_profile \
             tests.devconsole.test_v11_multienv \
+            tests.devconsole.test_v11_dock_workspace \
             tests.devconsole.test_v11_ui
 
   v11-quality:
@@ -141,6 +143,7 @@ jobs:
             tests/devconsole/test_v11_env_safety.py \
             tests/devconsole/test_v11_legacy_profile.py \
             tests/devconsole/test_v11_multienv.py \
+            tests/devconsole/test_v11_dock_workspace.py \
             tests/devconsole/test_v11_read_policy.py \
             tests/devconsole/test_project_detector.py \
             tests/devconsole/test_v11_capabilities.py \
@@ -156,6 +159,7 @@ jobs:
             static/js/v11/app.js \
             static/js/v11/core/events.js \
             static/js/v11/core/features.js \
+            static/js/v11/features/dock-workspace.js \
             static/js/v11/features/multi-env.js \
             static/js/v11/features/terminal-addons.js; do
             node --input-type=module --check < "$file"
