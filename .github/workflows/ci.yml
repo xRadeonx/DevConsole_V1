@@ -48,7 +48,7 @@ jobs:
             tests.devconsole.test_config_schema
 
   modernization-tooling:
-    name: Modernization dependency gate
+    name: Modernization package gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -60,24 +60,17 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install modernization dependencies
-        run: |
-          python -m pip install --disable-pip-version-check \
-            "psutil>=5.9,<8" \
-            "pydantic>=2.7,<3" \
-            "ruamel.yaml>=0.18,<0.19" \
-            "watchfiles>=0.21,<2" \
-            "websockets>=13,<17"
+      - name: Install DevConsole with accepted modernization extras
+        run: python -m pip install --disable-pip-version-check ".[modernization]"
 
-      - name: Import modernization dependencies
+      - name: Import accepted modernization dependencies
         run: |
           python - <<'PY'
           import psutil
           import pydantic
           import ruamel.yaml
-          import watchfiles
-          import websockets
-          print("modernization dependencies: OK")
+          import devconsole
+          print("modernization package: OK")
           PY
 
       - name: Run V1.1 tests with optional dependencies available
@@ -92,6 +85,43 @@ jobs:
             tests.devconsole.test_process_observer \
             tests.devconsole.test_yaml_service \
             tests.devconsole.test_config_schema
+
+  v11-quality:
+    name: V1.1 code quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ruff
+        run: python -m pip install --disable-pip-version-check "ruff>=0.8,<1"
+
+      - name: Lint V1.1 modules and tests
+        run: |
+          ruff check \
+            devconsole/v11_access.py \
+            devconsole/v11_capabilities.py \
+            devconsole/v11_git_safety.py \
+            devconsole/v11_read_policy.py \
+            devconsole/config_schema.py \
+            devconsole/services/project_detector.py \
+            devconsole/services/process_observer.py \
+            devconsole/services/yaml_service.py \
+            tests/devconsole/test_product_credentials.py \
+            tests/devconsole/test_v11_access.py \
+            tests/devconsole/test_v11_git_safety.py \
+            tests/devconsole/test_v11_read_policy.py \
+            tests/devconsole/test_project_detector.py \
+            tests/devconsole/test_v11_capabilities.py \
+            tests/devconsole/test_process_observer.py \
+            tests/devconsole/test_yaml_service.py \
+            tests/devconsole/test_config_schema.py
 
   legacy-characterization:
     name: Legacy characterization (debt inventory)
