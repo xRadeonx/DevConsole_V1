@@ -34,8 +34,18 @@ class BuildJob:
 
 
 class BuildJobStore:
-    def __init__(self, path: Path | None = None, *, log_limit: int = 2000, job_limit: int = 100) -> None:
-        default = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "sisper-devconsole" / "build_jobs.json"
+    def __init__(
+        self,
+        path: Path | None = None,
+        *,
+        log_limit: int = 2000,
+        job_limit: int = 100,
+    ) -> None:
+        default = (
+            Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+            / "sisper-devconsole"
+            / "build_jobs.json"
+        )
         self.path = path or default
         self.log_limit = log_limit
         self.job_limit = job_limit
@@ -44,6 +54,7 @@ class BuildJobStore:
         self._load()
 
     def _load(self) -> None:
+        recovered = False
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
             for raw in payload if isinstance(payload, list) else []:
@@ -52,16 +63,45 @@ class BuildJobStore:
                     job.status = "interrupted"
                     job.finished_at = time.time()
                     job.message = "Proceso anterior interrumpido; estado recuperado al iniciar DevConsole."
+                    recovered = True
                 self._jobs[job.id] = job
         except Exception:
             self._jobs = {}
+        if recovered:
+            try:
+                self._persist()
+            except OSError:
+                # A read-only state directory must not prevent DevConsole from
+                # starting; the recovered in-memory status is still truthful.
+                pass
 
     def _persist(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        ordered = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)[: self.job_limit]
+        try:
+            os.chmod(self.path.parent, 0o700)
+        except OSError:
+            pass
+        ordered = sorted(
+            self._jobs.values(),
+            key=lambda j: j.created_at,
+            reverse=True,
+        )[: self.job_limit]
+        # Keep the in-memory store bounded as well as the on-disk payload.
+        self._jobs = {job.id: job for job in ordered}
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps([j.to_dict() for j in ordered], ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.write_text(
+            json.dumps([j.to_dict() for j in ordered], ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass
         tmp.replace(self.path)
+        try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
 
     def create(self, service: str, image: str, ref: str, push: bool) -> BuildJob:
         with self._lock:
@@ -76,7 +116,14 @@ class BuildJobStore:
 
     def list(self) -> list[dict[str, Any]]:
         with self._lock:
-            return [j.to_dict() for j in sorted(self._jobs.values(), key=lambda x: x.created_at, reverse=True)]
+            return [
+                j.to_dict()
+                for j in sorted(
+                    self._jobs.values(),
+                    key=lambda x: x.created_at,
+                    reverse=True,
+                )
+            ]
 
     def update(self, job: BuildJob) -> None:
         with self._lock:
@@ -91,9 +138,18 @@ class BuildCoordinator:
         self._cancel: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
 
-    def start(self, *, service: str, repo_dir: Path, image: str, tag: str,
-              ref: str = "HEAD", push: bool = False, engine_name: str | None = None,
-              build_args: dict[str, str] | None = None) -> BuildJob:
+    def start(
+        self,
+        *,
+        service: str,
+        repo_dir: Path,
+        image: str,
+        tag: str,
+        ref: str = "HEAD",
+        push: bool = False,
+        engine_name: str | None = None,
+        build_args: dict[str, str] | None = None,
+    ) -> BuildJob:
         repo = Path(repo_dir).resolve()
         full_image = f"{image}:{tag}"
         job = self.store.create(service, full_image, ref, push)
@@ -114,7 +170,13 @@ class BuildCoordinator:
                 engine = ContainerEngine.discover(engine_name)
                 log(f"engine={engine.name} ref={ref} image={full_image}")
                 with temporary_worktree(repo, ref) as worktree:
-                    result = engine.build(full_image, worktree, build_args=build_args, on_line=log, cancel_event=cancel)
+                    result = engine.build(
+                        full_image,
+                        worktree,
+                        build_args=build_args,
+                        on_line=log,
+                        cancel_event=cancel,
+                    )
                     if result.cancelled:
                         job.status = "cancelled"
                         job.message = "Build cancelado por el usuario."
@@ -124,7 +186,12 @@ class BuildCoordinator:
                         job.message = "Build falló."
                         job.returncode = result.returncode
                     elif push:
-                        pushed = engine.push(full_image, worktree, on_line=log, cancel_event=cancel)
+                        pushed = engine.push(
+                            full_image,
+                            worktree,
+                            on_line=log,
+                            cancel_event=cancel,
+                        )
                         job.returncode = pushed.returncode
                         if pushed.cancelled:
                             job.status = "cancelled"
@@ -149,7 +216,11 @@ class BuildCoordinator:
                 with self._lock:
                     self._cancel.pop(job.id, None)
 
-        threading.Thread(target=run, name=f"build-{job.id[:8]}", daemon=True).start()
+        threading.Thread(
+            target=run,
+            name=f"build-{job.id[:8]}",
+            daemon=True,
+        ).start()
         return job
 
     def cancel(self, job_id: str) -> bool:
