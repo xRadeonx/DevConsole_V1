@@ -78,6 +78,9 @@ Environment=PATH=${HOME}/.local/bin:${HOME}/.bun/bin:${HOME}/bin:/usr/local/sbin
 # en loopback salvo que el operador decida explícitamente otra cosa.
 Environment=SISPER_HOST=127.0.0.1
 Environment=SISPER_PORT=${SISPER_PORT}
+# En instalación gestionada se exige el token local efímero. El browser recibe
+# la cookie HttpOnly al cargar la UI; clientes API usan el token 0600 del runtime.
+Environment=SISPER_LOCAL_TOKEN_REQUIRED=1
 PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
 
 [Install]
