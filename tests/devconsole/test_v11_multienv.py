@@ -104,6 +104,42 @@ class V11MultiEnvironmentTests(unittest.TestCase):
         self.assertIn("keycloak_credentials", state["missing"])
         self.assertIn("activity_database_credentials", state["missing"])
 
+    def test_exact_map_missing_fields_distinguish_name_user_and_password(self):
+        import devconsole.config as config
+
+        keycloak = {
+            "test": {
+                "url": "https://test.invalid",
+                "realm": "SISPER",
+                "client_id": "backend",
+                "client_secret": "kc-secret",
+            }
+        }
+        databases = {
+            "test": {
+                "host": "10.0.0.2",
+                "port": 5432,
+                "contratos_pass": "contratos-secret",
+                "destinaciones_db": "dest_test",
+                "destinaciones_pass": "dest-secret",
+            }
+        }
+
+        with mock.patch.object(config, "KEYCLOAK_ENV_CONFIGS", keycloak), mock.patch.object(
+            config, "DATABASE_ENV_CONFIGS", databases
+        ), mock.patch("devconsole.v11_multienv._refresh_local_catalog"):
+            state = v11_multienv.environment_status()["environments"]["test"]
+
+        self.assertFalse(state["map"])
+        self.assertEqual(
+            ["contratos_db", "contratos_user", "destinaciones_user"],
+            state["missing_fields"]["map_database"],
+        )
+        rendered = repr(state)
+        self.assertNotIn("10.0.0.2", rendered)
+        self.assertNotIn("contratos-secret", rendered)
+        self.assertNotIn("dest-secret", rendered)
+
     def test_full_credentials_mark_map_and_activity_ready_without_exposing_values(self):
         import devconsole.config as config
 
