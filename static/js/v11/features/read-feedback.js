@@ -5,6 +5,14 @@ const ROUTES = [
   { match: "/api/infra/targets", tab: "#tab-infra", id: "infra" },
 ];
 
+const MISSING_LABELS = {
+  keycloak_endpoint: "endpoint/realm/client_id de Keycloak (catálogo, no secreto)",
+  keycloak_credentials: "client secret de Keycloak",
+  database_endpoint: "host/puerto de PostgreSQL (catálogo, no secreto)",
+  map_database_credentials: "usuarios/contraseñas de Contratos y Destinaciones",
+  activity_database_credentials: "usuario/contraseña de Bitácora",
+};
+
 let installed = false;
 
 function noticeTarget(selector) {
@@ -63,6 +71,12 @@ function routeFor(url) {
   return ROUTES.find((route) => String(url || "").includes(route.match));
 }
 
+function missingText(payload) {
+  const missing = Array.isArray(payload?.missing) ? payload.missing : [];
+  if (!missing.length) return "Falta completar el catálogo o las credenciales del entorno.";
+  return `Pendiente: ${missing.map((item) => MISSING_LABELS[item] || item).join(" · ")}.`;
+}
+
 function inspectJson(route, response) {
   response.clone().json().then((payload) => {
     if (route.id === "infra") {
@@ -74,8 +88,8 @@ function inspectJson(route, response) {
         showNotice(
           route,
           "Catálogo de infraestructura incompleto",
-          `Detectados: ${available.length ? available.map((item) => item.toUpperCase()).join(" · ") : "ninguno"}. TEST/MAIN requieren configuración local; DevConsole no usa DEVELOP como sustituto.`,
-          { label: "🔐 Revisar secretos", run: openSecrets },
+          `Detectados: ${available.length ? available.map((item) => item.toUpperCase()).join(" · ") : "ninguno"}. V1.1 intenta recuperar endpoints desde config/*.yaml y nunca sustituye TEST/MAIN por DEVELOP.`,
+          { label: "🔐 Ver requisitos", run: openSecrets },
         );
       } else {
         clearNotice(route.id);
@@ -87,9 +101,9 @@ function inspectJson(route, response) {
       const env = String(payload.requested_env || payload.env || "entorno").toUpperCase();
       showNotice(
         route,
-        `Configuración local incompleta para ${env}`,
-        "El entorno no será sustituido por DEVELOP. Revisa el catálogo local y las credenciales guardadas sólo en config/secrets.json.",
-        { label: "🔐 Revisar secretos", run: openSecrets },
+        `Configuración incompleta para ${env}`,
+        `${missingText(payload)} Los endpoints/usuarios se intentan detectar desde config YAML; las contraseñas y client secrets se administran en Secretos.`,
+        { label: "🔐 Ver requisitos y autodetectar", run: openSecrets },
       );
     } else if (payload?.success !== false) {
       clearNotice(route.id);
