@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   regression:
-    name: Regression / Python ${{ matrix.python-version }}
+    name: Portable regression / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -46,10 +46,49 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q dashboard.py devconsole tests
 
-      - name: Ruff baseline
+      - name: Ruff critical baseline
         run: ruff check dashboard.py devconsole tests
 
-      - name: Regression suite
+      # These suites are reproducible from the repository alone and passed on
+      # the untouched V1 baseline. They are the first blocking compatibility
+      # gate while the workspace-bound tests are converted to portable fixtures.
+      - name: Portable regression suite
+        run: |
+          pytest -q \
+            tests/devconsole/test_api_readonly.py \
+            tests/devconsole/test_frontend_identity.py \
+            tests/devconsole/test_security_boundary.py \
+            tests/devconsole/test_tilix_service.py
+
+  legacy-diagnostic:
+    name: Full legacy suite (diagnostic)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependency
+        run: python -m pip install pytest
+
+      - name: Prepare non-secret test configuration
+        run: |
+          if [ ! -f config/secrets.json ]; then
+            cp config/secrets.example.json config/secrets.json
+          fi
+
+      # Do not hide the inherited V1 failures. This job remains visible on every
+      # run, but is non-blocking until each environment-bound test has a portable
+      # fixture or an explicit integration-test environment.
+      - name: Run complete inherited suite
         run: >-
           pytest -q
           --deselect=tests/devconsole/test_config_discovery.py::GoldenDiscoveryTest::test_discovery_matches_golden_snapshot
