@@ -30,7 +30,9 @@ jobs:
         run: python -m compileall -q dashboard.py devconsole tests
 
       - name: Validate shell entrypoints
-        run: bash -n install_devconsole.sh
+        run: |
+          bash -n install_devconsole.sh
+          bash -n uninstall_devconsole.sh
 
       - name: Run stable security baseline and V1.1 contracts
         run: |
