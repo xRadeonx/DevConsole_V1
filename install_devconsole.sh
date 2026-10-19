@@ -83,7 +83,10 @@ elif [ -f "${V11_REQUIREMENTS}" ]; then
     fi
     if [ -x "${V11_VENV}/bin/python" ]; then
         if ! v11_imports_ok "${V11_VENV}/bin/python"; then
-            if ! "${V11_VENV}/bin/python" -m pip install --disable-pip-version-check -r "${V11_REQUIREMENTS}"; then
+            if ! "${V11_VENV}/bin/python" -m pip install --disable-pip-version-check \
+                --retries "${SISPER_PIP_RETRIES:-1}" \
+                --timeout "${SISPER_PIP_TIMEOUT:-8}" \
+                -r "${V11_REQUIREMENTS}"; then
                 echo "  [!] No se pudieron instalar todas las dependencias V1.1 (posible entorno offline)."
             fi
         fi
