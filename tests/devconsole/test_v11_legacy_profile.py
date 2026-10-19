@@ -66,6 +66,63 @@ class LegacyProfileTest(unittest.TestCase):
             self.assertEqual(5433, config.DATABASE_ENV_CONFIGS["test"]["port"])
             self.assertEqual("10.0.0.3", config.DATABASE_ENV_CONFIGS["main"]["host"])
 
+    def test_auto_discovery_finds_legacy_checkout_next_to_workspace(self):
+        parent = self.root / "host"
+        workspace = parent / "microservices"
+        dashboard = parent / "DevConsole_V1"
+        old = parent / "devconsole"
+        workspace.mkdir(parents=True)
+        dashboard.mkdir(parents=True)
+        (old / "devconsole").mkdir(parents=True)
+        (old / "devconsole" / "config.py").write_text(
+            '''\nKEYCLOAK_ENV_CONFIGS = {\n "develop": {"url": "https://dev.invalid"},\n "test": {"url": "https://test.invalid"},\n "main": {"url": "https://main.invalid"}\n}\nDATABASE_ENV_CONFIGS = {\n "develop": {"host": "10.0.0.1"},\n "test": {"host": "10.0.0.2"},\n "main": {"host": "10.0.0.3"}\n}\n''',
+            encoding="utf-8",
+        )
+
+        with mock.patch.object(legacy, "_workspace_root", return_value=workspace), mock.patch.object(
+            legacy, "_DASHBOARD_ROOT", dashboard
+        ), mock.patch.dict("os.environ", {legacy._LEGACY_DIR_ENV: ""}, clear=False):
+            catalog = legacy._read_legacy_python_catalog()
+
+        self.assertEqual(
+            {"develop", "test", "main"},
+            set(catalog["KEYCLOAK_ENV_CONFIGS"]),
+        )
+        self.assertEqual("10.0.0.2", catalog["DATABASE_ENV_CONFIGS"]["test"]["host"])
+
+    def test_auto_discovery_finds_legacy_infra_next_to_workspace(self):
+        parent = self.root / "host2"
+        workspace = parent / "microservices"
+        dashboard = parent / "DevConsole_V1"
+        old = parent / "devconsole"
+        workspace.mkdir(parents=True)
+        dashboard.mkdir(parents=True)
+        (old / "static" / "js").mkdir(parents=True)
+        (old / "static" / "js" / "dashboard.js").write_text(
+            '''\nconst INFRA_ENDPOINTS = {\n develop: [{ id: "db", name: "DEV", type: "DB", target: "dev:5432", testUrl: null, note: "", cmd: "" }],\n test: [{ id: "db", name: "TEST", type: "DB", target: "test:5433", testUrl: null, note: "", cmd: "" }],\n main: [{ id: "db", name: "MAIN", type: "DB", target: "main:5432", testUrl: null, note: "", cmd: "" }]\n};\n''',
+            encoding="utf-8",
+        )
+
+        with mock.patch.object(legacy, "_workspace_root", return_value=workspace), mock.patch.object(
+            legacy, "_DASHBOARD_ROOT", dashboard
+        ), mock.patch.dict("os.environ", {legacy._LEGACY_DIR_ENV: ""}, clear=False):
+            targets = legacy._read_legacy_infra_targets()
+
+        self.assertEqual(["develop", "main", "test"], sorted(targets))
+        self.assertEqual("test:5433", targets["test"][0]["target"])
+
+    def test_explicit_root_does_not_search_unrelated_siblings(self):
+        empty = self.root / "empty"
+        sibling = self.root / "devconsole"
+        empty.mkdir()
+        (sibling / "devconsole").mkdir(parents=True, exist_ok=True)
+        (sibling / "devconsole" / "config.py").write_text(
+            'KEYCLOAK_ENV_CONFIGS = {"test": {"url": "https://wrong.invalid"}}\n',
+            encoding="utf-8",
+        )
+
+        self.assertEqual({}, legacy._read_legacy_python_catalog(empty))
+
 
 if __name__ == "__main__":
     unittest.main()
