@@ -48,13 +48,16 @@ install_v11_env_safety()
 install_v11_yaml_promotion()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
+from devconsole.api import handlers as handlers_module
 from devconsole.api.handlers import DevConsoleHandler
 from devconsole.v11_read_policy import install as install_v11_read_policy
+from devconsole.v11_ui import install as install_v11_ui
 
-# The GET policy wraps the already imported handler class. server.py imports the
-# same class object afterwards, so both direct and server-driven use share the
-# least-privilege read policy without editing the legacy dispatcher.
+# The read policy wraps API reads first. The additive UI wrapper is installed
+# afterwards and intercepts only / and /index.html; every API request continues
+# through the authorization wrapper and the untouched V1 dispatcher.
 install_v11_read_policy(DevConsoleHandler)
+install_v11_ui(DevConsoleHandler, handlers_module)
 
 from devconsole.server import main
 
