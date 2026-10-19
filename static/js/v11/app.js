@@ -7,6 +7,7 @@ import { bootSplitLayouts } from "./features/split-layouts.js";
 import { bootGridEnhancements } from "./features/grid-enhancements.js";
 import { bootCodeEditors } from "./features/code-editors.js";
 import { bootWebAwesomeUi } from "./features/webawesome-ui.js";
+import { bootSecretGuidance } from "./features/secret-guidance.js";
 
 // Install the fetch observer while the module is evaluated, before the legacy
 // DOMContentLoaded handlers issue their first Map/Activity/Infrastructure reads.
@@ -34,6 +35,7 @@ async function bootFoundation() {
 
   // The existing tabs remain canonical. Libraries enhance those surfaces
   // in-place and every integration keeps the original control as fallback.
+  bootSecretGuidance();
   bootTerminalAddons();
   bootSplitLayouts();
   bootGridEnhancements();
