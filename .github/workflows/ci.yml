@@ -36,7 +36,9 @@ jobs:
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
-            tests.devconsole.test_process_observer
+            tests.devconsole.test_process_observer \
+            tests.devconsole.test_yaml_service \
+            tests.devconsole.test_config_schema
 
   modernization-tooling:
     name: Modernization dependency gate
@@ -77,7 +79,9 @@ jobs:
             tests.devconsole.test_v11_access \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
-            tests.devconsole.test_process_observer
+            tests.devconsole.test_process_observer \
+            tests.devconsole.test_yaml_service \
+            tests.devconsole.test_config_schema
 
   legacy-characterization:
     name: Legacy characterization (debt inventory)
