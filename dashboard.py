@@ -38,6 +38,7 @@ from devconsole.config import (
 from devconsole.v11_access import install as install_v11_access
 from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_env_safety import install as install_v11_env_safety
+from devconsole.v11_environment_secrets import install as install_v11_environment_secrets
 from devconsole.v11_git_safety import install as install_v11_git_safety
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
@@ -54,6 +55,10 @@ install_v11_yaml_promotion()
 # known literal structures; it never executes the legacy Python/JavaScript and
 # never persists recovered credentials into this repository.
 install_v11_legacy_profile()
+# Credentials are never committed. If the operator saved them in the existing
+# 0600 config/secrets.json store, overlay them on the recovered catalog in
+# memory so TEST/MAIN telemetry can use their own credentials.
+install_v11_environment_secrets()
 # Fresh ZIP checkouts do not contain panel.json/services.json. Install the
 # compatibility guards before handlers import infra/telemetry functions by
 # value so filesystem discovery and the read-only dashboard still work.
