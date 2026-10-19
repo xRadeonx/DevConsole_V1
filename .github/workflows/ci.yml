@@ -44,6 +44,7 @@ jobs:
             tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_v11_env_safety \
             tests.devconsole.test_v11_environment_secrets \
+            tests.devconsole.test_v11_infra_catalog \
             tests.devconsole.test_v11_read_policy \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
@@ -90,6 +91,7 @@ jobs:
             tests.devconsole.test_v11_git_safety \
             tests.devconsole.test_v11_env_safety \
             tests.devconsole.test_v11_environment_secrets \
+            tests.devconsole.test_v11_infra_catalog \
             tests.devconsole.test_v11_read_policy \
             tests.devconsole.test_project_detector \
             tests.devconsole.test_v11_capabilities \
@@ -131,6 +133,7 @@ jobs:
             devconsole/v11_git_safety.py \
             devconsole/v11_env_safety.py \
             devconsole/v11_environment_secrets.py \
+            devconsole/v11_infra_catalog.py \
             devconsole/v11_legacy_profile.py \
             devconsole/v11_multienv.py \
             devconsole/v11_read_policy.py \
@@ -145,6 +148,7 @@ jobs:
             tests/devconsole/test_v11_git_safety.py \
             tests/devconsole/test_v11_env_safety.py \
             tests/devconsole/test_v11_environment_secrets.py \
+            tests/devconsole/test_v11_infra_catalog.py \
             tests/devconsole/test_v11_legacy_profile.py \
             tests/devconsole/test_v11_multienv.py \
             tests/devconsole/test_v11_dock_workspace.py \
