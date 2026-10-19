@@ -45,6 +45,13 @@ install_v11_git_safety()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
 from devconsole.api.handlers import DevConsoleHandler
+from devconsole.v11_read_policy import install as install_v11_read_policy
+
+# The GET policy wraps the already imported handler class. server.py imports the
+# same class object afterwards, so both direct and server-driven use share the
+# least-privilege read policy without editing the legacy dispatcher.
+install_v11_read_policy(DevConsoleHandler)
+
 from devconsole.server import main
 
 # Expose HTML_TEMPLATE for legacy scripts that might inspect it
