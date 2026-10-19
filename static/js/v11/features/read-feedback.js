@@ -15,7 +15,7 @@ function clearNotice(id) {
   document.getElementById(`dcV11ReadNotice-${id}`)?.remove();
 }
 
-function showNotice(route, title, message) {
+function showNotice(route, title, message, action = null) {
   const tab = noticeTarget(route.tab);
   if (!tab) return;
   let notice = document.getElementById(`dcV11ReadNotice-${route.id}`);
@@ -25,7 +25,38 @@ function showNotice(route, title, message) {
     notice.className = "dc-v11-read-notice";
     tab.prepend(notice);
   }
-  notice.innerHTML = `<span aria-hidden="true">⚠</span><div><strong>${title}</strong><br>${message}</div>`;
+
+  notice.replaceChildren();
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "⚠";
+
+  const body = document.createElement("div");
+  const strong = document.createElement("strong");
+  strong.textContent = String(title || "Aviso");
+  const text = document.createElement("div");
+  text.textContent = String(message || "");
+  body.append(strong, text);
+
+  if (action?.label && typeof action.run === "function") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dc-v11-notice-action";
+    button.textContent = action.label;
+    button.addEventListener("click", action.run);
+    body.appendChild(button);
+  }
+
+  notice.append(icon, body);
+}
+
+function openSecrets() {
+  if (typeof window.openSecretsModal === "function") window.openSecretsModal();
+}
+
+function openRole() {
+  if (typeof window.openRoleModal === "function") window.openRoleModal();
+  else document.getElementById("sidebarRolePill")?.click();
 }
 
 function routeFor(url) {
@@ -43,7 +74,8 @@ function inspectJson(route, response) {
         showNotice(
           route,
           "Catálogo de infraestructura incompleto",
-          `Detectados: ${available.length ? available.map((item) => item.toUpperCase()).join(" · ") : "ninguno"}. TEST/MAIN requieren configuración local; DevConsole ya no usa DEVELOP como sustituto.`,
+          `Detectados: ${available.length ? available.map((item) => item.toUpperCase()).join(" · ") : "ninguno"}. TEST/MAIN requieren configuración local; DevConsole no usa DEVELOP como sustituto.`,
+          { label: "🔐 Revisar secretos", run: openSecrets },
         );
       } else {
         clearNotice(route.id);
@@ -56,7 +88,8 @@ function inspectJson(route, response) {
       showNotice(
         route,
         `Configuración local incompleta para ${env}`,
-        "El entorno no será sustituido por DEVELOP. Revisa el catálogo local y el botón 🔐 Secretos; las credenciales se guardan sólo en config/secrets.json.",
+        "El entorno no será sustituido por DEVELOP. Revisa el catálogo local y las credenciales guardadas sólo en config/secrets.json.",
+        { label: "🔐 Revisar secretos", run: openSecrets },
       );
     } else if (payload?.success !== false) {
       clearNotice(route.id);
@@ -81,6 +114,7 @@ export function bootReadFeedback() {
           route,
           "Vista protegida",
           "Esta telemetría contiene información operacional sensible y requiere una sesión Administrador válida. La vista ya no queda vacía silenciosamente.",
+          { label: "🔑 Autenticar Administrador", run: openRole },
         );
       } else if (response.ok) {
         inspectJson(route, response);
