@@ -40,6 +40,7 @@ from devconsole.v11_capabilities import install as install_v11_capabilities
 from devconsole.v11_env_safety import install as install_v11_env_safety
 from devconsole.v11_git_safety import install as install_v11_git_safety
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
+from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
 from devconsole.v11_yaml_promotion import install as install_v11_yaml_promotion
 
@@ -57,13 +58,23 @@ install_v11_legacy_profile()
 # compatibility guards before handlers import infra/telemetry functions by
 # value so filesystem discovery and the read-only dashboard still work.
 install_v11_runtime_compat()
+# V1 used DEVELOP whenever a requested telemetry environment was absent. That
+# is unsafe for TEST/MAIN because the UI appeared to switch while querying the
+# wrong environment. Strict wrappers now make the effective env explicit and
+# fail closed when that env is not configured.
+install_v11_multienv_telemetry()
 
 from devconsole.auth import ADMIN_PIN, verify_admin_pin, is_admin_request
 from devconsole.api import handlers as handlers_module
 from devconsole.api.handlers import DevConsoleHandler
+from devconsole.v11_multienv import install_handler as install_v11_multienv_handler
 from devconsole.v11_read_policy import install as install_v11_read_policy
 from devconsole.v11_ui import install as install_v11_ui
 
+# Add the secret-free environment capability endpoint and a bundled SVG fallback
+# before the read-policy/UI wrappers are layered on top of the complete V1 GET
+# dispatcher.
+install_v11_multienv_handler(DevConsoleHandler, handlers_module)
 # The read policy wraps API reads first. The additive UI wrapper is installed
 # afterwards and intercepts only / and /index.html; every API request continues
 # through the authorization wrapper and the untouched V1 dispatcher.
