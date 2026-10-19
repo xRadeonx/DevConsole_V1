@@ -44,6 +44,7 @@ from devconsole.v11_infra_catalog import install as install_v11_infra_catalog
 from devconsole.v11_legacy_profile import install as install_v11_legacy_profile
 from devconsole.v11_multienv import install_telemetry as install_v11_multienv_telemetry
 from devconsole.v11_runtime_compat import install as install_v11_runtime_compat
+from devconsole.v11_yaml_catalog import install as install_v11_yaml_catalog
 from devconsole.v11_yaml_promotion import install as install_v11_yaml_promotion
 
 install_v11_access()
@@ -56,6 +57,12 @@ install_v11_yaml_promotion()
 # known literal structures; it never executes the legacy Python/JavaScript and
 # never persists recovered credentials into this repository.
 install_v11_legacy_profile()
+# Many SISPER workspaces already describe DEVELOP/TEST/MAIN inside the project's
+# config/*.yaml Kubernetes manifests. Recover only allow-listed endpoint/user/
+# credential variables from those local files, in memory, before overlaying the
+# explicit 0600 secrets store. This avoids asking the operator to duplicate
+# configuration that already exists in the selected project.
+install_v11_yaml_catalog()
 # Credentials are never committed. If the operator saved them in the existing
 # 0600 config/secrets.json store, overlay them on the recovered catalog in
 # memory so TEST/MAIN telemetry can use their own credentials.
