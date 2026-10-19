@@ -6,6 +6,7 @@ import { bootTerminalAddons } from "./features/terminal-addons.js";
 import { bootSplitLayouts } from "./features/split-layouts.js";
 import { bootGridEnhancements } from "./features/grid-enhancements.js";
 import { bootCodeEditors } from "./features/code-editors.js";
+import { bootWebAwesomeUi } from "./features/webawesome-ui.js";
 
 // Install the fetch observer while the module is evaluated, before the legacy
 // DOMContentLoaded handlers issue their first Map/Activity/Infrastructure reads.
@@ -31,13 +32,13 @@ async function bootFoundation() {
 
   const environmentState = await bootMultiEnvironment();
 
-  // The existing Consolas tab remains the canonical experience. Dockview is
-  // kept vendored for future composition work but is no longer exposed as a
-  // second/duplicate workspace. Improvements are applied in-place instead.
+  // The existing tabs remain canonical. Libraries enhance those surfaces
+  // in-place and every integration keeps the original control as fallback.
   bootTerminalAddons();
   bootSplitLayouts();
   bootGridEnhancements();
   bootCodeEditors();
+  bootWebAwesomeUi();
 
   events.emit("v11-ready", {
     version: api.version,
