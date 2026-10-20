@@ -1,0 +1,91 @@
+name: DevConsole UX vendor build
+
+on:
+  push:
+    branches:
+      - feature/v1.1-ux-library-value
+    paths:
+      - tools/vendor-ui/**
+      - .github/workflows/vendor-ui-ux.yml
+
+permissions:
+  contents: write
+
+jobs:
+  vendor-ui-ux:
+    name: Build UX library assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout UX branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/v1.1-ux-library-value
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned UI build dependencies
+        working-directory: tools/vendor-ui
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Build self-hosted browser libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$PWD"
+          VENDOR="$ROOT/static/vendor/v11"
+          NODE="$ROOT/tools/vendor-ui/node_modules"
+          mkdir -p "$VENDOR"
+
+          cp "$NODE/split.js/dist/split.min.js" "$VENDOR/split.min.js"
+          cp "$NODE/gridjs/dist/gridjs.umd.js" "$VENDOR/gridjs.umd.js"
+          cp "$NODE/gridjs/dist/theme/mermaid.min.css" "$VENDOR/gridjs-mermaid.min.css"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/codemirror-entry.js" \
+            --bundle --format=iife --global-name=DevConsoleCodeMirror \
+            --platform=browser --target=es2020 --minify --legal-comments=none \
+            --outfile="$VENDOR/codemirror.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-web-links-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-web-links.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-webgl-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-webgl.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/webawesome-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2020 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/webawesome.bundle.js"
+
+          for file in \
+            split.min.js \
+            gridjs.umd.js \
+            gridjs-mermaid.min.css \
+            codemirror.bundle.js \
+            xterm-web-links.bundle.js \
+            xterm-webgl.bundle.js \
+            webawesome.bundle.js; do
+            test -s "$VENDOR/$file"
+          done
+
+      - name: Commit generated assets if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add static/vendor/v11
+          if git diff --cached --quiet; then
+            echo "Vendor assets already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build(ux): refresh self-hosted UI bundles"
+          git push origin "HEAD:feature/v1.1-ux-library-value"
