@@ -18,14 +18,39 @@ class V11FrontendRegressionTests(unittest.TestCase):
         self.assertNotIn("ensureStyle(", source)
         self.assertIn("webawesome.bundle.js", source)
 
-    def test_webawesome_readiness_is_global_and_uses_existing_components(self):
-        source = self._read("static/js/v11/features/webawesome-ui.js")
-        self.assertIn('document.querySelector(".topbar-right")', source)
-        self.assertIn("READINESS", source)
-        self.assertIn("M✓ A✓", source)
-        self.assertIn('document.createElement("wa-badge")', source)
-        self.assertIn('document.createElement("wa-tooltip")', source)
-        self.assertIn('document.createElement("wa-spinner")', source)
+    def test_app_boots_tabler_and_does_not_boot_readiness_experiment(self):
+        source = self._read("static/js/v11/app.js")
+        self.assertIn('from "./features/tabler-ui.js"', source)
+        self.assertIn("bootTablerUi()", source)
+        self.assertNotIn("bootWebAwesomeUi", source)
+        self.assertNotIn("READINESS", source)
+
+    def test_tabler_is_self_hosted_reversible_and_uses_icon_sprite(self):
+        source = self._read("static/js/v11/features/tabler-ui.js")
+        self.assertIn('/static/vendor/v11/tabler.min.css', source)
+        self.assertIn('/static/vendor/v11/tabler.min.js', source)
+        self.assertIn('/static/vendor/v11/tabler-icons.svg', source)
+        self.assertIn('/static/css/v11-tabler.css', source)
+        self.assertIn('params.get("tabler") === "off"', source)
+        self.assertIn("DevConsoleTabler", source)
+        self.assertIn("localStorage.setItem(DISABLE_KEY", source)
+        self.assertIn('data-bs-theme', source)
+
+    def test_tabler_adapter_covers_shell_cards_forms_tables_and_modals(self):
+        source = self._read("static/css/v11-tabler.css")
+        for selector in (
+            ".dc-tabler-topbar",
+            ".dc-tabler-sidebar",
+            ".dc-tabler-main",
+            ".dc-tabler-card",
+            ".form-control",
+            ".dc-tabler-table",
+            ".dc-tabler-modal",
+            ".dc-tabler-env-switcher",
+        ):
+            self.assertIn(selector, source)
+        self.assertIn("Legacy modal compatibility", source)
+        self.assertIn("Preserve the purpose-built console wall", source)
 
     def test_workspace_table_is_not_replaced_by_gridjs(self):
         source = self._read("static/js/v11/features/grid-enhancements.js")
@@ -77,13 +102,12 @@ class V11FrontendRegressionTests(unittest.TestCase):
         self.assertIn("setSizes", source)
         self.assertIn("DEFAULT_MAP_SIZES", source)
 
-    def test_library_value_styles_are_isolated_and_booted_by_v11(self):
+    def test_library_value_styles_remain_isolated_for_specialized_tools(self):
         app = self._read("static/js/v11/app.js")
         css = self._read("static/css/v11-library-value.css")
         self.assertIn("v11-library-value.css", app)
         self.assertIn("ensureLibraryValueStyles", app)
         self.assertIn(".dc-v11-editor-toolbar", css)
-        self.assertIn(".dc-v11-wa-global-health", css)
         self.assertIn(".dc-v11-terminal-toolbar", css)
         self.assertIn(".dc-v11-grid-valuebar", css)
         self.assertIn(".dc-v11-split-grip", css)
@@ -97,12 +121,14 @@ class V11FrontendRegressionTests(unittest.TestCase):
         self.assertIn("Actividad", source)
         self.assertIn("OnlyOffice · JWT Secret", source)
 
-    def test_app_boots_guided_secrets_without_replacing_legacy_tabs(self):
+    def test_app_keeps_existing_feature_enhancers(self):
         source = self._read("static/js/v11/app.js")
         self.assertIn('from "./features/secret-guidance.js"', source)
         self.assertIn("bootSecretGuidance();", source)
         self.assertIn("bootGridEnhancements();", source)
         self.assertIn("bootTerminalAddons();", source)
+        self.assertIn("bootCodeEditors();", source)
+        self.assertIn("bootSplitLayouts();", source)
 
 
 if __name__ == "__main__":
