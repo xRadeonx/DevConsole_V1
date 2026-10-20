@@ -42,14 +42,24 @@ class V11FrontendRegressionTests(unittest.TestCase):
 
     def test_codemirror_env_editor_has_visible_validation_and_actions(self):
         source = self._read("static/js/v11/features/code-editors.js")
-        self.assertIn("CodeMirror 6", source)
+        self.assertIn("CodeMirror 6 · ENV", source)
         self.assertIn("analyseEnv", source)
         self.assertIn("duplicada", source)
         self.assertIn("KEY=valor", source)
         self.assertIn('data-action="find"', source)
         self.assertIn('data-action="validate"', source)
         self.assertIn('data-action="copy"', source)
+        self.assertIn("lib.openSearch?.(editor)", source)
         self.assertIn("sensitive", source)
+
+    def test_codemirror_bundle_source_has_real_dotenv_language_and_native_search(self):
+        source = self._read("tools/vendor-ui/codemirror-entry.js")
+        self.assertIn("StreamLanguage", source)
+        self.assertIn("openSearchPanel", source)
+        self.assertIn("const dotenv", source)
+        self.assertIn('language === "env"', source)
+        self.assertIn("variableName.definition", source)
+        self.assertIn("export function openSearch", source)
 
     def test_terminal_addons_are_discoverable_without_replacing_xterm(self):
         source = self._read("static/js/v11/features/terminal-addons.js")
