@@ -6,8 +6,8 @@ import { bootTerminalAddons } from "./features/terminal-addons.js";
 import { bootSplitLayouts } from "./features/split-layouts.js";
 import { bootGridEnhancements } from "./features/grid-enhancements.js";
 import { bootCodeEditors } from "./features/code-editors.js";
-import { bootWebAwesomeUi } from "./features/webawesome-ui.js";
 import { bootSecretGuidance } from "./features/secret-guidance.js";
+import { bootTablerUi } from "./features/tabler-ui.js";
 
 const LIBRARY_VALUE_CSS = "/static/css/v11-library-value.css";
 
@@ -43,21 +43,23 @@ async function bootFoundation() {
     writable: false,
   });
 
+  // Tabler owns the visual language only on this experimental UX branch.
+  // It is additive: legacy IDs, handlers, tabs and API contracts remain canonical.
+  const tablerPromise = bootTablerUi();
   const environmentState = await bootMultiEnvironment();
 
-  // The existing tabs remain canonical. Libraries enhance those surfaces
-  // in-place and every integration keeps the original control as fallback.
   bootSecretGuidance();
   bootTerminalAddons();
   bootSplitLayouts();
   bootGridEnhancements();
   bootCodeEditors();
-  bootWebAwesomeUi();
+  await tablerPromise;
 
   events.emit("v11-ready", {
     version: api.version,
     features: features.snapshot(),
     environments: environmentState?.available || [],
+    tabler: document.documentElement.dataset.dcTabler || "fallback",
   });
 }
 
