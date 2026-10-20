@@ -9,6 +9,17 @@ import { bootCodeEditors } from "./features/code-editors.js";
 import { bootWebAwesomeUi } from "./features/webawesome-ui.js";
 import { bootSecretGuidance } from "./features/secret-guidance.js";
 
+const LIBRARY_VALUE_CSS = "/static/css/v11-library-value.css";
+
+function ensureLibraryValueStyles() {
+  if (document.querySelector('link[data-devconsole-v11="library-value-css"]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = LIBRARY_VALUE_CSS;
+  link.dataset.devconsoleV11 = "library-value-css";
+  document.head.appendChild(link);
+}
+
 // Install the fetch observer while the module is evaluated, before the legacy
 // DOMContentLoaded handlers issue their first Map/Activity/Infrastructure reads.
 // It never changes a response; it only explains 403/missing-config states.
@@ -17,6 +28,7 @@ if (features.enabled("foundation")) bootReadFeedback();
 async function bootFoundation() {
   document.documentElement.dataset.devconsoleUi = "v1.1";
   document.documentElement.classList.add("dc-v11-foundation");
+  ensureLibraryValueStyles();
 
   const api = Object.freeze({
     version: "1.1",
