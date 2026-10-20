@@ -67,6 +67,9 @@ class V11UiTests(unittest.TestCase):
             "webawesome.css": 25_000,
             "xterm-web-links.bundle.js": 2000,
             "xterm-webgl.bundle.js": 25_000,
+            "tabler.min.css": 100_000,
+            "tabler.min.js": 25_000,
+            "tabler-icons.svg": 10_000,
             "THIRD_PARTY_LICENSES.txt": 500,
             "VERSIONS.txt": 100,
         }
@@ -82,6 +85,8 @@ class V11UiTests(unittest.TestCase):
         self.assertIn("@awesome.me/webawesome=3.14.0", versions)
         self.assertIn("xterm-addon-web-links=0.5.1", versions)
         self.assertIn("xterm-addon-webgl=0.11.4", versions)
+        self.assertIn("@tabler/core=1.6.1", versions)
+        self.assertIn("@tabler/icons-sprite=3.49.0", versions)
 
     def test_terminal_links_are_protocol_limited_and_webgl_has_canvas_fallback(self):
         repo_root = Path(__file__).resolve().parents[2]
@@ -94,15 +99,18 @@ class V11UiTests(unittest.TestCase):
         self.assertIn("xterm-web-links.bundle.js", source)
         self.assertIn("xterm-webgl.bundle.js", source)
 
-    def test_webawesome_is_applied_in_place_not_as_parallel_workspace(self):
+    def test_tabler_ui_is_additive_and_has_runtime_fallback(self):
         repo_root = Path(__file__).resolve().parents[2]
-        source = (repo_root / "static" / "js" / "v11" / "features" / "webawesome-ui.js").read_text(
+        source = (repo_root / "static" / "js" / "v11" / "features" / "tabler-ui.js").read_text(
             encoding="utf-8"
         )
-        self.assertIn('document.createElement("wa-badge")', source)
-        self.assertIn('document.createElement("wa-tooltip")', source)
-        self.assertIn('document.getElementById("mapEnvSelect")', source)
-        self.assertNotIn("dockview", source.lower())
+        self.assertIn("tabler.min.css", source)
+        self.assertIn("tabler.min.js", source)
+        self.assertIn("tabler-icons.svg", source)
+        self.assertIn('params.get("tabler") === "off"', source)
+        self.assertIn('dataset.dcTabler = "fallback"', source)
+        self.assertIn("decorateShell", source)
+        self.assertIn("decorateCardsAndTables", source)
 
 
 if __name__ == "__main__":
