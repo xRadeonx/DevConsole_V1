@@ -39,7 +39,7 @@ function tableSnapshot(table, lib) {
 
 function language() {
   return {
-    search: { placeholder: "Buscar en la tabla…" },
+    search: { placeholder: "Buscar en Actividad…" },
     pagination: {
       previous: "Anterior",
       next: "Siguiente",
@@ -51,6 +51,24 @@ function language() {
   };
 }
 
+function ensureGridValueHeader(host, { pagination }) {
+  if (host.previousElementSibling?.classList?.contains("dc-v11-grid-valuebar")) return;
+  const bar = document.createElement("div");
+  bar.className = "dc-v11-grid-valuebar";
+  bar.innerHTML = `
+    <div>
+      <strong>Grid.js</strong>
+      <span>tabla interactiva sin alterar la fuente de datos legacy</span>
+    </div>
+    <div class="dc-v11-grid-capabilities">
+      <span>⌕ búsqueda</span>
+      <span>↕ orden</span>
+      ${pagination ? "<span>◫ paginación</span>" : ""}
+    </div>
+  `;
+  host.insertAdjacentElement("beforebegin", bar);
+}
+
 async function enhanceTable(table, { pagination = false } = {}) {
   if (!table || table.dataset.dcGrid === "true") return;
   const lib = await loadGrid();
@@ -59,6 +77,7 @@ async function enhanceTable(table, { pagination = false } = {}) {
   const host = document.createElement("div");
   host.className = "dc-v11-grid-host";
   table.insertAdjacentElement("afterend", host);
+  ensureGridValueHeader(host, { pagination });
 
   const render = () => {
     const { headers, rows } = tableSnapshot(table, lib);
@@ -106,6 +125,8 @@ function restoreWorkspaceLegacyTable() {
   workspace.removeAttribute("data-dc-grid");
   const next = workspace.nextElementSibling;
   if (next?.classList?.contains("dc-v11-grid-host")) next.remove();
+  const valuebar = workspace.parentElement?.querySelector(":scope > .dc-v11-grid-valuebar");
+  valuebar?.remove();
 }
 
 function discoverTables() {
