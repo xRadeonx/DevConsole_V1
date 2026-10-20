@@ -1,25 +1,55 @@
 """Compose the infrastructure matrix without treating a partial catalog as complete.
 
-V1.1 can receive infrastructure metadata from three local sources:
+V1.1 can receive infrastructure metadata from four local sources:
 
-1. explicit ``config/panel.json`` rows;
-2. a safely parsed historical V1 checkout;
-3. non-secret Keycloak/database endpoints already present in the in-memory
+1. explicit ``config/panel.json`` rows from the current checkout;
+2. a sibling/older DevConsole ``config/panel.json`` already used on the workstation;
+3. a safely parsed historical V1 JavaScript catalog;
+4. non-secret Keycloak/database endpoints already present in the in-memory
    environment catalog.
 
-Earlier compatibility code returned as soon as source (1) was non-empty. A
-workstation with only DEVELOP configured therefore hid TEST/MAIN even when the
-legacy catalog knew about them. This adapter merges sources per environment and
-per component while preserving explicit rows as authoritative.
+The important invariant is that a fresh ZIP must not silently reduce a working
+SISPER matrix to only the two components that V1.1 can synthesize.  Existing
+installation-specific ``infra_targets`` are configuration, not credentials, so
+this adapter recovers them read-only from a neighbouring DevConsole checkout.
+Explicit rows in the current checkout remain authoritative.
 """
 
 from __future__ import annotations
 
+import json
 import urllib.parse
+from pathlib import Path
 from typing import Any
 
 _INSTALLED = False
 _ENVIRONMENTS = ("develop", "test", "main")
+_CANONICAL_ENV_ORDER = ("local", "develop", "test", "main")
+_MAX_PANEL_BYTES = 2_000_000
+_ALLOWED_ROW_FIELDS = {
+    "id",
+    "name",
+    "type",
+    "target",
+    "localKey",
+    "k8sPod",
+    "testUrl",
+    "note",
+    "cmd",
+}
+
+
+def _normalise_env(value: str) -> str:
+    key = str(value or "").strip().lower()
+    if key in {"prod", "production", "produccion", "main"}:
+        return "main"
+    if key in {"dev", "development", "develop", "desarrollo"}:
+        return "develop"
+    if key in {"qa", "testing", "test"}:
+        return "test"
+    if key in {"local", "localhost"}:
+        return "local"
+    return key
 
 
 def _row_key(row: dict[str, Any]) -> str:
@@ -38,6 +68,83 @@ def _merge_rows(primary: list[dict[str, Any]], fallback: list[dict[str, Any]]) -
         result.append(dict(row))
         seen.add(key)
     return result
+
+
+def _safe_panel_row(row: Any) -> dict[str, Any] | None:
+    """Return one non-secret infrastructure row from a local panel file.
+
+    ``infra_targets`` should contain only endpoints and probe metadata.  A
+    malformed/local panel can still contain a secret marker, so do not promote
+    such a value into the live matrix.
+    """
+    if not isinstance(row, dict):
+        return None
+    clean = {key: value for key, value in row.items() if key in _ALLOWED_ROW_FIELDS}
+    key = _row_key(clean)
+    target = clean.get("target")
+    if not key or target in (None, ""):
+        return None
+    if "__SECRET__" in str(target):
+        return None
+    for optional in ("testUrl", "cmd"):
+        if "__SECRET__" in str(clean.get(optional) or ""):
+            clean[optional] = None if optional == "testUrl" else ""
+    return clean
+
+
+def _read_panel_targets_at(root: Path) -> dict[str, list[dict[str, Any]]]:
+    """Read only ``infra_targets`` from one neighbouring panel.json."""
+    path = Path(root) / "config" / "panel.json"
+    try:
+        if not path.is_file() or path.stat().st_size > _MAX_PANEL_BYTES:
+            return {}
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    raw_targets = payload.get("infra_targets")
+    if not isinstance(raw_targets, dict):
+        return {}
+
+    result: dict[str, list[dict[str, Any]]] = {}
+    for raw_env, raw_rows in raw_targets.items():
+        env = _normalise_env(str(raw_env))
+        if env not in _CANONICAL_ENV_ORDER or not isinstance(raw_rows, list):
+            continue
+        rows = [clean for row in raw_rows if (clean := _safe_panel_row(row)) is not None]
+        if rows:
+            result[env] = _merge_rows(result.get(env, []), rows)
+    return result
+
+
+def _read_sibling_panel_targets(root: Path | None = None) -> dict[str, list[dict[str, Any]]]:
+    """Choose the richest existing local DevConsole panel catalog.
+
+    Automatic legacy discovery can see both the fresh V1.1 ZIP and an older
+    checkout.  Returning the first panel would therefore be unstable.  Prefer
+    the candidate with the broadest environment coverage and then the largest
+    number of infrastructure rows.  This recovers the already-working matrix
+    without combining unrelated installations.
+    """
+    try:
+        from devconsole.v11_legacy_profile import _candidate_roots
+
+        candidates = _candidate_roots(root)
+    except Exception:
+        candidates = [Path(root)] if root is not None else []
+
+    best: dict[str, list[dict[str, Any]]] = {}
+    best_score = (-1, -1)
+    for candidate in candidates:
+        targets = _read_panel_targets_at(Path(candidate))
+        if not targets:
+            continue
+        score = (len(targets), sum(len(rows) for rows in targets.values()))
+        if score > best_score:
+            best = targets
+            best_score = score
+    return best
 
 
 def _synthesized_targets() -> dict[str, list[dict[str, Any]]]:
@@ -97,37 +204,51 @@ def _synthesized_targets() -> dict[str, list[dict[str, Any]]]:
     return result
 
 
+def _normalise_target_map(mapping: Any) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = {}
+    if not isinstance(mapping, dict):
+        return result
+    for raw_env, rows in mapping.items():
+        env = _normalise_env(str(raw_env))
+        if env not in _CANONICAL_ENV_ORDER or not isinstance(rows, list):
+            continue
+        valid = [dict(row) for row in rows if isinstance(row, dict) and _row_key(row)]
+        if valid:
+            result[env] = _merge_rows(result.get(env, []), valid)
+    return result
+
+
 def compose_targets(explicit_or_current: dict[str, Any] | None = None) -> dict[str, list[dict[str, Any]]]:
-    """Merge explicit/current, historical and synthesized targets per env."""
+    """Merge current, sibling-panel, historical and synthesized targets per env."""
     from devconsole.v11_legacy_profile import _read_legacy_infra_targets, hydrate_environment_catalog
 
     # Refreshing the local catalog is read-only and makes synthesis useful even
     # if the historical dashboard had no INFRA_ENDPOINTS literal.
     hydrate_environment_catalog()
 
-    current = explicit_or_current if isinstance(explicit_or_current, dict) else {}
+    current = _normalise_target_map(explicit_or_current)
+    sibling_panel = _normalise_target_map(_read_sibling_panel_targets())
     try:
-        legacy = _read_legacy_infra_targets()
+        legacy = _normalise_target_map(_read_legacy_infra_targets())
     except Exception:
         legacy = {}
-    synthesized = _synthesized_targets()
+    synthesized = _normalise_target_map(_synthesized_targets())
 
     result: dict[str, list[dict[str, Any]]] = {}
-    all_envs = list(dict.fromkeys([*current.keys(), *legacy.keys(), *synthesized.keys()]))
-    for env in all_envs:
-        configured_rows = current.get(env, [])
-        legacy_rows = legacy.get(env, [])
-        synthesized_rows = synthesized.get(env, [])
-        if not isinstance(configured_rows, list):
-            configured_rows = []
-        if not isinstance(legacy_rows, list):
-            legacy_rows = []
-        if not isinstance(synthesized_rows, list):
-            synthesized_rows = []
-        rows = _merge_rows(configured_rows, legacy_rows)
-        rows = _merge_rows(rows, synthesized_rows)
+    discovered_envs = set(current) | set(sibling_panel) | set(legacy) | set(synthesized)
+    ordered_envs = [env for env in _CANONICAL_ENV_ORDER if env in discovered_envs]
+    ordered_envs.extend(sorted(discovered_envs - set(ordered_envs)))
+
+    for env in ordered_envs:
+        rows: list[dict[str, Any]] = []
+        # Current panel wins.  A sibling panel is the next-best representation
+        # because it is the configuration that produced the already-working V1
+        # matrix.  Historical JS and synthesis only fill actual gaps.
+        for source in (current, sibling_panel, legacy, synthesized):
+            source_rows = source.get(env, [])
+            rows = _merge_rows(rows, source_rows)
         if rows:
-            result[str(env)] = rows
+            result[env] = rows
     return result
 
 
@@ -161,6 +282,7 @@ def status() -> dict[str, Any]:
     targets = settings.infra_targets() if _INSTALLED else compose_targets({})
     return {
         "installed": _INSTALLED,
-        "environments": sorted(key for key, rows in targets.items() if rows),
+        "environments": [key for key in _CANONICAL_ENV_ORDER if targets.get(key)],
         "counts": {key: len(rows) for key, rows in targets.items() if rows},
+        "sibling_panel_detected": bool(_read_sibling_panel_targets()),
     }
