@@ -122,8 +122,8 @@ function createToolbar(lib) {
   bar.className = "dc-v11-editor-toolbar";
   bar.innerHTML = `
     <div class="dc-v11-editor-heading">
-      <span class="dc-v11-editor-product">CodeMirror 6</span>
-      <span class="dc-v11-editor-subtitle">Editor .env con validación local</span>
+      <span class="dc-v11-editor-product">CodeMirror 6 · ENV</span>
+      <span class="dc-v11-editor-subtitle">Resaltado .env, búsqueda nativa y validación local</span>
     </div>
     <div class="dc-v11-editor-badges" aria-live="polite">
       <span class="dc-v11-editor-badge" data-role="validity" data-state="neutral">Validando…</span>
@@ -132,16 +132,14 @@ function createToolbar(lib) {
       <span class="dc-v11-editor-badge" data-role="sensitive" data-state="neutral">Sin sensibles</span>
     </div>
     <div class="dc-v11-editor-actions">
-      <button type="button" data-action="find" title="Enfoca el editor. Usa Ctrl+F para la búsqueda nativa de CodeMirror.">⌕ Buscar</button>
+      <button type="button" data-action="find" title="Abre la búsqueda nativa de CodeMirror (Ctrl+F).">⌕ Buscar</button>
       <button type="button" data-action="validate" title="Valida sintaxis KEY=valor y variables duplicadas sin enviar contenido al servidor.">✓ Validar</button>
       <button type="button" data-action="copy" title="Copia el contenido actual del editor.">⧉ Copiar</button>
     </div>
   `;
 
   bar.querySelector('[data-action="find"]').addEventListener("click", () => {
-    lib.focus?.(editor);
-    const hint = bar.querySelector('[data-role="validity"]');
-    if (hint) hint.title = `${hint.title || ""}\nBúsqueda: Ctrl+F / Cmd+F dentro del editor.`.trim();
+    if (!lib.openSearch?.(editor)) lib.focus?.(editor);
   });
   bar.querySelector('[data-action="validate"]').addEventListener("click", () => {
     refreshToolbar(lib);
@@ -212,7 +210,7 @@ async function installEnvEditor() {
 
   source.dataset.dcCodeMirror = "true";
   source.classList.add("dc-v11-codemirror-source");
-  document.documentElement.dataset.dcCodemirror = "6";
+  document.documentElement.dataset.dcCodemirror = "6-env";
   refreshToolbar(lib);
   startExternalSync(lib);
 
