@@ -36,6 +36,19 @@ class V11FrontendRegressionTests(unittest.TestCase):
         self.assertIn("localStorage.setItem(DISABLE_KEY", source)
         self.assertIn('data-bs-theme', source)
 
+    def test_tabler_keeps_devconsole_sidebar_in_native_shell_flow(self):
+        source = self._read("static/js/v11/features/tabler-ui.js")
+        self.assertNotIn(
+            'sidebar?.classList.add("navbar", "navbar-vertical", "navbar-expand-lg", "dc-tabler-sidebar")',
+            source,
+        )
+        self.assertIn('sidebar.classList.remove("navbar-vertical", "navbar-expand-lg")', source)
+        self.assertIn('sidebar.classList.add("navbar", "dc-tabler-sidebar")', source)
+
+        css = self._read("static/css/v11-tabler.css")
+        self.assertIn("flex: 0 0 220px !important;", css)
+        self.assertIn("flex-basis: 62px !important;", css)
+
     def test_tabler_adapter_covers_shell_cards_forms_tables_and_modals(self):
         source = self._read("static/css/v11-tabler.css")
         for selector in (
