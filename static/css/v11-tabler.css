@@ -1,0 +1,734 @@
+/* DevConsole V1.1 · Tabler visual adapter
+ * Loaded only by feature/v1.1-ux-library-value through tabler-ui.js.
+ * The stable V1.1 branch keeps the original visual system untouched.
+ */
+
+body.dc-tabler-ui {
+  --tblr-primary: var(--accent, #206bc4);
+  --tblr-primary-rgb: 32, 107, 196;
+  --tblr-body-color: var(--text, #e6edf5);
+  --tblr-body-bg: var(--bg, #0f172a);
+  --tblr-bg-surface: var(--surface-base, #111827);
+  --tblr-bg-surface-secondary: color-mix(in srgb, var(--surface-base, #111827) 84%, var(--bg, #0f172a));
+  --tblr-border-color: var(--border-soft, #243247);
+  --tblr-secondary-color: var(--text-muted, #94a3b8);
+  --tblr-card-bg: var(--surface-elevated, #111827);
+  --tblr-card-border-color: var(--border-soft, #243247);
+  --tblr-border-radius: 0.625rem;
+  --tblr-border-radius-sm: 0.45rem;
+  --tblr-box-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.08);
+  background: var(--tblr-body-bg) !important;
+  background-image: none !important;
+  color: var(--tblr-body-color);
+}
+
+body.dc-tabler-ui::before {
+  content: none !important;
+}
+
+body.dc-tabler-ui * {
+  scrollbar-color: color-mix(in srgb, var(--text-muted, #94a3b8) 28%, transparent) transparent;
+}
+
+body.dc-tabler-ui ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.dc-tabler-ui ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted, #94a3b8) 26%, transparent);
+  border-radius: 999px;
+}
+
+/* -------------------------------------------------------------------------
+   Application chrome
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .topbar.dc-tabler-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  height: 60px;
+  min-height: 60px;
+  padding: 0 18px;
+  gap: 14px;
+  background: color-mix(in srgb, var(--surface-base, #111827) 98%, transparent) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--tblr-border-color) !important;
+  border-radius: 0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 3px 16px rgba(0, 0, 0, 0.13) !important;
+  backdrop-filter: none !important;
+}
+
+body.dc-tabler-ui .topbar-left,
+body.dc-tabler-ui .topbar-right {
+  gap: 9px;
+}
+
+body.dc-tabler-ui .topbar-brand.navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 0;
+  margin: 0 4px 0 0;
+  padding: 0;
+  color: var(--text, #f8fafc);
+}
+
+body.dc-tabler-ui .topbar-brand-title {
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: var(--text, #f8fafc) !important;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+body.dc-tabler-ui .topbar-brand-sub {
+  color: var(--text-muted, #94a3b8) !important;
+  font-size: 11px;
+  font-weight: 650;
+  opacity: 1;
+}
+
+body.dc-tabler-ui .dc-tabler-sidebar-toggle {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body.dc-tabler-ui .dc-tabler-sidebar-toggle:hover {
+  background: color-mix(in srgb, var(--accent, #206bc4) 10%, transparent) !important;
+  color: var(--accent, #60a5fa) !important;
+}
+
+body.dc-tabler-ui .dc-tabler-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  flex: 0 0 auto;
+}
+
+body.dc-tabler-ui .dc-tabler-path {
+  max-width: min(360px, 30vw);
+  min-height: 32px;
+  padding: 4px 9px !important;
+  overflow: hidden;
+  border-color: var(--tblr-border-color) !important;
+  background: var(--tblr-bg-surface-secondary) !important;
+  color: var(--text-secondary, #cbd5e1) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+}
+
+body.dc-tabler-ui #baseDirPathText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   KPI strip · compact Tabler stats rather than glass/neon ribbon
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .topbar-kpi-row.dc-tabler-kpi-strip {
+  flex: 1 1 auto;
+  justify-content: center;
+  max-width: 720px;
+  min-height: 34px;
+  padding: 2px 5px;
+  gap: 1px;
+  overflow-x: auto;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius);
+  background: var(--tblr-bg-surface-secondary) !important;
+  box-shadow: none !important;
+}
+
+body.dc-tabler-ui .dc-tabler-kpi {
+  min-height: 27px;
+  margin: 0;
+  padding: 3px 8px;
+  gap: 5px;
+  border: 0 !important;
+  border-radius: var(--tblr-border-radius-sm);
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8);
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+body.dc-tabler-ui .dc-tabler-kpi:hover,
+body.dc-tabler-ui .dc-tabler-kpi.active {
+  background: color-mix(in srgb, var(--accent, #206bc4) 11%, transparent) !important;
+  color: var(--text, #f8fafc) !important;
+}
+
+body.dc-tabler-ui .kpi-label {
+  color: var(--text-muted, #94a3b8);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+body.dc-tabler-ui .kpi-val {
+  color: var(--text, #f8fafc);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+body.dc-tabler-ui .kpi-divider {
+  height: 18px;
+  background: var(--tblr-border-color);
+  opacity: 0.65;
+}
+
+body.dc-tabler-ui .kpi-dot {
+  width: 6px;
+  height: 6px;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   Sidebar · Tabler vertical navbar
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .app-shell {
+  height: calc(100vh - 60px);
+  background: var(--tblr-body-bg);
+}
+
+body.dc-tabler-ui .sidebar.dc-tabler-sidebar {
+  top: 60px;
+  width: 244px;
+  height: calc(100vh - 60px);
+  padding: 10px 8px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--tblr-bg-surface) !important;
+  border: 0 !important;
+  border-right: 1px solid var(--tblr-border-color) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+body.dc-tabler-ui .sidebar.collapsed {
+  width: 68px;
+}
+
+body.dc-tabler-ui .sidebar-nav.navbar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 !important;
+}
+
+body.dc-tabler-ui .dc-tabler-nav-caption {
+  padding: 14px 10px 6px;
+  color: var(--text-dim, #64748b);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+body.dc-tabler-ui .sidebar-divider {
+  margin: 9px 7px !important;
+  background: var(--tblr-border-color) !important;
+  opacity: 0.75;
+}
+
+body.dc-tabler-ui .sidebar-nav-item.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  padding: 7px 9px;
+  gap: 9px;
+  border: 0 !important;
+  border-radius: 7px;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+body.dc-tabler-ui .sidebar-nav-item.nav-link:hover {
+  background: color-mix(in srgb, var(--text, #f8fafc) 5%, transparent) !important;
+  color: var(--text, #f8fafc) !important;
+}
+
+body.dc-tabler-ui .sidebar-nav-item.nav-link.active {
+  background: color-mix(in srgb, var(--accent, #206bc4) 13%, transparent) !important;
+  color: color-mix(in srgb, var(--accent, #60a5fa) 88%, white 12%) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent, #206bc4) 18%, transparent) !important;
+}
+
+body.dc-tabler-ui .sidebar-nav-item.nav-link.active::before {
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent, #206bc4);
+  box-shadow: none !important;
+}
+
+body.dc-tabler-ui .sidebar-nav-icon.nav-link-icon {
+  width: 20px;
+  min-width: 20px;
+  margin: 0;
+  color: currentColor;
+  opacity: 0.9;
+}
+
+body.dc-tabler-ui .sidebar-nav-label.nav-link-title {
+  color: inherit;
+  font-weight: inherit;
+}
+
+body.dc-tabler-ui .sidebar-footer {
+  margin-top: auto;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--tblr-border-color);
+  background: transparent !important;
+}
+
+body.dc-tabler-ui .sidebar-footer-btn,
+body.dc-tabler-ui .sidebar-footer-role {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 34px;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body.dc-tabler-ui .sidebar-footer-btn:hover,
+body.dc-tabler-ui .sidebar-footer-role:hover {
+  background: color-mix(in srgb, var(--text, #fff) 5%, transparent) !important;
+  color: var(--text, #fff) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Main content and cards
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .main-content.dc-tabler-main {
+  padding: 22px 24px 42px;
+  background: var(--tblr-bg-surface-secondary);
+}
+
+body.dc-tabler-ui .table-card,
+body.dc-tabler-ui .filter-card,
+body.dc-tabler-ui .service-card,
+body.dc-tabler-ui .stat-card,
+body.dc-tabler-ui .panel-card,
+body.dc-tabler-ui .infra-card,
+body.dc-tabler-ui .activity-card,
+body.dc-tabler-ui .dc-tabler-card.card {
+  border: 1px solid var(--tblr-border-color) !important;
+  border-radius: 10px !important;
+  background: var(--tblr-bg-surface) !important;
+  box-shadow: var(--tblr-box-shadow-card) !important;
+  backdrop-filter: none !important;
+}
+
+body.dc-tabler-ui .filter-card {
+  padding: 12px 14px !important;
+}
+
+body.dc-tabler-ui .service-card:hover,
+body.dc-tabler-ui .table-card:hover {
+  border-color: color-mix(in srgb, var(--accent, #206bc4) 28%, var(--tblr-border-color)) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14) !important;
+  transform: none !important;
+}
+
+body.dc-tabler-ui .section-title {
+  margin: 22px 0 10px;
+  padding: 0 2px;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text, #f8fafc);
+  box-shadow: none !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.dc-tabler-ui .section-title::before,
+body.dc-tabler-ui .section-title::after {
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------
+   Buttons · use Tabler semantics while preserving legacy actions
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .btn:not(.cw-btn) {
+  min-height: 31px;
+  border-radius: 6px;
+  box-shadow: none !important;
+  transform: none !important;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+body.dc-tabler-ui .btn.btn-sm:not(.cw-btn) {
+  min-height: 29px;
+  padding: 4px 9px;
+}
+
+body.dc-tabler-ui .btn.btn-xs:not(.cw-btn) {
+  min-height: 25px;
+  padding: 3px 7px;
+  font-size: 9.5px;
+}
+
+body.dc-tabler-ui .btn-hero.btn-primary {
+  border-color: var(--tblr-primary) !important;
+  background: var(--tblr-primary) !important;
+  color: white !important;
+}
+
+body.dc-tabler-ui .btn-outline.btn-outline-secondary {
+  border-color: var(--tblr-border-color) !important;
+  background: transparent !important;
+  color: var(--text-secondary, #cbd5e1) !important;
+}
+
+body.dc-tabler-ui .btn-outline.btn-outline-secondary:hover {
+  border-color: color-mix(in srgb, var(--accent, #206bc4) 42%, var(--tblr-border-color)) !important;
+  background: color-mix(in srgb, var(--accent, #206bc4) 8%, transparent) !important;
+  color: var(--text, #fff) !important;
+}
+
+body.dc-tabler-ui .toolbar-btn-group,
+body.dc-tabler-ui .btn-bar-group {
+  gap: 6px;
+}
+
+body.dc-tabler-ui .view-toggle-group {
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: 7px;
+  background: var(--tblr-bg-surface-secondary);
+}
+
+body.dc-tabler-ui .view-toggle-btn {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+body.dc-tabler-ui .view-toggle-btn.active {
+  background: var(--tblr-bg-surface) !important;
+  color: var(--text, #fff) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Environment selector · simple segmented control
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .env-switcher.dc-tabler-env-switcher {
+  min-height: 34px;
+  padding: 2px;
+  gap: 1px;
+  border: 1px solid var(--tblr-border-color);
+  border-radius: 7px;
+  background: var(--tblr-bg-surface-secondary) !important;
+  box-shadow: none !important;
+}
+
+body.dc-tabler-ui .env-btn.btn {
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+}
+
+body.dc-tabler-ui .env-btn:hover {
+  background: color-mix(in srgb, var(--text, #fff) 5%, transparent) !important;
+  color: var(--text, #fff) !important;
+}
+
+body.dc-tabler-ui .env-btn.active-develop {
+  background: color-mix(in srgb, var(--warn, #f59e0b) 13%, transparent) !important;
+  color: var(--warn, #f59e0b) !important;
+}
+
+body.dc-tabler-ui .env-btn.active-test {
+  background: color-mix(in srgb, var(--accent, #206bc4) 13%, transparent) !important;
+  color: var(--accent, #60a5fa) !important;
+}
+
+body.dc-tabler-ui .env-btn.active-main {
+  background: color-mix(in srgb, var(--success, #10b981) 13%, transparent) !important;
+  color: var(--success, #10b981) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Forms, filters and chips
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .form-control,
+body.dc-tabler-ui .form-select {
+  min-height: 32px;
+  border-color: var(--tblr-border-color) !important;
+  border-radius: 6px !important;
+  background-color: var(--tblr-bg-surface-secondary) !important;
+  color: var(--text, #f8fafc) !important;
+  box-shadow: none !important;
+  font-size: 10.5px;
+}
+
+body.dc-tabler-ui .form-control:focus,
+body.dc-tabler-ui .form-select:focus {
+  border-color: color-mix(in srgb, var(--accent, #206bc4) 64%, white 8%) !important;
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--accent, #206bc4) 13%, transparent) !important;
+}
+
+body.dc-tabler-ui .form-control::placeholder {
+  color: var(--text-dim, #64748b);
+}
+
+body.dc-tabler-ui .form-check-input {
+  border-color: var(--tblr-border-color);
+  background-color: var(--tblr-bg-surface-secondary);
+  box-shadow: none;
+}
+
+body.dc-tabler-ui .form-check-input:checked {
+  border-color: var(--tblr-primary);
+  background-color: var(--tblr-primary);
+}
+
+body.dc-tabler-ui .chip,
+body.dc-tabler-ui .badge-pill,
+body.dc-tabler-ui .status-badge,
+body.dc-tabler-ui .dc-tabler-badge.badge {
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid var(--tblr-border-color) !important;
+  border-radius: 999px !important;
+  background: var(--tblr-bg-surface-secondary) !important;
+  color: var(--text-muted, #94a3b8) !important;
+  box-shadow: none !important;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+body.dc-tabler-ui .chip:hover,
+body.dc-tabler-ui .chip.active {
+  border-color: color-mix(in srgb, var(--accent, #206bc4) 40%, var(--tblr-border-color)) !important;
+  background: color-mix(in srgb, var(--accent, #206bc4) 10%, var(--tblr-bg-surface-secondary)) !important;
+  color: color-mix(in srgb, var(--accent, #60a5fa) 84%, white 16%) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Tables
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .dc-tabler-table.table {
+  --tblr-table-bg: transparent;
+  --tblr-table-color: var(--text-secondary, #cbd5e1);
+  --tblr-table-border-color: var(--tblr-border-color);
+  width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+body.dc-tabler-ui .dc-tabler-table thead th {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--tblr-border-color) !important;
+  background: color-mix(in srgb, var(--tblr-bg-surface-secondary) 88%, transparent) !important;
+  color: var(--text-muted, #94a3b8) !important;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+body.dc-tabler-ui .dc-tabler-table tbody td {
+  padding: 9px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--tblr-border-color) 70%, transparent) !important;
+  background: transparent !important;
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 10.5px;
+}
+
+body.dc-tabler-ui .dc-tabler-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--accent, #206bc4) 5%, transparent) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Legacy modal compatibility with Bootstrap/Tabler .modal class
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .modal-overlay {
+  background: rgba(2, 6, 23, 0.72) !important;
+  backdrop-filter: blur(4px);
+}
+
+body.dc-tabler-ui .modal-overlay > .modal.dc-tabler-modal {
+  position: relative !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: flex;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--tblr-border-color) !important;
+  border-radius: 10px !important;
+  background: var(--tblr-bg-surface) !important;
+  color: var(--text, #f8fafc) !important;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.42) !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+body.dc-tabler-ui .modal-overlay > .modal.dc-tabler-modal::before,
+body.dc-tabler-ui .modal-overlay > .modal.dc-tabler-modal::after {
+  content: none !important;
+}
+
+body.dc-tabler-ui .modal-title {
+  color: var(--text, #f8fafc);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+/* -------------------------------------------------------------------------
+   Dropdowns and action menus (legacy JS still owns visibility/state)
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .toolbar-dropdown-menu {
+  min-width: 220px;
+  padding: 5px;
+  border: 1px solid var(--tblr-border-color) !important;
+  border-radius: 8px !important;
+  background: var(--tblr-bg-surface) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28) !important;
+}
+
+body.dc-tabler-ui .toolbar-dropdown-menu a {
+  display: flex;
+  align-items: center;
+  min-height: 31px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  color: var(--text-secondary, #cbd5e1) !important;
+  font-size: 10.5px;
+  text-decoration: none;
+}
+
+body.dc-tabler-ui .toolbar-dropdown-menu a:hover {
+  background: color-mix(in srgb, var(--accent, #206bc4) 9%, transparent) !important;
+  color: var(--text, #fff) !important;
+}
+
+/* -------------------------------------------------------------------------
+   Preserve the purpose-built console wall. Tabler only frames it.
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui #tab-consoles.active {
+  background: var(--tblr-bg-surface-secondary) !important;
+}
+
+body.dc-tabler-ui #tab-consoles .console-stage,
+body.dc-tabler-ui #tab-consoles .console-stage-view,
+body.dc-tabler-ui #tab-consoles .console-mosaic-grid,
+body.dc-tabler-ui #tab-consoles .console-grouped-view {
+  --tblr-body-bg: initial;
+}
+
+body.dc-tabler-ui #tab-consoles .cw-btn,
+body.dc-tabler-ui #tab-consoles .cw-input,
+body.dc-tabler-ui #tab-consoles select {
+  font-family: inherit;
+}
+
+/* -------------------------------------------------------------------------
+   Existing enhanced libraries: make them fit the Tabler visual language.
+   ------------------------------------------------------------------------- */
+body.dc-tabler-ui .dc-v11-editor-toolbar,
+body.dc-tabler-ui .dc-v11-grid-valuebar {
+  border-color: var(--tblr-border-color) !important;
+  border-radius: 8px !important;
+  background: var(--tblr-bg-surface) !important;
+  box-shadow: none !important;
+}
+
+body.dc-tabler-ui .dc-v11-codemirror-host {
+  border-color: var(--tblr-border-color) !important;
+  border-radius: 8px !important;
+}
+
+body.dc-tabler-ui .dc-v11-grid-host .gridjs-wrapper {
+  border-color: var(--tblr-border-color) !important;
+  border-radius: 8px !important;
+}
+
+body.dc-tabler-ui .dc-v11-terminal-toolbar {
+  border-color: rgba(71, 85, 105, 0.72);
+  border-radius: 6px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
+}
+
+/* -------------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  body.dc-tabler-ui .dc-tabler-path {
+    max-width: 220px;
+  }
+
+  body.dc-tabler-ui .topbar-kpi-row.dc-tabler-kpi-strip {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1024px) {
+  body.dc-tabler-ui .sidebar.dc-tabler-sidebar {
+    top: 60px;
+    height: calc(100vh - 60px);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.32) !important;
+  }
+
+  body.dc-tabler-ui .main-content.dc-tabler-main {
+    padding: 15px 14px 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  body.dc-tabler-ui .topbar.dc-tabler-topbar {
+    padding-inline: 10px;
+  }
+
+  body.dc-tabler-ui .dc-tabler-path {
+    display: none;
+  }
+
+  body.dc-tabler-ui .topbar-brand-sub {
+    display: none;
+  }
+
+  body.dc-tabler-ui .env-btn.btn {
+    padding-inline: 6px;
+  }
+}
