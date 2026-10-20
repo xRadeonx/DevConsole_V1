@@ -45,8 +45,8 @@ function makeSearchBar(parent, terminal, searchAddon) {
   bar.className = "dc-v11-terminal-search";
   bar.hidden = true;
   bar.innerHTML = `
-    <img src="/static/vendor/terminal-lab/icons/search.svg" alt="" aria-hidden="true">
-    <input type="search" aria-label="Buscar en terminal" placeholder="Buscar en salida…">
+    <span class="dc-v11-terminal-search-label">Buscar en salida</span>
+    <input type="search" aria-label="Buscar en terminal" placeholder="texto, error, URL…">
     <button type="button" data-dir="prev" title="Coincidencia anterior">↑</button>
     <button type="button" data-dir="next" title="Coincidencia siguiente">↓</button>
     <button type="button" data-close title="Cerrar búsqueda">×</button>
@@ -105,6 +105,34 @@ function makeSearchBar(parent, terminal, searchAddon) {
   };
 }
 
+function makeTerminalToolbar(parent, terminal, fit, searchUi, renderer, linksEnabled) {
+  if (!parent || parent.querySelector(":scope > .dc-v11-terminal-toolbar")) return null;
+  const bar = document.createElement("div");
+  bar.className = "dc-v11-terminal-toolbar";
+  bar.innerHTML = `
+    <span class="dc-v11-terminal-toolbar-brand" title="xterm.js con addons V1.1">xterm+</span>
+    <button type="button" data-action="find" title="Buscar en la salida (Ctrl+F)">⌕ Buscar</button>
+    <button type="button" data-action="fit" title="Ajustar terminal al panel">↔ Ajustar</button>
+    <span class="dc-v11-terminal-toolbar-state" data-role="renderer">${renderer.toUpperCase()}</span>
+    <span class="dc-v11-terminal-toolbar-state${linksEnabled ? " is-on" : ""}" title="WebLinksAddon: URLs http/https clicables">LINKS</span>
+  `;
+  parent.appendChild(bar);
+  bar.querySelector('[data-action="find"]').addEventListener("click", () => searchUi?.open());
+  bar.querySelector('[data-action="fit"]').addEventListener("click", () => {
+    try { fit.fit(); } catch (_) {}
+    terminal.focus();
+  });
+  return {
+    setRenderer(next) {
+      const badge = bar.querySelector('[data-role="renderer"]');
+      if (badge) badge.textContent = String(next || "canvas").toUpperCase();
+    },
+    remove() {
+      bar.remove();
+    },
+  };
+}
+
 function openSafeWebLink(_event, uri) {
   try {
     const url = new URL(uri, window.location.href);
@@ -133,6 +161,7 @@ function promoteTerminalConstructor() {
       this.__dcV11Links = null;
       this.__dcV11Webgl = null;
       this.__dcV11SearchUi = null;
+      this.__dcV11Toolbar = null;
       this.__dcV11ResizeObserver = null;
       this.loadAddon(this.__dcV11Fit);
       this.loadAddon(this.__dcV11Search);
@@ -163,18 +192,21 @@ function promoteTerminalConstructor() {
     open(parent) {
       super.open(parent);
       this.__dcV11SearchUi = makeSearchBar(parent, this, this.__dcV11Search);
+      let renderer = "canvas";
 
       if (WebglCtor && !this.__dcV11Webgl) {
         try {
           const webgl = new WebglCtor(false);
           this.loadAddon(webgl);
           this.__dcV11Webgl = webgl;
+          renderer = "webgl";
           document.documentElement.dataset.dcXtermRenderer = "webgl";
           if (typeof webgl.onContextLoss === "function") {
             webgl.onContextLoss(() => {
               try { webgl.dispose(); } catch (_) {}
               this.__dcV11Webgl = null;
               document.documentElement.dataset.dcXtermRenderer = "canvas";
+              this.__dcV11Toolbar?.setRenderer("canvas");
             });
           }
         } catch (error) {
@@ -183,6 +215,15 @@ function promoteTerminalConstructor() {
           document.documentElement.dataset.dcXtermRenderer = "canvas";
         }
       }
+
+      this.__dcV11Toolbar = makeTerminalToolbar(
+        parent,
+        this,
+        this.__dcV11Fit,
+        this.__dcV11SearchUi,
+        renderer,
+        Boolean(this.__dcV11Links),
+      );
 
       const fit = () => {
         try { this.__dcV11Fit.fit(); } catch (_) {}
@@ -197,8 +238,10 @@ function promoteTerminalConstructor() {
     dispose() {
       try { this.__dcV11ResizeObserver?.disconnect(); } catch (_) {}
       try { this.__dcV11Webgl?.dispose(); } catch (_) {}
+      try { this.__dcV11Toolbar?.remove(); } catch (_) {}
       this.__dcV11ResizeObserver = null;
       this.__dcV11Webgl = null;
+      this.__dcV11Toolbar = null;
       super.dispose();
     }
   }
