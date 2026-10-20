@@ -79,11 +79,10 @@ jobs:
           mv "$TMP_VERSIONS" "$VENDOR/VERSIONS.txt"
 
           if ! grep -q '^Tabler Core 1.6.1' "$VENDOR/THIRD_PARTY_LICENSES.txt" 2>/dev/null; then
-            cat >> "$VENDOR/THIRD_PARTY_LICENSES.txt" <<'LICENSES'
-
-Tabler Core 1.6.1 — MIT — https://github.com/tabler/tabler
-Tabler Icons Sprite 3.49.0 — MIT — https://github.com/tabler/tabler-icons
-LICENSES
+            printf '\n%s\n%s\n' \
+              'Tabler Core 1.6.1 — MIT — https://github.com/tabler/tabler' \
+              'Tabler Icons Sprite 3.49.0 — MIT — https://github.com/tabler/tabler-icons' \
+              >> "$VENDOR/THIRD_PARTY_LICENSES.txt"
           fi
 
           for file in \
