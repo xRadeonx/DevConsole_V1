@@ -1,0 +1,395 @@
+/* DevConsole V1.1 · visible library value layer
+ * This file is intentionally isolated from dashboard.css/console-wall.css.
+ * Removing it must restore the stable V1.1 appearance without changing logic.
+ */
+
+/* -------------------------------------------------------------------------
+   CodeMirror 6 · .env editor toolbar
+   ------------------------------------------------------------------------- */
+.dc-v11-editor-toolbar {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent, #38bdf8) 28%, var(--border-soft, #334155));
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(8, 47, 73, 0.72));
+  color: var(--text, #e2e8f0);
+}
+
+.dc-v11-editor-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dc-v11-editor-product {
+  color: var(--accent, #38bdf8);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dc-v11-editor-subtitle {
+  margin-top: 2px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 9.5px;
+}
+
+.dc-v11-editor-badges,
+.dc-v11-editor-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.dc-v11-editor-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  padding: 2px 7px;
+  border: 1px solid var(--border-soft, #334155);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: var(--text-muted, #94a3b8);
+  font-size: 9.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.dc-v11-editor-badge[data-state="success"] {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.09);
+  color: #6ee7b7;
+}
+
+.dc-v11-editor-badge[data-state="warning"] {
+  border-color: rgba(245, 158, 11, 0.42);
+  background: rgba(245, 158, 11, 0.09);
+  color: #fbbf24;
+}
+
+.dc-v11-editor-badge[data-state="danger"] {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.09);
+  color: #fca5a5;
+}
+
+.dc-v11-editor-badge.is-pulsing {
+  transform: scale(1.045);
+  border-color: var(--accent, #38bdf8);
+}
+
+.dc-v11-editor-actions {
+  justify-content: flex-end;
+}
+
+.dc-v11-editor-actions button {
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, #38bdf8) 28%, var(--border-soft, #334155));
+  border-radius: 6px;
+  background: rgba(2, 6, 23, 0.62);
+  color: var(--text-secondary, #cbd5e1);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dc-v11-editor-actions button:hover {
+  border-color: var(--accent, #38bdf8);
+  color: #e0f2fe;
+  background: rgba(14, 165, 233, 0.11);
+}
+
+/* -------------------------------------------------------------------------
+   Web Awesome · global multi-environment readiness
+   ------------------------------------------------------------------------- */
+.dc-v11-wa-global-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  min-height: 30px;
+  padding: 3px 7px;
+  margin: 0 7px 0 0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.38);
+  color-scheme: dark;
+  --wa-font-family-body: inherit;
+  --wa-font-size-s: 9px;
+  --wa-tooltip-font-size: 11px;
+}
+
+.dc-v11-wa-title {
+  margin-right: 2px;
+  color: var(--text-muted, #94a3b8);
+  font: 800 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.07em;
+}
+
+.dc-v11-wa-global-health wa-badge {
+  font-size: 8.5px;
+  letter-spacing: 0.015em;
+}
+
+.dc-v11-wa-global-health wa-badge::part(badge) {
+  min-height: 19px;
+  padding-inline: 6px;
+  font-weight: 800;
+}
+
+.dc-v11-wa-spinner {
+  font-size: 13px;
+}
+
+.dc-v11-wa-loading-label {
+  color: var(--text-muted, #94a3b8);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+   xterm.js addons · discoverable toolbar + search surface
+   ------------------------------------------------------------------------- */
+.dc-v11-terminal-toolbar {
+  position: absolute;
+  z-index: 22;
+  top: 5px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 14px);
+  padding: 3px 4px;
+  border: 1px solid rgba(51, 65, 85, 0.82);
+  border-radius: 7px;
+  background: rgba(2, 6, 23, 0.88);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(6px);
+  opacity: 0.72;
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.dc-v11-terminal-toolbar:hover,
+.dc-v11-terminal-toolbar:focus-within {
+  opacity: 1;
+  border-color: rgba(56, 189, 248, 0.46);
+}
+
+.dc-v11-terminal-toolbar-brand {
+  padding: 0 4px;
+  color: #67e8f9;
+  font: 800 8.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.05em;
+}
+
+.dc-v11-terminal-toolbar button,
+.dc-v11-terminal-search button {
+  min-height: 22px;
+  padding: 2px 6px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #cbd5e1;
+  font: 700 9px/1.2 inherit;
+  cursor: pointer;
+}
+
+.dc-v11-terminal-toolbar button:hover,
+.dc-v11-terminal-search button:hover {
+  border-color: #38bdf8;
+  color: #e0f2fe;
+}
+
+.dc-v11-terminal-toolbar-state {
+  padding: 2px 5px;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  border-radius: 999px;
+  color: #94a3b8;
+  font: 800 7.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dc-v11-terminal-toolbar-state.is-on {
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+}
+
+.dc-v11-terminal-search {
+  position: absolute;
+  z-index: 24;
+  top: 38px;
+  right: 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(390px, calc(100% - 14px));
+  box-sizing: border-box;
+  padding: 5px;
+  border: 1px solid rgba(56, 189, 248, 0.46);
+  border-radius: 7px;
+  background: rgba(2, 6, 23, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dc-v11-terminal-search[hidden] {
+  display: none !important;
+}
+
+.dc-v11-terminal-search-label {
+  color: #94a3b8;
+  font-size: 8.5px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.dc-v11-terminal-search input {
+  flex: 1;
+  min-width: 80px;
+  height: 25px;
+  padding: 3px 7px;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  outline: none;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dc-v11-terminal-search input:focus {
+  border-color: #38bdf8;
+}
+
+/* -------------------------------------------------------------------------
+   Grid.js · visible capability header in Activity
+   ------------------------------------------------------------------------- */
+.dc-v11-grid-valuebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 8px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--accent, #38bdf8) 20%, var(--border-soft, #334155));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--card-bg, #0f172a) 92%, #020617);
+}
+
+.dc-v11-grid-valuebar > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.dc-v11-grid-valuebar strong {
+  color: var(--accent, #38bdf8);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.dc-v11-grid-valuebar > div:first-child span {
+  color: var(--text-muted, #94a3b8);
+  font-size: 9.5px;
+}
+
+.dc-v11-grid-capabilities {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dc-v11-grid-capabilities span {
+  padding: 2px 6px;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  border-radius: 999px;
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+   Split.js · discoverable map gutter
+   ------------------------------------------------------------------------- */
+.dc-v11-map-split > .gutter.gutter-horizontal {
+  flex-basis: 11px !important;
+  width: 11px !important;
+}
+
+.dc-v11-split-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.8);
+  color: #67e8f9;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.dc-v11-map-split > .gutter.gutter-horizontal:hover .dc-v11-split-grip,
+.dc-v11-map-split > .gutter.gutter-horizontal:focus .dc-v11-split-grip {
+  opacity: 1;
+  border-color: #38bdf8;
+}
+
+@media (max-width: 1350px) {
+  .dc-v11-wa-title {
+    display: none;
+  }
+
+  .dc-v11-wa-global-health wa-badge {
+    font-size: 7.5px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .dc-v11-wa-global-health {
+    display: none;
+  }
+
+  .dc-v11-editor-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .dc-v11-editor-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .dc-v11-grid-valuebar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dc-v11-grid-capabilities {
+    justify-content: flex-start;
+  }
+
+  .dc-v11-terminal-toolbar-state,
+  .dc-v11-terminal-toolbar-brand {
+    display: none;
+  }
+}
