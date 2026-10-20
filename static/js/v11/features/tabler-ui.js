@@ -103,7 +103,13 @@ function decorateShell() {
   document.getElementById("baseDirPathBtn")?.classList.add("btn", "btn-sm", "btn-outline-secondary", "dc-tabler-path");
 
   const sidebar = document.getElementById("sidebarNav");
-  sidebar?.classList.add("navbar", "navbar-vertical", "navbar-expand-lg", "dc-tabler-sidebar");
+  if (sidebar) {
+    // DevConsole owns the shell geometry. Tabler's vertical-navbar classes
+    // expect its .page-wrapper layout and pull this flex child out of flow,
+    // allowing main content to render underneath the sidebar.
+    sidebar.classList.remove("navbar-vertical", "navbar-expand-lg");
+    sidebar.classList.add("navbar", "dc-tabler-sidebar");
+  }
   const nav = sidebar?.querySelector(".sidebar-nav");
   nav?.classList.add("navbar-nav");
 
