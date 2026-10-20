@@ -13,28 +13,30 @@ echo "  Instalador SISPER DevConsole (Tilix & Multi-Entorno Orquestador)"
 echo "================================================================="
 echo "Directorio base detectado: ${SCRIPT_DIR}"
 
-# 0. Puerto fijo 9099 (el mismo para todos).  Si está ocupado por una
-#    instalación previa del mismo usuario, se detiene y se libera; si lo ocupa
-#    otro proceso/usuario, se aborta con el detalle (no se elige otro puerto).
+# 0. Puerto fijo 9099 (el mismo para todos). Si está ocupado, únicamente se
+#    detiene el servicio systemd que este instalador administra. Nunca se mata
+#    un proceso arbitrario por puerto: si el conflicto persiste, se aborta y se
+#    muestra el dueño para que el operador decida qué hacer.
 SISPER_PORT="${SISPER_PORT:-9099}"
-liberar_puerto() {
+liberar_servicio_propio() {
     local p="$1"
     ss -ltn 2>/dev/null | grep -q ":${p} " || return 0
-    echo "[*] El puerto ${p} está ocupado; intentando liberarlo..."
+
+    echo "[*] El puerto ${p} está ocupado; deteniendo ${SERVICE_NAME} si existe..."
     systemctl --user stop "${SERVICE_NAME}" 2>/dev/null || true
-    sleep 1
-    # fuser sólo puede matar procesos del propio usuario: nunca toca a otro.
-    command -v fuser >/dev/null 2>&1 && fuser -k "${p}/tcp" 2>/dev/null || true
+
     for _ in $(seq 1 10); do
         ss -ltn 2>/dev/null | grep -q ":${p} " || return 0
-        sleep 1
+        sleep 0.5
     done
     return 1
 }
-if ! liberar_puerto "${SISPER_PORT}"; then
-    echo "  [!] El puerto ${SISPER_PORT} sigue ocupado por otro proceso/usuario:"
-    ss -ltnp 2>/dev/null | grep ":${SISPER_PORT} " | sed 's/^/      /'
-    echo "      Ciérralo y reintenta, o usa otro:  SISPER_PORT=9100 ./install_devconsole.sh"
+
+if ! liberar_servicio_propio "${SISPER_PORT}"; then
+    echo "  [!] El puerto ${SISPER_PORT} está ocupado por un proceso que DevConsole no administra:"
+    ss -ltnp 2>/dev/null | grep ":${SISPER_PORT} " | sed 's/^/      /' || true
+    echo "      No se ha matado ningún proceso. Resuelve el conflicto y reintenta,"
+    echo "      o instala en otro puerto: SISPER_PORT=9100 ./install_devconsole.sh"
     exit 1
 fi
 echo "Puerto asignado: ${SISPER_PORT}"
@@ -60,12 +62,6 @@ Description=Dashboard Web Orquestador SISPER (Tilix & Microservicios)
 Documentation=http://localhost:${SISPER_PORT}
 After=graphical-session.target network.target
 PartOf=graphical-session.target
-# Si el panel no arranca (puerto ocupado, error de configuración…), se detiene
-# tras varios intentos en vez de reiniciarse sin fin (eso disparaba avisos
-# constantes de "Unit recovered").
-# La ruta del script va entre comillas: la carpeta puede tener espacios y
-# systemd partiría el comando (fallaba con status=2/INVALIDARGUMENT).
-# Ojo: WorkingDirectory= NO admite comillas, por eso no se usa.
 StartLimitIntervalSec=60
 StartLimitBurst=4
 
@@ -78,11 +74,13 @@ KillMode=process
 TimeoutStopSec=3s
 Environment=PYTHONUNBUFFERED=1
 Environment=PATH=${HOME}/.local/bin:${HOME}/.bun/bin:${HOME}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-# Fase 0C.5: bind explicito al loopback. DevConsole es un orquestador que
-# ejecuta comandos, reescribe .env y opera kubectl; no debe quedar expuesto
-# a la LAN. Para modo LAN (solo en redes de confianza) usar SISPER_HOST=0.0.0.0.
+# DevConsole ejecuta operaciones de desarrollo/DevOps: el listener queda sólo
+# en loopback salvo que el operador decida explícitamente otra cosa.
 Environment=SISPER_HOST=127.0.0.1
 Environment=SISPER_PORT=${SISPER_PORT}
+# En instalación gestionada se exige el token local efímero. El browser recibe
+# la cookie HttpOnly al cargar la UI; clientes API usan el token 0600 del runtime.
+Environment=SISPER_LOCAL_TOKEN_REQUIRED=1
 PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
 
 [Install]
@@ -132,33 +130,27 @@ echo "  El servicio inicia automáticamente con tu sesión gráfica."
 echo "  Acceso Web: http://localhost:${SISPER_PORT}"
 echo "  Acceso Menú: Busca 'SISPER DevConsole' en tus aplicaciones."
 
-# 5.b Claves hasheadas que vienen en el paquete (sin texto en claro)
+# 5.b Credenciales de producto: Viewer/QA siempre está disponible. Developer y
+#     Admin se habilitan con las claves cuyo hash viene en el paquete. El
+#     instalador NO genera claves nuevas ni cambia las ediciones del producto.
 DESTINO_CLAVES="${HOME}/.config/sisper-dashboard/secrets.json"
 if [ ! -f "${DESTINO_CLAVES}" ] && [ -f "${SCRIPT_DIR}/config/pins.json" ]; then
     mkdir -p "$(dirname "${DESTINO_CLAVES}")"
     cp "${SCRIPT_DIR}/config/pins.json" "${DESTINO_CLAVES}"
     chmod 600 "${DESTINO_CLAVES}"
-    echo "[✓] Claves de acceso instaladas (hasheadas) en ${DESTINO_CLAVES}"
-    echo "    Pide la tuya a quien administra el equipo; para cambiarla:"
-    echo "    cd ${SCRIPT_DIR} && python3 -m devconsole.pins set --role admin|dev"
-    INSTALO_CLAVES=1
+    echo "[✓] Credenciales de producto instaladas (sólo hashes) en ${DESTINO_CLAVES}"
+elif [ -f "${DESTINO_CLAVES}" ]; then
+    echo "[i] Se conserva el almacén de credenciales existente: ${DESTINO_CLAVES}"
+else
+    echo "[!] El paquete no contiene config/pins.json."
+    echo "    Viewer/QA seguirá disponible; Developer y Admin permanecerán bloqueados"
+    echo "    hasta instalar explícitamente sus credenciales."
 fi
 
-# 6. Claves de acceso: una por rol y distintas entre sí
+# 6. Modelo de acceso
 echo ""
-if [ "${INSTALO_CLAVES:-0}" = "1" ]; then
-    echo "  (se conservan las claves hasheadas del paquete)"
-elif [ -t 0 ]; then
-    echo "[*] Claves de acceso del panel (Administrador y Desarrollador, DISTINTAS)."
-    ( cd "${SCRIPT_DIR}" && python3 -m devconsole.pins set --role admin ) || \
-        echo "  [!] Sin clave de Administrador: no podrás desplegar ni cambiar entornos."
-    ( cd "${SCRIPT_DIR}" && python3 -m devconsole.pins set --role dev ) || \
-        echo "  [!] Sin clave de Desarrollador: no podrás lanzar servicios."
-else
-    echo "[i] Instalación no interactiva: define las claves luego con"
-    echo "    cd ${SCRIPT_DIR} && python3 -m devconsole.pins set --role admin"
-    echo "    cd ${SCRIPT_DIR} && python3 -m devconsole.pins set --role dev"
-fi
-echo "  El panel arranca como Soporte/QA (sólo lectura); con tu clave entras"
-echo "  como Desarrollador o Administrador."
+echo "  Nivel predeterminado: Viewer/QA (sin clave, sólo lectura)."
+echo "  Developer: requiere clave de producto Developer."
+echo "  Admin: requiere clave de producto Admin."
+echo "  El instalador no solicita ni fabrica claves nuevas."
 echo "================================================================="

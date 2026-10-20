@@ -1,0 +1,17 @@
+DevConsole V1.1 self-hosted UI dependencies
+===========================================
+
+split.js 1.6.5 — MIT — https://github.com/nathancahill/split
+Grid.js 6.2.0 — MIT — https://github.com/grid-js/gridjs
+CodeMirror 6 packages — MIT — https://github.com/codemirror
+Web Awesome 3.14.0 — MIT — https://github.com/shoelace-style/webawesome
+xterm-addon-web-links 0.5.1 — MIT — https://github.com/xtermjs/xterm.js
+xterm-addon-webgl 0.11.4 — MIT — https://github.com/xtermjs/xterm.js
+
+---- package license metadata ----
+split.js: MIT
+gridjs: MIT
+codemirror: MIT
+@awesome.me/webawesome: MIT
+xterm-addon-web-links: MIT
+xterm-addon-webgl: MIT

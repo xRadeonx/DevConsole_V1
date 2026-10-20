@@ -1,0 +1,348 @@
+name: DevConsole CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  core-regression:
+    name: V1.1 regression gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python sources
+        run: python -m compileall -q dashboard.py devconsole tests
+
+      - name: Validate shell entrypoints
+        run: |
+          bash -n install_devconsole.sh
+          bash -n uninstall_devconsole.sh
+
+      - name: Run stable security baseline and V1.1 contracts
+        run: |
+          python -m unittest -v \
+            tests.devconsole.test_security_boundary \
+            tests.devconsole.test_runtime_safety \
+            tests.devconsole.test_product_credentials \
+            tests.devconsole.test_v11_access \
+            tests.devconsole.test_v11_git_safety \
+            tests.devconsole.test_v11_env_safety \
+            tests.devconsole.test_v11_environment_secrets \
+            tests.devconsole.test_v11_infra_catalog \
+            tests.devconsole.test_v11_read_policy \
+            tests.devconsole.test_project_detector \
+            tests.devconsole.test_v11_capabilities \
+            tests.devconsole.test_process_observer \
+            tests.devconsole.test_yaml_service \
+            tests.devconsole.test_v11_yaml_promotion \
+            tests.devconsole.test_v11_yaml_catalog \
+            tests.devconsole.test_v11_nonsecret_catalog \
+            tests.devconsole.test_v11_catalog_aliases \
+            tests.devconsole.test_config_schema \
+            tests.devconsole.test_v11_legacy_profile \
+            tests.devconsole.test_v11_multienv \
+            tests.devconsole.test_v11_dock_workspace \
+            tests.devconsole.test_v11_ui \
+            tests.devconsole.test_v11_frontend_regressions
+
+  modernization-tooling:
+    name: Modernization package gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install DevConsole with accepted modernization extras
+        run: python -m pip install --disable-pip-version-check ".[modernization]"
+
+      - name: Import accepted modernization dependencies
+        run: |
+          python - <<'PY'
+          import psutil
+          import pydantic
+          import ruamel.yaml
+          import devconsole
+          print("modernization package: OK")
+          PY
+
+      - name: Run V1.1 tests with optional dependencies available
+        run: |
+          python -m unittest -v \
+            tests.devconsole.test_product_credentials \
+            tests.devconsole.test_v11_access \
+            tests.devconsole.test_v11_git_safety \
+            tests.devconsole.test_v11_env_safety \
+            tests.devconsole.test_v11_environment_secrets \
+            tests.devconsole.test_v11_infra_catalog \
+            tests.devconsole.test_v11_read_policy \
+            tests.devconsole.test_project_detector \
+            tests.devconsole.test_v11_capabilities \
+            tests.devconsole.test_process_observer \
+            tests.devconsole.test_yaml_service \
+            tests.devconsole.test_v11_yaml_promotion \
+            tests.devconsole.test_v11_yaml_catalog \
+            tests.devconsole.test_v11_nonsecret_catalog \
+            tests.devconsole.test_v11_catalog_aliases \
+            tests.devconsole.test_config_schema \
+            tests.devconsole.test_v11_legacy_profile \
+            tests.devconsole.test_v11_multienv \
+            tests.devconsole.test_v11_dock_workspace \
+            tests.devconsole.test_v11_ui \
+            tests.devconsole.test_v11_frontend_regressions
+
+  v11-quality:
+    name: V1.1 code quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js for static module syntax checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Ruff
+        run: python -m pip install --disable-pip-version-check "ruff>=0.8,<1"
+
+      - name: Lint V1.1 modules and tests
+        run: |
+          ruff check \
+            devconsole/v11_access.py \
+            devconsole/v11_capabilities.py \
+            devconsole/v11_catalog_aliases.py \
+            devconsole/v11_git_safety.py \
+            devconsole/v11_env_safety.py \
+            devconsole/v11_environment_secrets.py \
+            devconsole/v11_infra_catalog.py \
+            devconsole/v11_k8s_configmaps.py \
+            devconsole/v11_k8s_secrets.py \
+            devconsole/v11_legacy_profile.py \
+            devconsole/v11_local_env_catalog.py \
+            devconsole/v11_multienv.py \
+            devconsole/v11_read_policy.py \
+            devconsole/v11_yaml_catalog.py \
+            devconsole/v11_yaml_promotion.py \
+            devconsole/v11_ui.py \
+            devconsole/config_schema.py \
+            devconsole/services/project_detector.py \
+            devconsole/services/process_observer.py \
+            devconsole/services/yaml_service.py \
+            tests/devconsole/test_product_credentials.py \
+            tests/devconsole/test_v11_access.py \
+            tests/devconsole/test_v11_catalog_aliases.py \
+            tests/devconsole/test_v11_git_safety.py \
+            tests/devconsole/test_v11_env_safety.py \
+            tests/devconsole/test_v11_environment_secrets.py \
+            tests/devconsole/test_v11_infra_catalog.py \
+            tests/devconsole/test_v11_legacy_profile.py \
+            tests/devconsole/test_v11_multienv.py \
+            tests/devconsole/test_v11_dock_workspace.py \
+            tests/devconsole/test_v11_read_policy.py \
+            tests/devconsole/test_project_detector.py \
+            tests/devconsole/test_v11_capabilities.py \
+            tests/devconsole/test_process_observer.py \
+            tests/devconsole/test_yaml_service.py \
+            tests/devconsole/test_v11_yaml_catalog.py \
+            tests/devconsole/test_v11_nonsecret_catalog.py \
+            tests/devconsole/test_v11_yaml_promotion.py \
+            tests/devconsole/test_config_schema.py \
+            tests/devconsole/test_v11_ui.py \
+            tests/devconsole/test_v11_frontend_regressions.py
+
+      - name: Check V1.1 ES-module syntax
+        run: |
+          for file in \
+            static/js/v11/app.js \
+            static/js/v11/core/events.js \
+            static/js/v11/core/features.js \
+            static/js/v11/features/code-editors.js \
+            static/js/v11/features/dock-workspace.js \
+            static/js/v11/features/grid-enhancements.js \
+            static/js/v11/features/multi-env.js \
+            static/js/v11/features/read-feedback.js \
+            static/js/v11/features/secret-guidance.js \
+            static/js/v11/features/split-layouts.js \
+            static/js/v11/features/terminal-addons.js \
+            static/js/v11/features/webawesome-ui.js; do
+            node --input-type=module --check < "$file"
+          done
+
+  vendor-ui:
+    name: Self-hosted UI library gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v1.1-modernization'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/v1.1-modernization
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned UI build dependencies
+        working-directory: tools/vendor-ui
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Build self-hosted browser libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$PWD"
+          VENDOR="$ROOT/static/vendor/v11"
+          NODE="$ROOT/tools/vendor-ui/node_modules"
+          mkdir -p "$VENDOR"
+
+          cp "$NODE/split.js/dist/split.min.js" "$VENDOR/split.min.js"
+          cp "$NODE/gridjs/dist/gridjs.umd.js" "$VENDOR/gridjs.umd.js"
+          cp "$NODE/gridjs/dist/theme/mermaid.min.css" "$VENDOR/gridjs-mermaid.min.css"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/codemirror-entry.js" \
+            --bundle --format=iife --global-name=DevConsoleCodeMirror \
+            --platform=browser --target=es2020 --minify --legal-comments=none \
+            --outfile="$VENDOR/codemirror.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-web-links-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-web-links.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/xterm-webgl-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2019 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/xterm-webgl.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/webawesome-entry.js" \
+            --bundle --format=iife --platform=browser --target=es2020 \
+            --minify --legal-comments=none \
+            --outfile="$VENDOR/webawesome.bundle.js"
+
+          "$NODE/.bin/esbuild" "$ROOT/tools/vendor-ui/webawesome-style-entry.css" \
+            --bundle --minify --legal-comments=none \
+            --outfile="$VENDOR/webawesome.css"
+
+          {
+            echo "DevConsole V1.1 self-hosted UI dependencies"
+            echo "==========================================="
+            echo
+            echo "split.js 1.6.5 — MIT — https://github.com/nathancahill/split"
+            echo "Grid.js 6.2.0 — MIT — https://github.com/grid-js/gridjs"
+            echo "CodeMirror 6 packages — MIT — https://github.com/codemirror"
+            echo "Web Awesome 3.14.0 — MIT — https://github.com/shoelace-style/webawesome"
+            echo "xterm-addon-web-links 0.5.1 — MIT — https://github.com/xtermjs/xterm.js"
+            echo "xterm-addon-webgl 0.11.4 — MIT — https://github.com/xtermjs/xterm.js"
+            echo
+            echo "---- package license metadata ----"
+            NODE_ROOT="$NODE" node - <<'NODE'
+          const path = require('path');
+          const root = process.env.NODE_ROOT;
+          const packages = [
+            'split.js',
+            'gridjs',
+            'codemirror',
+            '@awesome.me/webawesome',
+            'xterm-addon-web-links',
+            'xterm-addon-webgl'
+          ];
+          for (const name of packages) {
+            const p = require(path.join(root, name, 'package.json'));
+            console.log(`${name}: ${p.license || 'MIT'}`);
+          }
+          NODE
+          } > "$VENDOR/THIRD_PARTY_LICENSES.txt"
+
+          printf '%s\n' \
+            'split.js=1.6.5' \
+            'gridjs=6.2.0' \
+            'codemirror=6.0.2' \
+            '@codemirror/lang-json=6.0.2' \
+            '@codemirror/lang-yaml=6.1.2' \
+            '@codemirror/theme-one-dark=6.1.2' \
+            '@awesome.me/webawesome=3.14.0' \
+            'xterm=4.18.0' \
+            'xterm-addon-web-links=0.5.1' \
+            'xterm-addon-webgl=0.11.4' \
+            > "$VENDOR/VERSIONS.txt"
+
+          for file in \
+            split.min.js \
+            gridjs.umd.js \
+            gridjs-mermaid.min.css \
+            codemirror.bundle.js \
+            xterm-web-links.bundle.js \
+            xterm-webgl.bundle.js \
+            webawesome.bundle.js \
+            webawesome.css; do
+            test -s "$VENDOR/$file"
+          done
+          grep -q '@awesome.me/webawesome=3.14.0' "$VENDOR/VERSIONS.txt"
+          grep -q 'xterm-addon-web-links=0.5.1' "$VENDOR/VERSIONS.txt"
+          grep -q 'xterm-addon-webgl=0.11.4' "$VENDOR/VERSIONS.txt"
+
+      - name: Commit generated vendor assets if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add static/vendor/v11
+          if git diff --cached --quiet; then
+            echo "Vendor assets already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build(ui): vendor Web Awesome and xterm addons"
+          git push origin "HEAD:feature/v1.1-modernization"
+
+  legacy-characterization:
+    name: Legacy characterization (debt inventory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run full unittest suite
+        run: python -m unittest discover -s tests -t . -v

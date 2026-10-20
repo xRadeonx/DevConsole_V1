@@ -2,7 +2,7 @@
 # ==============================================================================
 # SISPER DevConsole — Desinstalador (servicio de usuario + lanzador)
 #   ./uninstall_devconsole.sh            detiene y quita servicio y acceso directo
-#   ./uninstall_devconsole.sh --purge    además borra esta carpeta y el PIN guardado
+#   ./uninstall_devconsole.sh --purge    además borra carpeta y credenciales locales
 # ==============================================================================
 set -uo pipefail
 
@@ -13,6 +13,7 @@ APPS_DIR="${HOME}/.local/share/applications"
 PURGE=0
 [ "${1:-}" = "--purge" ] && PURGE=1
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SISPER_PORT="${SISPER_PORT:-9099}"
 
 echo "=== Desinstalando SISPER DevConsole ==="
 
@@ -25,16 +26,16 @@ rm -f "${SYSTEMD_USER_DIR}/${SERVICE_NAME}"
 rm -rf "${SYSTEMD_USER_DIR}/${SERVICE_NAME}.d"
 systemctl --user daemon-reload
 
-echo "[*] Matando cualquier proceso que siga en el puerto (del propio usuario)..."
-if command -v fuser >/dev/null 2>&1; then
-    for puerto in 9099 "${SISPER_PORT:-}"; do
-        [ -n "${puerto}" ] || continue
-        ss -ltn 2>/dev/null | grep -q ":${puerto} " && fuser -k "${puerto}/tcp" 2>/dev/null || true
-    done
+# No se usa fuser/pkill. El servicio systemd es la identidad autoritativa del
+# proceso instalado. Si el puerto permanece ocupado después de detener la unidad,
+# asumir que pertenece a otro proceso evita matar trabajo ajeno por accidente.
+if ss -ltn 2>/dev/null | grep -q ":${SISPER_PORT} "; then
+    echo "  [!] El puerto ${SISPER_PORT} sigue ocupado después de detener ${SERVICE_NAME}."
+    echo "      No se ha matado ningún proceso externo. Propietario observado:"
+    ss -ltnp 2>/dev/null | grep ":${SISPER_PORT} " | sed 's/^/      /' || true
+else
+    echo "  [✓] Puerto ${SISPER_PORT} libre."
 fi
-pkill -u "${USER}" -f "$(printf '%s' "${INSTALL_DIR}")/dashboard.py" 2>/dev/null || true
-sleep 1
-ss -ltn 2>/dev/null | grep -q ":9099 " && echo "  [!] El 9099 sigue ocupado por OTRO usuario/proceso." || echo "  [✓] Puerto 9099 libre."
 
 echo "[*] Quitando acceso directo del menú..."
 rm -f "${APPS_DIR}/${DESKTOP_NAME}"
@@ -44,9 +45,9 @@ echo "[✓] Servicio y lanzador eliminados. La carpeta del proyecto sigue en:"
 echo "    ${INSTALL_DIR}"
 
 if [ "${PURGE}" = "1" ]; then
-    echo "[*] Purga: se borran la carpeta del proyecto y el PIN guardado."
+    echo "[*] Purga: se borran la carpeta del proyecto y las credenciales/configuración locales."
     echo "    ${INSTALL_DIR}"
-    echo "    ${HOME}/.config/sisper-dashboard (PIN hasheado y secretos)"
+    echo "    ${HOME}/.config/sisper-dashboard"
     if [ "${2:-}" != "--yes" ]; then
         read -r -p "¿Confirmas el borrado? [s/N] " r
         case "${r}" in [sSyY]) ;; *) echo "  Cancelado."; exit 0 ;; esac
@@ -56,5 +57,5 @@ if [ "${PURGE}" = "1" ]; then
     rm -rf "${HOME}/.config/sisper-dashboard"
     echo "[✓] Purga completada."
 else
-    echo "    (Para borrar también la carpeta y el PIN: ./uninstall_devconsole.sh --purge)"
+    echo "    (Para borrar también carpeta y configuración: ./uninstall_devconsole.sh --purge)"
 fi

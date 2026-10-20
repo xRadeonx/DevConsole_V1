@@ -14,19 +14,20 @@ RestartSec=3
 
 Environment=PYTHONUNBUFFERED=1
 Environment=PATH=/home/__USUARIO__/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-# Sólo loopback por defecto.  Exponer en LAN exige SISPER_HOST explícito.
+# Sólo loopback por defecto. Exponer en LAN exige SISPER_HOST explícito.
 Environment=SISPER_HOST=127.0.0.1
 Environment=SISPER_PORT=9099
-# PIN propio de cada usuario (Administrador y Desarrollador), HASHEADO:
-#   python3 -m devconsole.pins set --role admin
-# Alternativa en claro por entorno (menos recomendable):
-# Environment=SISPER_ADMIN_PIN=cambia-este-pin
-# Environment=SISPER_DEV_PIN=cambia-este-pin
-# Almacén de hashes (por defecto ~/.config/sisper-dashboard/secrets.json):
+# La instalación gestionada exige el token efímero local. El browser recibe el
+# token por cookie HttpOnly/SameSite; clientes API pueden leer el fichero 0600.
+Environment=SISPER_LOCAL_TOKEN_REQUIRED=1
+# Viewer/QA es el nivel base. Developer/Admin usan las credenciales de producto
+# distribuidas como hashes scrypt en ~/.config/sisper-dashboard/secrets.json.
+# No existe contraseña incorporada en texto claro.
+# Compatibilidad opcional administrada por el operador:
+# Environment=SISPER_ADMIN_PIN=clave-explicita
+# Environment=SISPER_DEV_PIN=clave-explicita
 # Environment=SISPER_SECRETS_FILE=%h/.config/sisper-dashboard/secrets.json
-# Más fuerte: credencial cifrada con la clave del equipo.
-# LoadCredentialEncrypted=admin_pin:%h/.config/sisper-dashboard/admin_pin.cred
-# Backend de consolas: tmux (recomendado).  Sin esto se usa el lanzador legacy de Tilix.
+# Backend de consolas: tmux (recomendado); Tilix permanece como visor opcional.
 Environment=SISPER_TERMINAL_BACKEND=tmux
 # Necesario para que el visor de Tilix pueda abrir ventanas de la sesión gráfica.
 PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
