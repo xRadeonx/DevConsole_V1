@@ -18,11 +18,65 @@ class V11FrontendRegressionTests(unittest.TestCase):
         self.assertNotIn("ensureStyle(", source)
         self.assertIn("webawesome.bundle.js", source)
 
+    def test_webawesome_readiness_is_global_and_uses_existing_components(self):
+        source = self._read("static/js/v11/features/webawesome-ui.js")
+        self.assertIn('document.querySelector(".topbar-right")', source)
+        self.assertIn("READINESS", source)
+        self.assertIn("M✓ A✓", source)
+        self.assertIn('document.createElement("wa-badge")', source)
+        self.assertIn('document.createElement("wa-tooltip")', source)
+        self.assertIn('document.createElement("wa-spinner")', source)
+
     def test_workspace_table_is_not_replaced_by_gridjs(self):
         source = self._read("static/js/v11/features/grid-enhancements.js")
         self.assertIn("restoreWorkspaceLegacyTable", source)
         self.assertNotIn("enhanceTable(workspace", source)
         self.assertIn('document.getElementById("activityTable")', source)
+
+    def test_gridjs_exposes_activity_search_sort_pagination_value(self):
+        source = self._read("static/js/v11/features/grid-enhancements.js")
+        self.assertIn("ensureGridValueHeader", source)
+        self.assertIn("⌕ búsqueda", source)
+        self.assertIn("↕ orden", source)
+        self.assertIn("◫ paginación", source)
+
+    def test_codemirror_env_editor_has_visible_validation_and_actions(self):
+        source = self._read("static/js/v11/features/code-editors.js")
+        self.assertIn("CodeMirror 6", source)
+        self.assertIn("analyseEnv", source)
+        self.assertIn("duplicada", source)
+        self.assertIn("KEY=valor", source)
+        self.assertIn('data-action="find"', source)
+        self.assertIn('data-action="validate"', source)
+        self.assertIn('data-action="copy"', source)
+        self.assertIn("sensitive", source)
+
+    def test_terminal_addons_are_discoverable_without_replacing_xterm(self):
+        source = self._read("static/js/v11/features/terminal-addons.js")
+        self.assertIn("makeTerminalToolbar", source)
+        self.assertIn("xterm+", source)
+        self.assertIn("⌕ Buscar", source)
+        self.assertIn("↔ Ajustar", source)
+        self.assertIn("WebLinksAddon", source)
+        self.assertIn("WebglCtor", source)
+
+    def test_splitjs_gutter_is_discoverable_and_resettable(self):
+        source = self._read("static/js/v11/features/split-layouts.js")
+        self.assertIn("decorateGutter", source)
+        self.assertIn("doble clic", source)
+        self.assertIn("setSizes", source)
+        self.assertIn("DEFAULT_MAP_SIZES", source)
+
+    def test_library_value_styles_are_isolated_and_booted_by_v11(self):
+        app = self._read("static/js/v11/app.js")
+        css = self._read("static/css/v11-library-value.css")
+        self.assertIn("v11-library-value.css", app)
+        self.assertIn("ensureLibraryValueStyles", app)
+        self.assertIn(".dc-v11-editor-toolbar", css)
+        self.assertIn(".dc-v11-wa-global-health", css)
+        self.assertIn(".dc-v11-terminal-toolbar", css)
+        self.assertIn(".dc-v11-grid-valuebar", css)
+        self.assertIn(".dc-v11-split-grip", css)
 
     def test_secret_guidance_names_each_environment_and_yaml_discovery(self):
         source = self._read("static/js/v11/features/secret-guidance.js")
