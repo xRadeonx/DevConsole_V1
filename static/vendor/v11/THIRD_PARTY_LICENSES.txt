@@ -15,3 +15,6 @@ codemirror: MIT
 @awesome.me/webawesome: MIT
 xterm-addon-web-links: MIT
 xterm-addon-webgl: MIT
+
+Tabler Core 1.6.1 — MIT — https://github.com/tabler/tabler
+Tabler Icons Sprite 3.49.0 — MIT — https://github.com/tabler/tabler-icons
