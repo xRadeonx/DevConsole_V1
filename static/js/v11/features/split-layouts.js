@@ -1,5 +1,6 @@
 const SPLIT_JS = "/static/vendor/v11/split.min.js";
 const MAP_SIZES_KEY = "devconsole.v11.map.split";
+const DEFAULT_MAP_SIZES = [42, 58];
 
 let loadPromise = null;
 let mapSplit = null;
@@ -27,7 +28,38 @@ function savedSizes() {
       return value.map(Number);
     }
   } catch (_) {}
-  return [42, 58];
+  return [...DEFAULT_MAP_SIZES];
+}
+
+function decorateGutter(layout) {
+  const gutter = layout?.querySelector(":scope > .gutter.gutter-horizontal");
+  if (!gutter || gutter.dataset.dcSplitDecorated === "true") return;
+  gutter.dataset.dcSplitDecorated = "true";
+  gutter.title = "Split.js · arrastra para redimensionar · doble clic para restaurar";
+  gutter.setAttribute("role", "separator");
+  gutter.setAttribute("aria-orientation", "vertical");
+  gutter.setAttribute("aria-label", "Redimensionar paneles del Mapa Operativo");
+  gutter.tabIndex = 0;
+
+  const grip = document.createElement("span");
+  grip.className = "dc-v11-split-grip";
+  grip.textContent = "⋮";
+  gutter.appendChild(grip);
+
+  const reset = () => {
+    try {
+      mapSplit?.setSizes?.([...DEFAULT_MAP_SIZES]);
+      localStorage.setItem(MAP_SIZES_KEY, JSON.stringify(DEFAULT_MAP_SIZES));
+      window.dispatchEvent(new Event("resize"));
+    } catch (_) {}
+  };
+  gutter.addEventListener("dblclick", reset);
+  gutter.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      reset();
+    }
+  });
 }
 
 function destroyMapSplit() {
@@ -47,7 +79,10 @@ async function mountMapSplit() {
     destroyMapSplit();
     return;
   }
-  if (mapSplit) return;
+  if (mapSplit) {
+    decorateGutter(layout);
+    return;
+  }
 
   const Split = await loadSplit();
   if (!Split || !media?.matches || !document.body.contains(layout)) return;
@@ -56,7 +91,7 @@ async function mountMapSplit() {
   mapSplit = Split([left, right], {
     sizes: savedSizes(),
     minSize: [300, 360],
-    gutterSize: 9,
+    gutterSize: 11,
     snapOffset: 18,
     cursor: "col-resize",
     onDragEnd(sizes) {
@@ -64,6 +99,7 @@ async function mountMapSplit() {
       window.dispatchEvent(new Event("resize"));
     },
   });
+  decorateGutter(layout);
   document.documentElement.dataset.dcSplit = "1.6.5";
 }
 
